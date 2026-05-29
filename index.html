@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการนักเรียน (Cloud)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Loader */
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #4f46e5; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased h-screen overflow-hidden relative">
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-5 right-5 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50 flex items-center gap-2">
+        <i id="toast-icon" class="fas fa-check-circle"></i>
+        <span id="toast-message">บันทึกสำเร็จ!</span>
+    </div>
+
+    <!-- Full Screen Loader -->
+    <div id="global-loader" class="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center">
+        <div class="loader mb-4"></div>
+        <p class="text-gray-500 font-medium">กำลังเชื่อมต่อระบบ...</p>
+    </div>
+
+    <!-- Auth View (Login/Signup) -->
+    <div id="auth-view" class="fixed inset-0 bg-gradient-to-br from-indigo-800 to-purple-800 z-[60] flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 fade-in">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 text-indigo-600 text-3xl mb-4">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <h2 id="auth-title" class="text-2xl font-bold text-gray-800">SchoolHub</h2>
+                <p id="auth-subtitle" class="text-gray-500 text-sm mt-1">เข้าสู่ระบบเพื่อจัดการข้อมูลนักเรียน</p>
+            </div>
+
+            <!-- ใช้ onsubmit="handleAuthSubmit(event)" เพื่อแยกโหมดเข้าสู่ระบบและสมัครสมาชิก -->
+            <form id="auth-form" class="space-y-4" onsubmit="handleAuthSubmit(event)">
+                <!-- เพิ่มช่องชื่อ-นามสกุล (ซ่อนไว้ในโหมดเข้าสู่ระบบ) -->
+                <div id="auth-name-container" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ - นามสกุล</label>
+                    <input type="text" id="auth-name" placeholder="นาย/นางสาว..." class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">อีเมล</label>
+                    <input type="text" id="auth-email" required placeholder="email@example.com" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">รหัสผ่าน</label>
+                    <input type="password" id="auth-pass" required placeholder="••••••••" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <!-- ช่องยืนยันรหัสผ่าน (ซ่อนไว้ในโหมดเข้าสู่ระบบ) -->
+                <div id="auth-confirm-pass-container" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">ยืนยันรหัสผ่าน</label>
+                    <input type="password" id="auth-confirm-pass" placeholder="••••••••" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div class="pt-2">
+                    <button type="submit" id="btn-auth-submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-lg transition shadow-md">
+                        เข้าสู่ระบบ
+                    </button>
+                </div>
+                <div class="text-center mt-4">
+                    <p class="text-sm text-gray-600" id="auth-toggle-text">
+                        ยังไม่มีบัญชี? <button type="button" onclick="toggleAuthMode()" class="text-indigo-600 hover:underline font-medium">สมัครสมาชิกใหม่</button>
+                    </p>
+                </div>
+                <div class="text-center mt-4 border-t pt-4">
+                    <button type="button" onclick="handleGoogleLogin()" class="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 rounded-lg transition border border-gray-200 flex items-center justify-center gap-2 shadow-sm">
+                        <i class="fab fa-google text-red-500"></i> เข้าสู่ระบบด้วย Google
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Application UI -->
+    <div id="main-app" class="flex h-full hidden">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-indigo-700 text-white flex flex-col transition-all duration-300 z-20 hidden md:flex">
+            <div class="p-5 text-2xl font-bold border-b border-indigo-600 flex items-center gap-3">
+                <i class="fas fa-graduation-cap"></i>
+                <span>School<span class="text-indigo-300">Hub</span></span>
+            </div>
+            <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+                <button onclick="switchView('dashboard')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 bg-indigo-800 rounded-lg text-left transition hover:bg-indigo-600" data-target="dashboard">
+                    <i class="fas fa-home w-5 text-center"></i> แดชบอร์ด
+                </button>
+                <button onclick="switchView('courses')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition hover:bg-indigo-600" data-target="courses">
+                    <i class="fas fa-book w-5 text-center"></i> รายวิชา
+                </button>
+                <button onclick="switchView('students')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition hover:bg-indigo-600" data-target="students">
+                    <i class="fas fa-users w-5 text-center"></i> ข้อมูลนักเรียน
+                </button>
+                <button onclick="switchView('attendance')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition hover:bg-indigo-600" data-target="attendance">
+                    <i class="fas fa-calendar-check w-5 text-center"></i> เช็คชื่อ
+                </button>
+                <button onclick="switchView('scores')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition hover:bg-indigo-600" data-target="scores">
+                    <i class="fas fa-star w-5 text-center"></i> เก็บคะแนน
+                </button>
+                <!-- Admin Only Menu -->
+                <button id="nav-admin" onclick="switchView('admin')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition hover:bg-red-600 text-red-200 hover:text-white hidden mt-8 border border-red-500/30" data-target="admin">
+                    <i class="fas fa-shield-alt w-5 text-center"></i> ระบบแอดมิน
+                </button>
+            </nav>
+        </aside>
+
+        <!-- Mobile Header & Navigation -->
+        <div class="md:hidden fixed top-0 w-full bg-indigo-700 text-white z-30 flex justify-between items-center p-4 shadow-md">
+            <div class="text-xl font-bold flex items-center gap-2">
+                <i class="fas fa-graduation-cap"></i> SchoolHub
+            </div>
+            <button onclick="toggleMobileMenu()" class="focus:outline-none">
+                <i class="fas fa-bars text-2xl"></i>
+            </button>
+        </div>
+        
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden fixed inset-0 bg-indigo-800 z-20 pt-16 flex flex-col">
+            <nav class="p-4 space-y-2 text-white">
+                <button onclick="switchView('dashboard'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-indigo-600">
+                    <i class="fas fa-home"></i> แดชบอร์ด
+                </button>
+                <button onclick="switchView('courses'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-indigo-600">
+                    <i class="fas fa-book"></i> รายวิชา
+                </button>
+                <button onclick="switchView('students'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-indigo-600">
+                    <i class="fas fa-users"></i> ข้อมูลนักเรียน
+                </button>
+                <button onclick="switchView('attendance'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-indigo-600">
+                    <i class="fas fa-calendar-check"></i> เช็คชื่อ
+                </button>
+                <button onclick="switchView('scores'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-indigo-600">
+                    <i class="fas fa-star"></i> เก็บคะแนน
+                </button>
+                <button id="nav-admin-mobile" onclick="switchView('admin'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-red-600 text-red-200 hidden">
+                    <i class="fas fa-shield-alt"></i> ระบบแอดมิน
+                </button>
+            </nav>
+        </div>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 flex flex-col h-screen overflow-hidden pt-14 md:pt-0">
+            <!-- Header -->
+            <header class="bg-white shadow-sm px-8 py-4 flex justify-between items-center z-10">
+                <h2 id="page-title" class="text-2xl font-semibold text-gray-700">แดชบอร์ด</h2>
+                <div class="flex items-center gap-4">
+                    <div class="text-sm text-gray-500 hidden sm:block" id="user-display-email">กำลังโหลด...</div>
+                    <button onclick="doLogout()" class="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-sm transition border border-red-100 flex items-center gap-2">
+                        <i class="fas fa-sign-out-alt"></i> ออกระบบ
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dynamic Views Container -->
+            <div class="flex-1 overflow-y-auto p-4 md:p-8 relative">
+                
+                <!-- View: Dashboard -->
+                <div id="view-dashboard" class="view-section fade-in">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-indigo-500 flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">จำนวนนักเรียนทั้งหมด</p>
+                                <h3 id="stat-students" class="text-3xl font-bold text-gray-800">0</h3>
+                            </div>
+                            <div class="h-12 w-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-500 text-xl">
+                                <i class="fas fa-users"></i>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-green-500 flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">รายวิชาทั้งหมด</p>
+                                <h3 id="stat-courses" class="text-3xl font-bold text-gray-800">0</h3>
+                            </div>
+                            <div class="h-12 w-12 rounded-full bg-green-50 flex items-center justify-center text-green-500 text-xl">
+                                <i class="fas fa-book"></i>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-yellow-500 flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">งาน/การสอบ ที่สร้าง</p>
+                                <h3 id="stat-tasks" class="text-3xl font-bold text-gray-800">0</h3>
+                            </div>
+                            <div class="h-12 w-12 rounded-full bg-yellow-50 flex items-center justify-center text-yellow-500 text-xl">
+                                <i class="fas fa-tasks"></i>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-purple-500 flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">แผนเก็บคะแนนรวม</p>
+                                <h3 id="stat-plans" class="text-3xl font-bold text-gray-800">0</h3>
+                            </div>
+                            <div class="h-12 w-12 rounded-full bg-purple-50 flex items-center justify-center text-purple-500 text-xl">
+                                <i class="fas fa-list-alt"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-indigo-100">
+                        <div class="flex items-center gap-3 mb-4">
+                            <i class="fas fa-cloud text-indigo-500 text-2xl"></i>
+                            <h3 class="text-lg font-semibold text-gray-800">ระบบเชื่อมต่อ Cloud สมบูรณ์</h3>
+                        </div>
+                        <p class="text-gray-600">ข้อมูลทั้งหมดของคุณจะถูกบันทึกและซิงค์ผ่าน Firebase ของคุณ ข้อมูลของคุณจะถูกเก็บแยกเป็นส่วนตัวและสามารถเข้าถึงได้ทุกที่เมื่อเข้าสู่ระบบด้วยบัญชีนี้</p>
+                    </div>
+                </div>
+
+                <!-- View: Admin (Admin Only) -->
+                <div id="view-admin" class="view-section hidden fade-in">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-semibold text-gray-700">รายชื่อสมาชิกทั้งหมด (Admin Panel)</h3>
+                        <button onclick="loadAdminData()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition shadow-sm">
+                            <i class="fas fa-sync-alt"></i> รีเฟรช
+                        </button>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-50 text-gray-600 border-b">
+                                    <th class="p-4 font-medium">UID</th>
+                                    <th class="p-4 font-medium">ชื่อ-นามสกุล</th>
+                                    <th class="p-4 font-medium">อีเมล</th>
+                                    <th class="p-4 font-medium text-center">สิทธิ์การใช้งาน</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-user-list">
+                                <!-- Admin JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- View: Courses -->
+                <div id="view-courses" class="view-section hidden fade-in">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-semibold text-gray-700">จัดการรายวิชา</h3>
+                        <button onclick="openModal('course-modal')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm">
+                            <i class="fas fa-plus"></i> เพิ่มรายวิชา
+                        </button>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-50 text-gray-600 border-b">
+                                    <th class="p-4 font-medium">รหัสวิชา</th>
+                                    <th class="p-4 font-medium">ชื่อรายวิชา</th>
+                                    <th class="p-4 font-medium text-right">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="course-list"></tbody>
+                        </table>
+                        <div id="empty-course" class="p-8 text-center text-gray-500 hidden">
+                            <i class="fas fa-folder-open text-4xl mb-3 text-gray-300"></i>
+                            <p>ยังไม่มีข้อมูลรายวิชา</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Students -->
+                <div id="view-students" class="view-section hidden fade-in">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-semibold text-gray-700">จัดการข้อมูลนักเรียน</h3>
+                        <div class="flex gap-2">
+                            <button onclick="exportStudentsToExcel()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm">
+                                <i class="fas fa-file-excel"></i> <span class="hidden sm:inline">ส่งออก Excel</span>
+                            </button>
+                            <button onclick="openModal('student-modal')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm">
+                                <i class="fas fa-plus"></i> เพิ่มนักเรียน
+                            </button>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-50 text-gray-600 border-b">
+                                    <th class="p-4 font-medium">รหัสนักเรียน</th>
+                                    <th class="p-4 font-medium">ชื่อ - นามสกุล</th>
+                                    <th class="p-4 font-medium">ระดับชั้น</th>
+                                    <th class="p-4 font-medium text-right">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="student-list"></tbody>
+                        </table>
+                        <div id="empty-student" class="p-8 text-center text-gray-500 hidden">
+                            <i class="fas fa-user-slash text-4xl mb-3 text-gray-300"></i>
+                            <p>ยังไม่มีข้อมูลนักเรียน</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Attendance -->
+                <div id="view-attendance" class="view-section hidden fade-in">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-semibold text-gray-700">เช็คชื่อเข้าเรียน</h3>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">เลือกรายวิชา</label>
+                                <select id="att-course-select" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none" onchange="renderAttendanceList()">
+                                    <option value="">-- กรุณาเลือกวิชา --</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">วันที่</label>
+                                <input type="date" id="att-date" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none" onchange="renderAttendanceList()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="attendance-area" class="bg-white rounded-xl shadow-sm overflow-hidden hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-50 text-gray-600 border-b">
+                                    <th class="p-4 font-medium w-1/4">รหัส</th>
+                                    <th class="p-4 font-medium w-1/3">ชื่อ - นามสกุล</th>
+                                    <th class="p-4 font-medium text-center">สถานะการเข้าเรียน</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendance-list"></tbody>
+                        </table>
+                        <div class="p-4 bg-gray-50 border-t flex justify-end gap-3">
+                            <button onclick="exportAttendanceToExcel()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition shadow-sm">
+                                <i class="fas fa-file-excel"></i> ส่งออก Excel
+                            </button>
+                            <button onclick="saveAttendance()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition shadow-sm">
+                                <i class="fas fa-save"></i> บันทึกการเช็คชื่อ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Scores -->
+                <div id="view-scores" class="view-section hidden fade-in">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-semibold text-gray-700">บันทึกคะแนน</h3>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">เลือกรายวิชา</label>
+                                <select id="score-course-select" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none" onchange="renderScoreList()">
+                                    <option value="">-- กรุณาเลือกวิชา --</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">สัปดาห์ที่</label>
+                                <select id="score-week" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    <!-- Populated by JS -->
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">ชื่องาน / การสอบ</label>
+                                <input type="text" id="score-title" placeholder="เช่น สอบกลางภาค" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">คะแนนเต็ม</label>
+                                <input type="number" id="score-max" value="10" min="1" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none" oninput="updateMaxScores()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="score-area" class="bg-white rounded-xl shadow-sm overflow-hidden hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-50 text-gray-600 border-b">
+                                    <th class="p-4 font-medium w-1/4">รหัส</th>
+                                    <th class="p-4 font-medium w-1/3">ชื่อ - นามสกุล</th>
+                                    <th class="p-4 font-medium text-center">คะแนนที่ได้</th>
+                                </tr>
+                            </thead>
+                            <tbody id="score-list"></tbody>
+                        </table>
+                        <div class="p-4 bg-gray-50 border-t flex justify-end gap-3">
+                            <button onclick="exportScoresToExcel()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition shadow-sm">
+                                <i class="fas fa-file-excel"></i> ส่งออก Excel
+                            </button>
+                            <button onclick="saveScores()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition shadow-sm">
+                                <i class="fas fa-save"></i> บันทึกคะแนน
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Course Modal -->
+    <div id="course-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center fade-in p-4">
+        <div class="bg-white rounded-xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div class="p-5 border-b flex justify-between items-center bg-gray-50">
+                <h3 class="text-lg font-semibold text-gray-800">เพิ่มรายวิชาใหม่</h3>
+                <button onclick="closeModal('course-modal')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <form onsubmit="event.preventDefault(); handleCourseSubmit(event);" class="p-5 space-y-4">
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">รหัสวิชา</label><input type="text" id="course-code-input" required class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">ชื่อรายวิชา</label><input type="text" id="course-name-input" required class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500"></div>
+                <div class="pt-4 flex justify-end gap-2"><button type="button" onclick="closeModal('course-modal')" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg">ยกเลิก</button><button type="submit" class="px-4 py-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg">บันทึก</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Course Plan Modal -->
+    <div id="plan-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center fade-in p-4">
+        <div class="bg-white rounded-xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="p-5 border-b flex justify-between items-center bg-gray-50 shrink-0">
+                <h3 class="text-lg font-semibold text-gray-800" id="plan-modal-title">แผนการเก็บคะแนน: </h3>
+                <button onclick="closeModal('plan-modal')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-5 overflow-y-auto flex-1">
+                <form onsubmit="event.preventDefault(); handleAddPlan(event);" class="bg-indigo-50 p-4 rounded-lg mb-6 border border-indigo-100">
+                    <input type="hidden" id="plan-course-id">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                        <div><label class="block text-sm text-gray-700 mb-1">สัปดาห์ที่</label><select id="plan-week" class="w-full border rounded-lg p-2"></select></div>
+                        <div class="md:col-span-2"><label class="block text-sm text-gray-700 mb-1">ชื่องาน</label><input type="text" id="plan-title" required class="w-full border rounded-lg p-2"></div>
+                        <div><label class="block text-sm text-gray-700 mb-1">คะแนนเต็ม</label><div class="flex gap-2"><input type="number" id="plan-max" required value="10" min="1" class="w-full border rounded-lg p-2"><button type="submit" class="bg-indigo-600 text-white px-4 rounded-lg"><i class="fas fa-plus"></i></button></div></div>
+                    </div>
+                </form>
+                <h4 class="font-medium text-gray-700 mb-3"><i class="fas fa-list-ol text-indigo-500"></i> รายการที่บันทึกไว้</h4>
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-100 border-b"><tr><th class="p-3">สัปดาห์ที่</th><th class="p-3 w-1/2">ชื่องาน</th><th class="p-3 text-center">คะแนนเต็ม</th><th class="p-3 text-right">ลบ</th></tr></thead>
+                    <tbody id="plan-list"></tbody>
+                </table>
+                <div id="empty-plan" class="p-6 text-center text-gray-500 hidden"><p>ยังไม่ได้เพิ่มแผน</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Modal -->
+    <div id="student-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center fade-in p-4">
+        <div class="bg-white rounded-xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div class="p-5 border-b flex justify-between items-center bg-gray-50">
+                <h3 class="text-lg font-semibold text-gray-800">เพิ่มนักเรียนใหม่</h3>
+                <button onclick="closeModal('student-modal')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <form onsubmit="event.preventDefault(); handleStudentSubmit(event);" class="p-5 space-y-4">
+                <div><label class="block text-sm text-gray-700 mb-1">รหัสประจำตัว</label><input type="text" id="student-code-input" required class="w-full border rounded-lg p-2.5"></div>
+                <div><label class="block text-sm text-gray-700 mb-1">ชื่อ - นามสกุล</label><input type="text" id="student-name-input" required class="w-full border rounded-lg p-2.5"></div>
+                <div><label class="block text-sm text-gray-700 mb-1">ระดับชั้น</label><input type="text" id="student-grade-input" required class="w-full border rounded-lg p-2.5"></div>
+                <div class="pt-4 flex justify-end gap-2"><button type="button" onclick="closeModal('student-modal')" class="px-4 py-2 bg-gray-100 rounded-lg">ยกเลิก</button><button type="submit" class="px-4 py-2 text-white bg-indigo-600 rounded-lg">บันทึก</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase SDK & Application Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Setup
+        const firebaseConfig = {
+            apiKey: "AIzaSyB7C5tVPmMVB_Td1OlbTj1Waab4IFQ6bYQ",
+            authDomain: "shool-9671a.firebaseapp.com",
+            projectId: "shool-9671a",
+            storageBucket: "shool-9671a.firebasestorage.app",
+            messagingSenderId: "903453845773",
+            appId: "1:903453845773:web:ce154da91515181cd1a844",
+            measurementId: "G-0JSRQE5FZQ"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        // Standard Firestore Paths 
+        const getPrivatePath = (userId) => `users/${userId}/school_data`;
+        const getPublicPath = () => `public_users_directory`;
+
+        // Local State
+        let currentUser = null;
+        let isAdmin = false;
+        let state = { courses: [], students: [], scores: [], coursePlans: {} };
+
+        // DOM Initialization
+        const scoreWeekSelect = document.getElementById('score-week');
+        const planWeekSelect = document.getElementById('plan-week');
+        for(let i=1; i<=20; i++) {
+            if(scoreWeekSelect) scoreWeekSelect.innerHTML += `<option value="${i}">สัปดาห์ที่ ${i}</option>`;
+            if(planWeekSelect) planWeekSelect.innerHTML += `<option value="${i}">สัปดาห์ที่ ${i}</option>`;
+        }
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').textContent = message;
+            document.getElementById('toast-icon').className = isError ? 'fas fa-exclamation-circle' : 'fas fa-check-circle';
+            toast.className = `fixed top-5 right-5 text-white px-6 py-3 rounded-lg shadow-lg transform transition-transform duration-300 z-50 flex items-center gap-2 ${isError ? 'bg-red-500' : 'bg-green-500'}`;
+            setTimeout(() => toast.classList.add('translate-x-full'), 4000);
+        }
+
+        function toggleLoader(show) {
+            document.getElementById('global-loader').style.display = show ? 'flex' : 'none';
+        }
+
+        async function saveStateToDB() {
+            if (!currentUser || currentUser.uid === 'admin-bypass') return;
+            try { 
+                await setDoc(doc(db, getPrivatePath(currentUser.uid), 'state'), state); 
+            } catch (error) { 
+                showToast("ข้อมูลไม่ถูกบันทึกลง Cloud (โปรดตรวจสอบ Firestore Rules ของคุณ)", true); 
+            }
+        }
+
+        async function loadStateFromDB() {
+            if (!currentUser || currentUser.uid === 'admin-bypass') {
+                updateAllViews();
+                return;
+            }
+            try {
+                const docSnap = await getDoc(doc(db, getPrivatePath(currentUser.uid), 'state'));
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    state.courses = data.courses || []; 
+                    state.students = data.students || []; 
+                    state.scores = data.scores || []; 
+                    state.coursePlans = data.coursePlans || {};
+                } else {
+                    state = { courses: [], students: [], scores: [], coursePlans: {} };
+                    await saveStateToDB();
+                }
+                updateAllViews();
+            } catch (error) {
+                showToast("ดึงข้อมูลไม่ได้ (โปรดตรวจสอบ Firestore Rules ของคุณ)", true);
+            }
+        }
+
+        async function addUserToDirectory(user, role = 'user', name = '') {
+            try { 
+                const displayName = name || user.displayName || 'ไม่มีชื่อ';
+                await setDoc(doc(db, getPublicPath(), user.uid), { uid: user.uid, name: displayName, email: user.email, role: role, joinedAt: new Date().toISOString() }); 
+            } catch(e) {}
+        }
+
+        // ฟังก์ชันทะลุเข้าหน้า Admin ทันที (ไม่ต้องเช็ค Firebase)
+        async function enterAdminMode() {
+            currentUser = { uid: 'admin-bypass', email: 'Admin' };
+            isAdmin = true;
+            
+            document.getElementById('auth-view').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            document.getElementById('user-display-email').textContent = 'Administrator';
+            document.getElementById('nav-admin').classList.remove('hidden');
+            document.getElementById('nav-admin-mobile').classList.remove('hidden');
+            
+            toggleLoader(true);
+            await loadStateFromDB();
+            window.switchView('admin');
+            toggleLoader(false);
+        }
+
+        // สถานะโหมดของฟอร์ม (Login หรือ Register)
+        let isLoginMode = true;
+
+        window.toggleAuthMode = () => {
+            isLoginMode = !isLoginMode;
+            document.getElementById('auth-title').textContent = isLoginMode ? 'SchoolHub' : 'สมัครสมาชิกใหม่';
+            document.getElementById('auth-subtitle').textContent = isLoginMode ? 'เข้าสู่ระบบเพื่อจัดการข้อมูลนักเรียน' : 'สร้างบัญชีเพื่อเริ่มต้นใช้งานระบบ';
+            document.getElementById('btn-auth-submit').textContent = isLoginMode ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก';
+            
+            const nameContainer = document.getElementById('auth-name-container');
+            const nameInput = document.getElementById('auth-name');
+            const confirmContainer = document.getElementById('auth-confirm-pass-container');
+            const confirmInput = document.getElementById('auth-confirm-pass');
+            
+            if (isLoginMode) {
+                nameContainer.classList.add('hidden');
+                nameInput.removeAttribute('required');
+                confirmContainer.classList.add('hidden');
+                confirmInput.removeAttribute('required');
+                document.getElementById('auth-toggle-text').innerHTML = `ยังไม่มีบัญชี? <button type="button" onclick="toggleAuthMode()" class="text-indigo-600 hover:underline font-medium">สมัครสมาชิกใหม่</button>`;
+            } else {
+                nameContainer.classList.remove('hidden');
+                nameInput.setAttribute('required', 'true');
+                confirmContainer.classList.remove('hidden');
+                confirmInput.setAttribute('required', 'true');
+                document.getElementById('auth-toggle-text').innerHTML = `มีบัญชีอยู่แล้ว? <button type="button" onclick="toggleAuthMode()" class="text-indigo-600 hover:underline font-medium">เข้าสู่ระบบ</button>`;
+            }
+        };
+
+        window.handleAuthSubmit = async (e) => {
+            e.preventDefault();
+            if(isLoginMode) {
+                await window.handleLogin();
+            } else {
+                await window.handleRegister();
+            }
+        };
+
+        // ระบบล็อกอิน
+        window.handleLogin = async () => {
+            let email = document.getElementById('auth-email').value.trim();
+            const pass = document.getElementById('auth-pass').value;
+
+            if(!email || !pass) return showToast("กรุณากรอกอีเมลและรหัสผ่าน", true);
+
+            // บายพาสเข้าหน้าแอดมินโดยตรง เมื่อพิมพ์ Admin และรหัส 65030900
+            if(email.toLowerCase() === 'admin' && pass === '65030900') {
+                localStorage.setItem('schoolhub_admin_bypass', 'true');
+                enterAdminMode();
+                return;
+            }
+
+            // ถ้าไม่ใช่แอดมิน ให้ล็อกอินผ่าน Firebase ปกติ
+            toggleLoader(true);
+            try {
+                const userCred = await signInWithEmailAndPassword(auth, email, pass);
+            } catch (error) {
+                toggleLoader(false);
+                if(error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials') {
+                    showToast("ไม่พบบัญชีผู้ใช้ หรือรหัสผ่านผิด", true);
+                } else { 
+                    alert("เกิดข้อผิดพลาดในการล็อกอิน: " + error.message); 
+                }
+            }
+        };
+
+        window.handleRegister = async () => {
+            const name = document.getElementById('auth-name').value.trim();
+            const email = document.getElementById('auth-email').value.trim();
+            const pass = document.getElementById('auth-pass').value;
+            const confirmPass = document.getElementById('auth-confirm-pass').value;
+
+            if(!name) return showToast("กรุณากรอกชื่อ - นามสกุล", true);
+            if(!email || !pass) return showToast("กรุณากรอกอีเมลและรหัสผ่านเพื่อสมัคร", true);
+            if(pass !== confirmPass) return showToast("รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน", true);
+            if(email.toLowerCase() === 'admin') return showToast("ไม่สามารถใช้ชื่อนี้สมัครได้", true);
+
+            toggleLoader(true);
+            try {
+                const userCred = await createUserWithEmailAndPassword(auth, email, pass);
+                await updateProfile(userCred.user, { displayName: name });
+                await addUserToDirectory(userCred.user, 'user', name);
+                showToast("สมัครสมาชิกสำเร็จ!");
+            } catch (error) { 
+                toggleLoader(false);
+                showToast(error.message, true); 
+            }
+        };
+
+        window.handleGoogleLogin = async () => {
+            const provider = new GoogleAuthProvider();
+            toggleLoader(true);
+            try { 
+                const result = await signInWithPopup(auth, provider); 
+                await addUserToDirectory(result.user, 'user', result.user.displayName); 
+            } catch (error) { 
+                toggleLoader(false);
+                alert("เข้าสู่ระบบด้วย Google ไม่สำเร็จ: " + error.message); 
+            }
+        };
+
+        // ตรวจสอบและเด้งเข้าหน้าหลักอัตโนมัติ
+        onAuthStateChanged(auth, async (user) => {
+            // เช็คก่อนว่าเคยใช้สิทธิ์ Bypass แอดมินไว้ไหม
+            if (localStorage.getItem('schoolhub_admin_bypass') === 'true') {
+                enterAdminMode();
+                return;
+            }
+
+            if (user) {
+                try {
+                    currentUser = user;
+                    isAdmin = false;
+                    
+                    document.getElementById('auth-view').classList.add('hidden');
+                    document.getElementById('main-app').classList.remove('hidden');
+                    document.getElementById('user-display-email').textContent = user.displayName || user.email;
+                    
+                    document.getElementById('nav-admin').classList.add('hidden');
+                    document.getElementById('nav-admin-mobile').classList.add('hidden');
+
+                    toggleLoader(true);
+                    await loadStateFromDB();
+                    window.switchView('dashboard');
+                } catch (error) {
+                    alert("เกิดข้อผิดพลาดในการโหลดโปรไฟล์: " + error.message);
+                } finally {
+                    toggleLoader(false);
+                }
+            } else {
+                currentUser = null;
+                isAdmin = false;
+                document.getElementById('auth-view').classList.remove('hidden');
+                document.getElementById('main-app').classList.add('hidden');
+                toggleLoader(false);
+            }
+        });
+
+        // ออกจากระบบ
+        window.doLogout = () => {
+            localStorage.removeItem('schoolhub_admin_bypass'); // ล้างข้อมูล Bypass แอดมิน
+            if(auth.currentUser) {
+                signOut(auth);
+            } else {
+                // ถ้าเป็น Admin Bypass ให้ออกระบบแบบ Manual
+                currentUser = null;
+                isAdmin = false;
+                document.getElementById('auth-view').classList.remove('hidden');
+                document.getElementById('main-app').classList.add('hidden');
+            }
+        };
+        
+        window.switchView = (viewId) => {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`view-${viewId}`).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-indigo-800');
+                if(btn.dataset.target === viewId) btn.classList.add('bg-indigo-800');
+            });
+
+            const titles = { 'dashboard': 'แดชบอร์ด', 'courses': 'จัดการรายวิชา', 'students': 'จัดการข้อมูลนักเรียน', 'attendance': 'เช็คชื่อ', 'scores': 'บันทึกคะแนน', 'admin': 'ระบบแอดมิน' };
+            document.getElementById('page-title').textContent = titles[viewId] || '';
+
+            if(viewId === 'admin' && isAdmin) loadAdminData();
+        };
+
+        window.toggleMobileMenu = () => document.getElementById('mobile-menu').classList.toggle('hidden');
+        window.openModal = (id) => document.getElementById(id).classList.remove('hidden');
+        window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
+
+        function updateAllViews() {
+            document.getElementById('stat-students').textContent = state.students.length;
+            document.getElementById('stat-courses').textContent = state.courses.length;
+            document.getElementById('stat-tasks').textContent = state.scores.length;
+            
+            let planCount = 0;
+            Object.values(state.coursePlans).forEach(arr => planCount += arr.length);
+            document.getElementById('stat-plans').textContent = planCount;
+
+            renderCourses(); renderStudents(); populateCourseDropdowns();
+        }
+
+        window.renderCourses = () => {
+            const tbody = document.getElementById('course-list'); tbody.innerHTML = '';
+            if (state.courses.length === 0) document.getElementById('empty-course').classList.remove('hidden');
+            else {
+                document.getElementById('empty-course').classList.add('hidden');
+                state.courses.forEach(c => {
+                    tbody.innerHTML += `<tr class="border-b"><td class="p-4">${c.code}</td><td class="p-4"><button onclick="openPlanModal('${c.id}')" class="text-indigo-600 hover:underline">${c.name} <i class="fas fa-link text-xs"></i></button></td><td class="p-4 text-right"><button onclick="deleteCourse('${c.id}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`;
+                });
+            }
+        };
+
+        window.handleCourseSubmit = async (e) => {
+            state.courses.push({ id: Date.now().toString(), code: document.getElementById('course-code-input').value, name: document.getElementById('course-name-input').value });
+            e.target.reset(); window.closeModal('course-modal');
+            updateAllViews(); await saveStateToDB(); showToast('เพิ่มรายวิชาสำเร็จ');
+        };
+        window.deleteCourse = async (id) => { state.courses = state.courses.filter(c => c.id !== id); updateAllViews(); await saveStateToDB(); };
+
+        window.renderStudents = () => {
+            const tbody = document.getElementById('student-list'); tbody.innerHTML = '';
+            if (state.students.length === 0) document.getElementById('empty-student').classList.remove('hidden');
+            else {
+                document.getElementById('empty-student').classList.add('hidden');
+                state.students.forEach(s => tbody.innerHTML += `<tr class="border-b"><td class="p-4">${s.code}</td><td class="p-4">${s.name}</td><td class="p-4"><span class="bg-indigo-100 text-indigo-800 px-2 rounded-full text-xs">${s.grade}</span></td><td class="p-4 text-right"><button onclick="deleteStudent('${s.id}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`);
+            }
+        };
+
+        window.handleStudentSubmit = async (e) => {
+            state.students.push({ id: Date.now().toString(), code: document.getElementById('student-code-input').value, name: document.getElementById('student-name-input').value, grade: document.getElementById('student-grade-input').value });
+            e.target.reset(); window.closeModal('student-modal');
+            updateAllViews(); await saveStateToDB(); showToast('เพิ่มข้อมูลนักเรียนสำเร็จ');
+        };
+        window.deleteStudent = async (id) => { state.students = state.students.filter(s => s.id !== id); updateAllViews(); await saveStateToDB(); };
+
+        window.openPlanModal = (id) => {
+            const c = state.courses.find(x => x.id === id); if(!c) return;
+            document.getElementById('plan-modal-title').textContent = `แผนเก็บคะแนน: ${c.name}`;
+            document.getElementById('plan-course-id').value = id;
+            window.renderPlanList(id); window.openModal('plan-modal');
+        };
+        window.renderPlanList = (id) => {
+            const tbody = document.getElementById('plan-list'); tbody.innerHTML = '';
+            const plans = state.coursePlans[id] || [];
+            if(plans.length === 0) document.getElementById('empty-plan').classList.remove('hidden');
+            else {
+                document.getElementById('empty-plan').classList.add('hidden');
+                plans.sort((a,b) => a.week - b.week).forEach(p => tbody.innerHTML += `<tr class="border-b"><td class="p-3">สัปดาห์ที่ ${p.week}</td><td class="p-3">${p.title}</td><td class="p-3 text-center">${p.maxScore}</td><td class="p-3 text-right"><button onclick="deletePlan('${id}', '${p.id}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`);
+            }
+        };
+        window.handleAddPlan = async (e) => {
+            const id = document.getElementById('plan-course-id').value;
+            if(!state.coursePlans[id]) state.coursePlans[id] = [];
+            state.coursePlans[id].push({ id: Date.now().toString(), week: document.getElementById('plan-week').value, title: document.getElementById('plan-title').value, maxScore: document.getElementById('plan-max').value });
+            document.getElementById('plan-title').value = '';
+            window.renderPlanList(id); updateAllViews(); await saveStateToDB(); showToast('เพิ่มแผนสำเร็จ');
+        };
+        window.deletePlan = async (cId, pId) => { state.coursePlans[cId] = state.coursePlans[cId].filter(p => p.id !== pId); window.renderPlanList(cId); updateAllViews(); await saveStateToDB(); };
+
+        window.populateCourseDropdowns = () => {
+            const opts = '<option value="">-- กรุณาเลือกวิชา --</option>' + state.courses.map(c => `<option value="${c.id}">${c.code} - ${c.name}</option>`).join('');
+            ['att-course-select', 'score-course-select'].forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = opts; });
+            const d = document.getElementById('att-date'); if(d && !d.value) d.value = new Date().toISOString().split('T')[0];
+        };
+
+        window.renderAttendanceList = () => {
+            const cid = document.getElementById('att-course-select').value; const area = document.getElementById('attendance-area'); const tbody = document.getElementById('attendance-list');
+            if(!cid || state.students.length===0) return area.classList.add('hidden');
+            area.classList.remove('hidden'); tbody.innerHTML = '';
+            state.students.forEach(s => tbody.innerHTML += `<tr class="border-b"><td class="p-4">${s.code}</td><td class="p-4">${s.name}</td><td class="p-4 text-center"><label><input type="radio" name="att_${s.id}" value="present" checked> มา</label> <label class="ml-2"><input type="radio" name="att_${s.id}" value="late"> สาย</label> <label class="ml-2"><input type="radio" name="att_${s.id}" value="absent"> ขาด</label></td></tr>`);
+        };
+        window.saveAttendance = () => { showToast('บันทึกเช็คชื่อ สำเร็จ'); document.getElementById('attendance-area').classList.add('hidden'); };
+
+        window.updateMaxScores = () => {
+            const max = parseFloat(document.getElementById('score-max').value) || 0;
+            document.querySelectorAll('#score-list input[type="number"]').forEach(input => {
+                input.max = max; input.setAttribute('oninput', `if(parseFloat(this.value)>${max}) this.value=${max};`);
+                if(input.value && parseFloat(input.value)>max) input.value = max;
+            });
+        };
+        window.renderScoreList = () => {
+            const cid = document.getElementById('score-course-select').value; const area = document.getElementById('score-area'); const tbody = document.getElementById('score-list'); const max = document.getElementById('score-max').value;
+            if(!cid || state.students.length===0) return area.classList.add('hidden');
+            area.classList.remove('hidden'); tbody.innerHTML = '';
+            state.students.forEach(s => tbody.innerHTML += `<tr class="border-b"><td class="p-4">${s.code}</td><td class="p-4">${s.name}</td><td class="p-4 text-center"><input type="number" min="0" max="${max}" placeholder="0" class="w-24 border rounded p-2 text-center" oninput="if(parseFloat(this.value)>${max}) this.value=${max};"></td></tr>`);
+        };
+        window.saveScores = async () => {
+            const cId = document.getElementById('score-course-select').value, title = document.getElementById('score-title').value;
+            if(!cId || !title) return alert("กรุณาเลือกวิชาและระบุชื่องาน");
+            const records = {};
+            document.querySelectorAll('#score-list input[type="number"]').forEach((inp, idx) => records[state.students[idx].id] = inp.value ? parseFloat(inp.value) : 0);
+            state.scores.push({ id: Date.now().toString(), courseId: cId, week: document.getElementById('score-week').value, title: title, maxScore: document.getElementById('score-max').value, records: records });
+            document.getElementById('score-title').value = ''; document.querySelectorAll('#score-list input').forEach(i => i.value='');
+            updateAllViews(); await saveStateToDB(); showToast('บันทึกคะแนนเข้า Cloud แล้ว');
+        };
+
+        window.loadAdminData = async () => {
+            const tbody = document.getElementById('admin-user-list');
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4">กำลังโหลด...</td></tr>';
+            try {
+                const querySnapshot = await getDocs(collection(db, getPublicPath()));
+                tbody.innerHTML = '';
+                querySnapshot.forEach((doc) => {
+                    const u = doc.data();
+                    const roleBadge = u.role === 'admin' ? '<span class="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-bold">Admin</span>' : '<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">User</span>';
+                    tbody.innerHTML += `<tr class="border-b"><td class="p-4 text-sm font-mono text-gray-500">${u.uid}</td><td class="p-4 font-medium text-gray-800">${u.name || '-'}</td><td class="p-4 font-medium text-gray-600">${u.email}</td><td class="p-4 text-center">${roleBadge}</td></tr>`;
+                });
+                if(querySnapshot.empty) tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-gray-500">ไม่พบผู้ใช้งาน</td></tr>';
+            } catch(e) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center p-4 text-red-500">โปรดเช็คสิทธิ์การเข้าถึงฐานข้อมูล Firebase</td></tr>`;
+            }
+        };
+
+        window.downloadExcel = (data, name) => { const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Sheet1"); XLSX.writeFile(wb, name+".xlsx"); };
+        window.exportStudentsToExcel = () => { if(state.students.length===0) return; window.downloadExcel(state.students.map(s => ({"รหัสนักเรียน":s.code,"ชื่อ - นามสกุล":s.name,"ระดับชั้น":s.grade})), "นักเรียน"); };
+        window.exportAttendanceToExcel = () => { /* Logic */ };
+        window.exportScoresToExcel = () => {
+            const cId = document.getElementById('score-course-select').value;
+            if(!cId || state.students.length===0) return alert("เลือกวิชาและต้องมีนักเรียน");
+            const cName = document.getElementById('score-course-select').options[document.getElementById('score-course-select').selectedIndex].text;
+            const cScores = state.scores.filter(s => s.courseId === cId).sort((a,b)=>a.week-b.week);
+            if(cScores.length===0) return alert("ไม่มีคะแนนวิชานี้");
+            const aoa = [[`สรุปคะแนน: ${cName}`], []];
+            const headers = ["รหัส","ชื่อ","ชั้น"]; cScores.forEach(t=>headers.push(`${t.title} (สัปดาห์ ${t.week})`)); headers.push("รวม"); aoa.push(headers);
+            const maxRow = ["","","คะแนนเต็ม"]; let tMax=0; cScores.forEach(t=>{maxRow.push(Number(t.maxScore)); tMax+=Number(t.maxScore);}); maxRow.push(tMax); aoa.push(maxRow);
+            state.students.forEach(s => {
+                const r = [s.code, s.name, s.grade]; let t=0;
+                cScores.forEach(task => { const sc = task.records[s.id]?Number(task.records[s.id]):0; r.push(sc); t+=sc; });
+                r.push(t); aoa.push(r);
+            });
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "คะแนน"); XLSX.writeFile(wb, `คะแนน_${cName}.xlsx`);
+        };
+    </script>
+</body>
+</html>
