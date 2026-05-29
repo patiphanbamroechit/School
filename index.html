@@ -38,22 +38,24 @@
 
     <!-- Auth View (Login/Signup) -->
     <div id="auth-view" class="fixed inset-0 bg-gradient-to-br from-indigo-800 to-purple-800 z-[60] flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 fade-in">
-            <div class="text-center mb-8">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 fade-in relative overflow-hidden">
+            <div class="text-center mb-6">
                 <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 text-indigo-600 text-3xl mb-4">
                     <i class="fas fa-graduation-cap"></i>
                 </div>
-                <h2 id="auth-title" class="text-2xl font-bold text-gray-800">SchoolHub</h2>
+                <h2 class="text-2xl font-bold text-gray-800">SchoolHub</h2>
                 <p id="auth-subtitle" class="text-gray-500 text-sm mt-1">เข้าสู่ระบบเพื่อจัดการข้อมูลนักเรียน</p>
             </div>
 
-            <!-- ใช้ onsubmit="handleAuthSubmit(event)" เพื่อแยกโหมดเข้าสู่ระบบและสมัครสมาชิก -->
             <form id="auth-form" class="space-y-4" onsubmit="handleAuthSubmit(event)">
-                <!-- เพิ่มช่องชื่อ-นามสกุล (ซ่อนไว้ในโหมดเข้าสู่ระบบ) -->
-                <div id="auth-name-container" class="hidden">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ - นามสกุล</label>
-                    <input type="text" id="auth-name" placeholder="นาย/นางสาว..." class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <!-- ฟิลด์สำหรับสมัครสมาชิก (ซ่อนไว้ก่อน) -->
+                <div id="signup-fields" class="hidden space-y-4 fade-in">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ - นามสกุล</label>
+                        <input type="text" id="auth-name" placeholder="ชื่อ นามสกุล" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
                 </div>
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">อีเมล</label>
                     <input type="text" id="auth-email" required placeholder="email@example.com" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
@@ -62,25 +64,33 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">รหัสผ่าน</label>
                     <input type="password" id="auth-pass" required placeholder="••••••••" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
-                <!-- ช่องยืนยันรหัสผ่าน (ซ่อนไว้ในโหมดเข้าสู่ระบบ) -->
-                <div id="auth-confirm-pass-container" class="hidden">
+
+                <!-- ฟิลด์ยืนยันรหัสผ่าน (ซ่อนไว้ก่อน) -->
+                <div id="confirm-pass-field" class="hidden fade-in">
                     <label class="block text-sm font-medium text-gray-700 mb-1">ยืนยันรหัสผ่าน</label>
                     <input type="password" id="auth-confirm-pass" placeholder="••••••••" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
+
                 <div class="pt-2">
                     <button type="submit" id="btn-auth-submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-lg transition shadow-md">
                         เข้าสู่ระบบ
                     </button>
                 </div>
-                <div class="text-center mt-4">
-                    <p class="text-sm text-gray-600" id="auth-toggle-text">
-                        ยังไม่มีบัญชี? <button type="button" onclick="toggleAuthMode()" class="text-indigo-600 hover:underline font-medium">สมัครสมาชิกใหม่</button>
-                    </p>
-                </div>
-                <div class="text-center mt-4 border-t pt-4">
-                    <button type="button" onclick="handleGoogleLogin()" class="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 rounded-lg transition border border-gray-200 flex items-center justify-center gap-2 shadow-sm">
-                        <i class="fab fa-google text-red-500"></i> เข้าสู่ระบบด้วย Google
+                
+                <div id="google-login-container">
+                    <div class="text-center my-3"><p class="text-sm text-gray-500">หรือ</p></div>
+                    <button type="button" onclick="handleGoogleLogin()" class="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 rounded-lg transition border border-gray-200 flex items-center justify-center gap-2">
+                        <i class="fab fa-google text-red-500"></i> ดำเนินการต่อด้วย Google
                     </button>
+                </div>
+
+                <div class="text-center mt-6 pt-4 border-t border-gray-100">
+                    <p class="text-sm text-gray-600">
+                        <span id="auth-toggle-text">ยังไม่มีบัญชีใช่หรือไม่?</span> 
+                        <button type="button" onclick="toggleAuthMode()" id="auth-toggle-btn" class="text-indigo-600 font-semibold hover:underline">
+                            สมัครสมาชิกใหม่
+                        </button>
+                    </p>
                 </div>
             </form>
         </div>
@@ -89,7 +99,7 @@
     <!-- Main Application UI -->
     <div id="main-app" class="flex h-full hidden">
         <!-- Sidebar -->
-        <aside class="w-64 bg-indigo-700 text-white flex flex-col transition-all duration-300 z-20 hidden md:flex">
+        <aside class="w-64 bg-indigo-700 text-white flex flex-col transition-all duration-300 z-20 hidden md:flex shrink-0">
             <div class="p-5 text-2xl font-bold border-b border-indigo-600 flex items-center gap-3">
                 <i class="fas fa-graduation-cap"></i>
                 <span>School<span class="text-indigo-300">Hub</span></span>
@@ -154,10 +164,15 @@
         <!-- Main Content Area -->
         <main class="flex-1 flex flex-col h-screen overflow-hidden pt-14 md:pt-0">
             <!-- Header -->
-            <header class="bg-white shadow-sm px-8 py-4 flex justify-between items-center z-10">
+            <header class="bg-white shadow-sm px-8 py-4 flex justify-between items-center z-10 shrink-0">
                 <h2 id="page-title" class="text-2xl font-semibold text-gray-700">แดชบอร์ด</h2>
                 <div class="flex items-center gap-4">
-                    <div class="text-sm text-gray-500 hidden sm:block" id="user-display-email">กำลังโหลด...</div>
+                    <div class="text-sm font-medium text-gray-700 hidden sm:flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <span id="user-display-email">กำลังโหลด...</span>
+                    </div>
                     <button onclick="doLogout()" class="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-sm transition border border-red-100 flex items-center gap-2">
                         <i class="fas fa-sign-out-alt"></i> ออกระบบ
                     </button>
@@ -213,7 +228,7 @@
                             <i class="fas fa-cloud text-indigo-500 text-2xl"></i>
                             <h3 class="text-lg font-semibold text-gray-800">ระบบเชื่อมต่อ Cloud สมบูรณ์</h3>
                         </div>
-                        <p class="text-gray-600">ข้อมูลทั้งหมดของคุณจะถูกบันทึกและซิงค์ผ่าน Firebase ของคุณ ข้อมูลของคุณจะถูกเก็บแยกเป็นส่วนตัวและสามารถเข้าถึงได้ทุกที่เมื่อเข้าสู่ระบบด้วยบัญชีนี้</p>
+                        <p class="text-gray-600">ข้อมูลทั้งหมดของคุณจะถูกบันทึกและซิงค์ผ่านฐานข้อมูล ข้อมูลของคุณจะถูกเก็บแยกเป็นส่วนตัวและสามารถเข้าถึงได้ทุกที่เมื่อเข้าสู่ระบบด้วยบัญชีนี้</p>
                     </div>
                 </div>
 
@@ -221,7 +236,7 @@
                 <div id="view-admin" class="view-section hidden fade-in">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-xl font-semibold text-gray-700">รายชื่อสมาชิกทั้งหมด (Admin Panel)</h3>
-                        <button onclick="loadAdminData()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition shadow-sm">
+                        <button onclick="loadAdminData()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition shadow-sm flex items-center gap-2">
                             <i class="fas fa-sync-alt"></i> รีเฟรช
                         </button>
                     </div>
@@ -230,8 +245,7 @@
                             <thead>
                                 <tr class="bg-gray-50 text-gray-600 border-b">
                                     <th class="p-4 font-medium">UID</th>
-                                    <th class="p-4 font-medium">ชื่อ-นามสกุล</th>
-                                    <th class="p-4 font-medium">อีเมล</th>
+                                    <th class="p-4 font-medium">ชื่อ-นามสกุล / อีเมล</th>
                                     <th class="p-4 font-medium text-center">สิทธิ์การใช้งาน</th>
                                 </tr>
                             </thead>
@@ -276,8 +290,8 @@
                             <button onclick="exportStudentsToExcel()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm">
                                 <i class="fas fa-file-excel"></i> <span class="hidden sm:inline">ส่งออก Excel</span>
                             </button>
-                            <button onclick="openModal('student-modal')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm">
-                                <i class="fas fa-plus"></i> เพิ่มนักเรียน
+                            <button onclick="openMultiStudentModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm">
+                                <i class="fas fa-user-plus"></i> เพิ่มนักเรียน
                             </button>
                         </div>
                     </div>
@@ -318,6 +332,9 @@
                                 <input type="date" id="att-date" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none" onchange="renderAttendanceList()">
                             </div>
                         </div>
+                        <div id="att-last-saved" class="mt-4 text-sm text-green-600 font-medium hidden">
+                            <i class="fas fa-clock"></i> บันทึกข้อมูลล่าสุด: <span id="att-timestamp-text"></span>
+                        </div>
                     </div>
 
                     <div id="attendance-area" class="bg-white rounded-xl shadow-sm overflow-hidden hidden">
@@ -332,9 +349,9 @@
                             <tbody id="attendance-list"></tbody>
                         </table>
                         <div class="p-4 bg-gray-50 border-t flex justify-end gap-3">
-                            <button onclick="exportAttendanceToExcel()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition shadow-sm">
+                            <!-- <button onclick="exportAttendanceToExcel()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition shadow-sm">
                                 <i class="fas fa-file-excel"></i> ส่งออก Excel
-                            </button>
+                            </button> -->
                             <button onclick="saveAttendance()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition shadow-sm">
                                 <i class="fas fa-save"></i> บันทึกการเช็คชื่อ
                             </button>
@@ -439,18 +456,49 @@
         </div>
     </div>
 
-    <!-- Student Modal -->
-    <div id="student-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center fade-in p-4">
-        <div class="bg-white rounded-xl w-full max-w-md overflow-hidden shadow-2xl">
-            <div class="p-5 border-b flex justify-between items-center bg-gray-50">
-                <h3 class="text-lg font-semibold text-gray-800">เพิ่มนักเรียนใหม่</h3>
-                <button onclick="closeModal('student-modal')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+    <!-- Multi-Student Modal (Table Input & Paste Support) -->
+    <div id="multi-student-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center fade-in p-4">
+        <div class="bg-white rounded-xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="p-5 border-b flex justify-between items-center bg-gray-50 shrink-0">
+                <h3 class="text-lg font-semibold text-gray-800">เพิ่มนักเรียน</h3>
+                <button onclick="closeModal('multi-student-modal')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
             </div>
-            <form onsubmit="event.preventDefault(); handleStudentSubmit(event);" class="p-5 space-y-4">
-                <div><label class="block text-sm text-gray-700 mb-1">รหัสประจำตัว</label><input type="text" id="student-code-input" required class="w-full border rounded-lg p-2.5"></div>
-                <div><label class="block text-sm text-gray-700 mb-1">ชื่อ - นามสกุล</label><input type="text" id="student-name-input" required class="w-full border rounded-lg p-2.5"></div>
-                <div><label class="block text-sm text-gray-700 mb-1">ระดับชั้น</label><input type="text" id="student-grade-input" required class="w-full border rounded-lg p-2.5"></div>
-                <div class="pt-4 flex justify-end gap-2"><button type="button" onclick="closeModal('student-modal')" class="px-4 py-2 bg-gray-100 rounded-lg">ยกเลิก</button><button type="submit" class="px-4 py-2 text-white bg-indigo-600 rounded-lg">บันทึก</button></div>
+            
+            <form onsubmit="event.preventDefault(); handleMultiStudentSubmit(event);" class="flex flex-col flex-1 overflow-hidden">
+                <div class="p-5 overflow-y-auto flex-1">
+                    <div class="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-4 text-sm text-blue-800 flex gap-3 items-start">
+                        <i class="fas fa-info-circle mt-0.5"></i>
+                        <div>
+                            <p class="font-semibold mb-1">เคล็ดลับการเพิ่มข้อมูลรวดเร็ว:</p>
+                            <p>คัดลอก (Copy) ข้อมูล รหัส, ชื่อ-นามสกุล, ระดับชั้น จาก <strong>Excel</strong> หรือ <strong>Google Sheets</strong> แล้วนำมาคลิกวาง (Paste) ที่ช่อง "รหัส" ช่องแรกได้เลย ระบบจะสร้างแถวให้อัตโนมัติ</p>
+                        </div>
+                    </div>
+                    
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100 text-sm text-gray-600">
+                                <th class="p-2 font-medium w-1/4">รหัสประจำตัว</th>
+                                <th class="p-2 font-medium w-2/4">ชื่อ - นามสกุล</th>
+                                <th class="p-2 font-medium w-1/4">ระดับชั้น</th>
+                                <th class="p-2 font-medium w-10 text-center"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="multi-student-tbody">
+                            <!-- Rows generated by JS -->
+                        </tbody>
+                    </table>
+                    <div class="mt-3">
+                        <button type="button" onclick="addStudentRow()" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
+                            <i class="fas fa-plus"></i> เพิ่มแถวใหม่
+                        </button>
+                    </div>
+                </div>
+                <div class="p-4 border-t bg-gray-50 flex justify-end gap-2 shrink-0">
+                    <button type="button" onclick="closeModal('multi-student-modal')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition">ยกเลิก</button>
+                    <button type="submit" class="px-6 py-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition flex items-center gap-2">
+                        <i class="fas fa-save"></i> บันทึกข้อมูล
+                    </button>
+                </div>
             </form>
         </div>
     </div>
@@ -483,7 +531,8 @@
         // Local State
         let currentUser = null;
         let isAdmin = false;
-        let state = { courses: [], students: [], scores: [], coursePlans: {} };
+        let state = { courses: [], students: [], scores: [], coursePlans: {}, attendance: {} };
+        let isLoginMode = true; // ควบคุมโหมด เข้าสู่ระบบ/สมัครสมาชิก
 
         // DOM Initialization
         const scoreWeekSelect = document.getElementById('score-week');
@@ -493,7 +542,7 @@
             if(planWeekSelect) planWeekSelect.innerHTML += `<option value="${i}">สัปดาห์ที่ ${i}</option>`;
         }
 
-        function showToast(message, isError = false) {
+        window.showToast = (message, isError = false) => {
             const toast = document.getElementById('toast');
             document.getElementById('toast-message').textContent = message;
             document.getElementById('toast-icon').className = isError ? 'fas fa-exclamation-circle' : 'fas fa-check-circle';
@@ -527,8 +576,9 @@
                     state.students = data.students || []; 
                     state.scores = data.scores || []; 
                     state.coursePlans = data.coursePlans || {};
+                    state.attendance = data.attendance || {}; // รองรับข้อมูลการเช็คชื่อ
                 } else {
-                    state = { courses: [], students: [], scores: [], coursePlans: {} };
+                    state = { courses: [], students: [], scores: [], coursePlans: {}, attendance: {} };
                     await saveStateToDB();
                 }
                 updateAllViews();
@@ -537,16 +587,16 @@
             }
         }
 
-        async function addUserToDirectory(user, role = 'user', name = '') {
+        async function addUserToDirectory(user, name, role = 'user') {
             try { 
                 const displayName = name || user.displayName || 'ไม่มีชื่อ';
-                await setDoc(doc(db, getPublicPath(), user.uid), { uid: user.uid, name: displayName, email: user.email, role: role, joinedAt: new Date().toISOString() }); 
+                await setDoc(doc(db, getPublicPath(), user.uid), { uid: user.uid, email: user.email, name: displayName, role: role, joinedAt: new Date().toISOString() }); 
             } catch(e) {}
         }
 
         // ฟังก์ชันทะลุเข้าหน้า Admin ทันที (ไม่ต้องเช็ค Firebase)
         async function enterAdminMode() {
-            currentUser = { uid: 'admin-bypass', email: 'Admin' };
+            currentUser = { uid: 'admin-bypass', email: 'Admin', displayName: 'Administrator' };
             isAdmin = true;
             
             document.getElementById('auth-view').classList.add('hidden');
@@ -561,92 +611,75 @@
             toggleLoader(false);
         }
 
-        // สถานะโหมดของฟอร์ม (Login หรือ Register)
-        let isLoginMode = true;
-
         window.toggleAuthMode = () => {
             isLoginMode = !isLoginMode;
-            document.getElementById('auth-title').textContent = isLoginMode ? 'SchoolHub' : 'สมัครสมาชิกใหม่';
-            document.getElementById('auth-subtitle').textContent = isLoginMode ? 'เข้าสู่ระบบเพื่อจัดการข้อมูลนักเรียน' : 'สร้างบัญชีเพื่อเริ่มต้นใช้งานระบบ';
+            document.getElementById('signup-fields').classList.toggle('hidden', isLoginMode);
+            document.getElementById('confirm-pass-field').classList.toggle('hidden', isLoginMode);
+            document.getElementById('google-login-container').classList.toggle('hidden', !isLoginMode); // ซ่อน google login ตอนสมัคร
+            
             document.getElementById('btn-auth-submit').textContent = isLoginMode ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก';
+            document.getElementById('btn-auth-submit').className = isLoginMode 
+                ? 'w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-lg transition shadow-md'
+                : 'w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-lg transition shadow-md';
             
-            const nameContainer = document.getElementById('auth-name-container');
-            const nameInput = document.getElementById('auth-name');
-            const confirmContainer = document.getElementById('auth-confirm-pass-container');
-            const confirmInput = document.getElementById('auth-confirm-pass');
-            
-            if (isLoginMode) {
-                nameContainer.classList.add('hidden');
-                nameInput.removeAttribute('required');
-                confirmContainer.classList.add('hidden');
-                confirmInput.removeAttribute('required');
-                document.getElementById('auth-toggle-text').innerHTML = `ยังไม่มีบัญชี? <button type="button" onclick="toggleAuthMode()" class="text-indigo-600 hover:underline font-medium">สมัครสมาชิกใหม่</button>`;
-            } else {
-                nameContainer.classList.remove('hidden');
-                nameInput.setAttribute('required', 'true');
-                confirmContainer.classList.remove('hidden');
-                confirmInput.setAttribute('required', 'true');
-                document.getElementById('auth-toggle-text').innerHTML = `มีบัญชีอยู่แล้ว? <button type="button" onclick="toggleAuthMode()" class="text-indigo-600 hover:underline font-medium">เข้าสู่ระบบ</button>`;
-            }
+            document.getElementById('auth-subtitle').textContent = isLoginMode ? 'เข้าสู่ระบบเพื่อจัดการข้อมูลนักเรียน' : 'สร้างบัญชีใหม่เพื่อเริ่มต้นใช้งาน';
+            document.getElementById('auth-toggle-text').textContent = isLoginMode ? 'ยังไม่มีบัญชีใช่หรือไม่?' : 'มีบัญชีอยู่แล้วใช่หรือไม่?';
+            document.getElementById('auth-toggle-btn').textContent = isLoginMode ? 'สมัครสมาชิกใหม่' : 'เข้าสู่ระบบ';
+
+            // Clear fields
+            document.getElementById('auth-pass').value = '';
+            document.getElementById('auth-confirm-pass').value = '';
         };
 
         window.handleAuthSubmit = async (e) => {
             e.preventDefault();
-            if(isLoginMode) {
-                await window.handleLogin();
-            } else {
-                await window.handleRegister();
-            }
-        };
-
-        // ระบบล็อกอิน
-        window.handleLogin = async () => {
-            let email = document.getElementById('auth-email').value.trim();
-            const pass = document.getElementById('auth-pass').value;
-
-            if(!email || !pass) return showToast("กรุณากรอกอีเมลและรหัสผ่าน", true);
-
-            // บายพาสเข้าหน้าแอดมินโดยตรง เมื่อพิมพ์ Admin และรหัส 65030900
-            if(email.toLowerCase() === 'admin' && pass === '65030900') {
-                localStorage.setItem('schoolhub_admin_bypass', 'true');
-                enterAdminMode();
-                return;
-            }
-
-            // ถ้าไม่ใช่แอดมิน ให้ล็อกอินผ่าน Firebase ปกติ
-            toggleLoader(true);
-            try {
-                const userCred = await signInWithEmailAndPassword(auth, email, pass);
-            } catch (error) {
-                toggleLoader(false);
-                if(error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials') {
-                    showToast("ไม่พบบัญชีผู้ใช้ หรือรหัสผ่านผิด", true);
-                } else { 
-                    alert("เกิดข้อผิดพลาดในการล็อกอิน: " + error.message); 
-                }
-            }
-        };
-
-        window.handleRegister = async () => {
-            const name = document.getElementById('auth-name').value.trim();
             const email = document.getElementById('auth-email').value.trim();
             const pass = document.getElementById('auth-pass').value;
-            const confirmPass = document.getElementById('auth-confirm-pass').value;
 
-            if(!name) return showToast("กรุณากรอกชื่อ - นามสกุล", true);
-            if(!email || !pass) return showToast("กรุณากรอกอีเมลและรหัสผ่านเพื่อสมัคร", true);
-            if(pass !== confirmPass) return showToast("รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน", true);
-            if(email.toLowerCase() === 'admin') return showToast("ไม่สามารถใช้ชื่อนี้สมัครได้", true);
+            if(!email || !pass) return showToast("กรุณากรอกข้อมูลให้ครบถ้วน", true);
 
-            toggleLoader(true);
-            try {
-                const userCred = await createUserWithEmailAndPassword(auth, email, pass);
-                await updateProfile(userCred.user, { displayName: name });
-                await addUserToDirectory(userCred.user, 'user', name);
-                showToast("สมัครสมาชิกสำเร็จ!");
-            } catch (error) { 
-                toggleLoader(false);
-                showToast(error.message, true); 
+            if (isLoginMode) {
+                // บายพาสเข้าหน้าแอดมินโดยตรง เมื่อพิมพ์ Admin และรหัส 65030900
+                if(email.toLowerCase() === 'admin' && pass === '65030900') {
+                    localStorage.setItem('schoolhub_admin_bypass', 'true');
+                    enterAdminMode();
+                    return;
+                }
+                // ล็อกอินปกติ
+                toggleLoader(true);
+                try {
+                    await signInWithEmailAndPassword(auth, email, pass);
+                } catch (error) {
+                    toggleLoader(false);
+                    if(error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials') {
+                        showToast("ไม่พบบัญชีผู้ใช้ หรือรหัสผ่านผิด", true);
+                    } else { 
+                        showToast("เกิดข้อผิดพลาดในการล็อกอิน: " + error.message, true); 
+                    }
+                }
+            } else {
+                // สมัครสมาชิก
+                const name = document.getElementById('auth-name').value.trim();
+                const confirmPass = document.getElementById('auth-confirm-pass').value;
+
+                if(!name) return showToast("กรุณากรอก ชื่อ-นามสกุล", true);
+                if(pass !== confirmPass) return showToast("รหัสผ่านไม่ตรงกัน กรุณาตรวจสอบอีกครั้ง", true);
+                if(email.toLowerCase() === 'admin') return showToast("ไม่สามารถใช้อีเมลนี้สมัครได้", true);
+
+                toggleLoader(true);
+                try {
+                    const userCred = await createUserWithEmailAndPassword(auth, email, pass);
+                    // อัปเดตชื่อโปรไฟล์
+                    await updateProfile(userCred.user, { displayName: name });
+                    // บันทึกเข้า directory
+                    await addUserToDirectory(userCred.user, name, 'user');
+                    showToast("สมัครสมาชิกสำเร็จ! กำลังเข้าสู่ระบบ...");
+                    // Firebase จะทำการล็อกอินอัตโนมัติหลังจากสมัครเสร็จ
+                } catch (error) { 
+                    toggleLoader(false);
+                    if(error.code === 'auth/email-already-in-use') showToast("อีเมลนี้ถูกใช้งานแล้ว", true);
+                    else showToast(error.message, true); 
+                }
             }
         };
 
@@ -655,16 +688,15 @@
             toggleLoader(true);
             try { 
                 const result = await signInWithPopup(auth, provider); 
-                await addUserToDirectory(result.user, 'user', result.user.displayName); 
+                await addUserToDirectory(result.user, result.user.displayName, 'user'); 
             } catch (error) { 
                 toggleLoader(false);
-                alert("เข้าสู่ระบบด้วย Google ไม่สำเร็จ: " + error.message); 
+                showToast("เข้าสู่ระบบด้วย Google ไม่สำเร็จ", true); 
             }
         };
 
         // ตรวจสอบและเด้งเข้าหน้าหลักอัตโนมัติ
         onAuthStateChanged(auth, async (user) => {
-            // เช็คก่อนว่าเคยใช้สิทธิ์ Bypass แอดมินไว้ไหม
             if (localStorage.getItem('schoolhub_admin_bypass') === 'true') {
                 enterAdminMode();
                 return;
@@ -677,7 +709,9 @@
                     
                     document.getElementById('auth-view').classList.add('hidden');
                     document.getElementById('main-app').classList.remove('hidden');
-                    document.getElementById('user-display-email').textContent = user.displayName || user.email;
+                    
+                    const displayName = user.displayName || user.email;
+                    document.getElementById('user-display-email').textContent = displayName;
                     
                     document.getElementById('nav-admin').classList.add('hidden');
                     document.getElementById('nav-admin-mobile').classList.add('hidden');
@@ -686,7 +720,7 @@
                     await loadStateFromDB();
                     window.switchView('dashboard');
                 } catch (error) {
-                    alert("เกิดข้อผิดพลาดในการโหลดโปรไฟล์: " + error.message);
+                    showToast("เกิดข้อผิดพลาดในการโหลดโปรไฟล์", true);
                 } finally {
                     toggleLoader(false);
                 }
@@ -705,7 +739,6 @@
             if(auth.currentUser) {
                 signOut(auth);
             } else {
-                // ถ้าเป็น Admin Bypass ให้ออกระบบแบบ Manual
                 currentUser = null;
                 isAdmin = false;
                 document.getElementById('auth-view').classList.remove('hidden');
@@ -767,15 +800,92 @@
             if (state.students.length === 0) document.getElementById('empty-student').classList.remove('hidden');
             else {
                 document.getElementById('empty-student').classList.add('hidden');
-                state.students.forEach(s => tbody.innerHTML += `<tr class="border-b"><td class="p-4">${s.code}</td><td class="p-4">${s.name}</td><td class="p-4"><span class="bg-indigo-100 text-indigo-800 px-2 rounded-full text-xs">${s.grade}</span></td><td class="p-4 text-right"><button onclick="deleteStudent('${s.id}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`);
+                state.students.forEach(s => tbody.innerHTML += `<tr class="border-b hover:bg-gray-50"><td class="p-4">${s.code}</td><td class="p-4">${s.name}</td><td class="p-4"><span class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs font-medium">${s.grade}</span></td><td class="p-4 text-right"><button onclick="deleteStudent('${s.id}')" class="text-red-400 hover:text-red-600 transition"><i class="fas fa-trash"></i></button></td></tr>`);
             }
         };
 
-        window.handleStudentSubmit = async (e) => {
-            state.students.push({ id: Date.now().toString(), code: document.getElementById('student-code-input').value, name: document.getElementById('student-name-input').value, grade: document.getElementById('student-grade-input').value });
-            e.target.reset(); window.closeModal('student-modal');
-            updateAllViews(); await saveStateToDB(); showToast('เพิ่มข้อมูลนักเรียนสำเร็จ');
+        window.openMultiStudentModal = () => {
+            document.getElementById('multi-student-tbody').innerHTML = '';
+            window.addStudentRow(); // เพิ่มแถวแรกเริ่มต้น
+            window.openModal('multi-student-modal');
         };
+
+        window.addStudentRow = () => {
+            const tbody = document.getElementById('multi-student-tbody');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="p-2"><input type="text" required placeholder="รหัส" class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-1 focus:ring-indigo-500 student-code-input"></td>
+                <td class="p-2"><input type="text" required placeholder="ชื่อ - นามสกุล" class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-1 focus:ring-indigo-500 student-name-input"></td>
+                <td class="p-2"><input type="text" required placeholder="เช่น ม.4/1" class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-1 focus:ring-indigo-500 student-grade-input"></td>
+                <td class="p-2 text-center"><button type="button" onclick="this.closest('tr').remove()" class="text-red-400 hover:text-red-600"><i class="fas fa-times-circle"></i></button></td>
+            `;
+            tbody.appendChild(tr);
+        };
+
+        // ตั้งค่า Event Listener ตรวจจับการวางข้อมูล (Paste)
+        document.addEventListener('DOMContentLoaded', () => {
+            const multiStudentTbody = document.getElementById('multi-student-tbody');
+            if(multiStudentTbody) {
+                multiStudentTbody.addEventListener('paste', (e) => {
+                    const target = e.target;
+                    if (target.tagName !== 'INPUT') return;
+
+                    e.preventDefault();
+                    const pasteData = (e.clipboardData || window.clipboardData).getData('text');
+                    if (!pasteData) return;
+
+                    const rows = pasteData.split(/\r\n|\n|\r/);
+                    const allRows = Array.from(multiStudentTbody.querySelectorAll('tr'));
+                    
+                    const currentRow = target.closest('tr');
+                    const startRowIdx = allRows.indexOf(currentRow);
+                    const inputsInRow = Array.from(currentRow.querySelectorAll('input'));
+                    const startColIdx = inputsInRow.indexOf(target);
+
+                    rows.forEach((rowText, rOffset) => {
+                        if (!rowText.trim()) return;
+                        const cols = rowText.split('\t');
+
+                        let tr = multiStudentTbody.querySelectorAll('tr')[startRowIdx + rOffset];
+                        if (!tr) {
+                            window.addStudentRow();
+                            tr = multiStudentTbody.querySelectorAll('tr')[startRowIdx + rOffset];
+                        }
+
+                        const inputs = tr.querySelectorAll('input');
+                        cols.forEach((colText, cOffset) => {
+                            const targetInputIdx = startColIdx + cOffset;
+                            if (targetInputIdx < inputs.length) {
+                                inputs[targetInputIdx].value = colText.trim();
+                            }
+                        });
+                    });
+                });
+            }
+        });
+
+        window.handleMultiStudentSubmit = async (e) => {
+            const rows = document.getElementById('multi-student-tbody').querySelectorAll('tr');
+            let addedCount = 0;
+            rows.forEach(tr => {
+                const code = tr.querySelector('.student-code-input').value.trim();
+                const name = tr.querySelector('.student-name-input').value.trim();
+                const grade = tr.querySelector('.student-grade-input').value.trim();
+                
+                if(code && name) {
+                    state.students.push({ id: Date.now().toString() + Math.random().toString(36).substr(2, 5), code, name, grade: grade || '-' });
+                    addedCount++;
+                }
+            });
+            
+            window.closeModal('multi-student-modal');
+            updateAllViews();
+            if(addedCount > 0) {
+                await saveStateToDB();
+                showToast(`เพิ่มนักเรียนสำเร็จ ${addedCount} คน`);
+            }
+        };
+
         window.deleteStudent = async (id) => { state.students = state.students.filter(s => s.id !== id); updateAllViews(); await saveStateToDB(); };
 
         window.openPlanModal = (id) => {
@@ -808,13 +918,81 @@
             const d = document.getElementById('att-date'); if(d && !d.value) d.value = new Date().toISOString().split('T')[0];
         };
 
+        // ระบบเช็คชื่อ (ใหม่)
         window.renderAttendanceList = () => {
-            const cid = document.getElementById('att-course-select').value; const area = document.getElementById('attendance-area'); const tbody = document.getElementById('attendance-list');
-            if(!cid || state.students.length===0) return area.classList.add('hidden');
-            area.classList.remove('hidden'); tbody.innerHTML = '';
-            state.students.forEach(s => tbody.innerHTML += `<tr class="border-b"><td class="p-4">${s.code}</td><td class="p-4">${s.name}</td><td class="p-4 text-center"><label><input type="radio" name="att_${s.id}" value="present" checked> มา</label> <label class="ml-2"><input type="radio" name="att_${s.id}" value="late"> สาย</label> <label class="ml-2"><input type="radio" name="att_${s.id}" value="absent"> ขาด</label></td></tr>`);
+            const cid = document.getElementById('att-course-select').value; 
+            const date = document.getElementById('att-date').value;
+            const area = document.getElementById('attendance-area'); 
+            const tbody = document.getElementById('attendance-list');
+            const lastSavedBox = document.getElementById('att-last-saved');
+            
+            if(!cid || !date || state.students.length===0) {
+                area.classList.add('hidden');
+                lastSavedBox.classList.add('hidden');
+                return;
+            }
+            
+            area.classList.remove('hidden'); 
+            tbody.innerHTML = '';
+            
+            const attKey = `${cid}_${date}`;
+            const existingData = state.attendance[attKey] || { records: {} };
+
+            // แสดงเวลาบันทึกล่าสุด
+            if(existingData.timestamp) {
+                const dateObj = new Date(existingData.timestamp);
+                document.getElementById('att-timestamp-text').textContent = dateObj.toLocaleString('th-TH');
+                lastSavedBox.classList.remove('hidden');
+            } else {
+                lastSavedBox.classList.add('hidden');
+            }
+
+            state.students.forEach(s => {
+                const status = existingData.records[s.id] || 'present'; // ค่าเริ่มต้นคือมา
+                const checkPres = status === 'present' ? 'checked' : '';
+                const checkLate = status === 'late' ? 'checked' : '';
+                const checkAbs = status === 'absent' ? 'checked' : '';
+
+                tbody.innerHTML += `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="p-4">${s.code}</td>
+                        <td class="p-4 font-medium">${s.name}</td>
+                        <td class="p-4 text-center">
+                            <label class="cursor-pointer text-green-600"><input type="radio" name="att_${s.id}" value="present" ${checkPres}> มา</label> 
+                            <label class="cursor-pointer text-yellow-600 ml-4"><input type="radio" name="att_${s.id}" value="late" ${checkLate}> สาย</label> 
+                            <label class="cursor-pointer text-red-600 ml-4"><input type="radio" name="att_${s.id}" value="absent" ${checkAbs}> ขาด</label>
+                        </td>
+                    </tr>`;
+            });
         };
-        window.saveAttendance = () => { showToast('บันทึกเช็คชื่อ สำเร็จ'); document.getElementById('attendance-area').classList.add('hidden'); };
+
+        window.saveAttendance = async () => { 
+            const cid = document.getElementById('att-course-select').value; 
+            const date = document.getElementById('att-date').value;
+            if(!cid || !date) return showToast("กรุณาเลือกวิชาและวันที่", true);
+
+            const attKey = `${cid}_${date}`;
+            const records = {};
+            
+            state.students.forEach(s => {
+                const radios = document.getElementsByName(`att_${s.id}`);
+                for (let radio of radios) {
+                    if (radio.checked) {
+                        records[s.id] = radio.value;
+                        break;
+                    }
+                }
+            });
+
+            state.attendance[attKey] = {
+                timestamp: new Date().toISOString(),
+                records: records
+            };
+
+            await saveStateToDB();
+            window.renderAttendanceList(); // รีเฟรชเพื่อแสดงเวลาล่าสุด
+            showToast('บันทึกข้อมูลเช็คชื่อสำเร็จ'); 
+        };
 
         window.updateMaxScores = () => {
             const max = parseFloat(document.getElementById('score-max').value) || 0;
@@ -827,47 +1005,49 @@
             const cid = document.getElementById('score-course-select').value; const area = document.getElementById('score-area'); const tbody = document.getElementById('score-list'); const max = document.getElementById('score-max').value;
             if(!cid || state.students.length===0) return area.classList.add('hidden');
             area.classList.remove('hidden'); tbody.innerHTML = '';
-            state.students.forEach(s => tbody.innerHTML += `<tr class="border-b"><td class="p-4">${s.code}</td><td class="p-4">${s.name}</td><td class="p-4 text-center"><input type="number" min="0" max="${max}" placeholder="0" class="w-24 border rounded p-2 text-center" oninput="if(parseFloat(this.value)>${max}) this.value=${max};"></td></tr>`);
+            state.students.forEach(s => tbody.innerHTML += `<tr class="border-b hover:bg-gray-50"><td class="p-4">${s.code}</td><td class="p-4">${s.name}</td><td class="p-4 text-center"><input type="number" min="0" max="${max}" placeholder="0" class="w-24 border border-gray-300 rounded-lg p-2 text-center focus:ring-2 focus:ring-indigo-500" oninput="if(parseFloat(this.value)>${max}) this.value=${max};"></td></tr>`);
         };
         window.saveScores = async () => {
             const cId = document.getElementById('score-course-select').value, title = document.getElementById('score-title').value;
-            if(!cId || !title) return alert("กรุณาเลือกวิชาและระบุชื่องาน");
+            if(!cId || !title) return showToast("กรุณาเลือกวิชาและระบุชื่องาน", true);
             const records = {};
             document.querySelectorAll('#score-list input[type="number"]').forEach((inp, idx) => records[state.students[idx].id] = inp.value ? parseFloat(inp.value) : 0);
             state.scores.push({ id: Date.now().toString(), courseId: cId, week: document.getElementById('score-week').value, title: title, maxScore: document.getElementById('score-max').value, records: records });
             document.getElementById('score-title').value = ''; document.querySelectorAll('#score-list input').forEach(i => i.value='');
-            updateAllViews(); await saveStateToDB(); showToast('บันทึกคะแนนเข้า Cloud แล้ว');
+            updateAllViews(); await saveStateToDB(); showToast('บันทึกคะแนนเข้าระบบแล้ว');
         };
 
         window.loadAdminData = async () => {
             const tbody = document.getElementById('admin-user-list');
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4">กำลังโหลด...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center p-4">กำลังโหลด...</td></tr>';
             try {
                 const querySnapshot = await getDocs(collection(db, getPublicPath()));
                 tbody.innerHTML = '';
                 querySnapshot.forEach((doc) => {
                     const u = doc.data();
-                    const roleBadge = u.role === 'admin' ? '<span class="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-bold">Admin</span>' : '<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">User</span>';
-                    tbody.innerHTML += `<tr class="border-b"><td class="p-4 text-sm font-mono text-gray-500">${u.uid}</td><td class="p-4 font-medium text-gray-800">${u.name || '-'}</td><td class="p-4 font-medium text-gray-600">${u.email}</td><td class="p-4 text-center">${roleBadge}</td></tr>`;
+                    const roleBadge = u.role === 'admin' ? '<span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold shadow-sm">Admin</span>' : '<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs shadow-sm">User</span>';
+                    tbody.innerHTML += `<tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs font-mono text-gray-500">${u.uid}</td><td class="p-4"><div class="font-medium text-gray-800">${u.name || 'ไม่มีชื่อ'}</div><div class="text-xs text-gray-500">${u.email}</div></td><td class="p-4 text-center">${roleBadge}</td></tr>`;
                 });
-                if(querySnapshot.empty) tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-gray-500">ไม่พบผู้ใช้งาน</td></tr>';
+                if(querySnapshot.empty) tbody.innerHTML = '<tr><td colspan="3" class="text-center p-4 text-gray-500">ไม่พบผู้ใช้งาน</td></tr>';
             } catch(e) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center p-4 text-red-500">โปรดเช็คสิทธิ์การเข้าถึงฐานข้อมูล Firebase</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center p-4 text-red-500">โปรดเช็คสิทธิ์การเข้าถึงฐานข้อมูล Firebase</td></tr>`;
             }
         };
 
         window.downloadExcel = (data, name) => { const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Sheet1"); XLSX.writeFile(wb, name+".xlsx"); };
         window.exportStudentsToExcel = () => { if(state.students.length===0) return; window.downloadExcel(state.students.map(s => ({"รหัสนักเรียน":s.code,"ชื่อ - นามสกุล":s.name,"ระดับชั้น":s.grade})), "นักเรียน"); };
-        window.exportAttendanceToExcel = () => { /* Logic */ };
+        
         window.exportScoresToExcel = () => {
             const cId = document.getElementById('score-course-select').value;
-            if(!cId || state.students.length===0) return alert("เลือกวิชาและต้องมีนักเรียน");
+            if(!cId || state.students.length===0) return showToast("เลือกวิชาและต้องมีนักเรียน", true);
             const cName = document.getElementById('score-course-select').options[document.getElementById('score-course-select').selectedIndex].text;
             const cScores = state.scores.filter(s => s.courseId === cId).sort((a,b)=>a.week-b.week);
-            if(cScores.length===0) return alert("ไม่มีคะแนนวิชานี้");
+            if(cScores.length===0) return showToast("ไม่มีคะแนนวิชานี้", true);
+            
             const aoa = [[`สรุปคะแนน: ${cName}`], []];
             const headers = ["รหัส","ชื่อ","ชั้น"]; cScores.forEach(t=>headers.push(`${t.title} (สัปดาห์ ${t.week})`)); headers.push("รวม"); aoa.push(headers);
             const maxRow = ["","","คะแนนเต็ม"]; let tMax=0; cScores.forEach(t=>{maxRow.push(Number(t.maxScore)); tMax+=Number(t.maxScore);}); maxRow.push(tMax); aoa.push(maxRow);
+            
             state.students.forEach(s => {
                 const r = [s.code, s.name, s.grade]; let t=0;
                 cScores.forEach(task => { const sc = task.records[s.id]?Number(task.records[s.id]):0; r.push(sc); t+=sc; });
