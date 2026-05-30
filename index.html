@@ -176,6 +176,9 @@
                     <button onclick="openPlanModalForCurrentCourse()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-slate-600 hover:bg-slate-50 mt-2 border border-slate-200 border-dashed">
                         <i class="fas fa-cog w-5 text-center"></i> จัดการแผนเก็บคะแนน
                     </button>
+                    <button onclick="openGradeCriteriaModalForCurrentCourse()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-slate-600 hover:bg-slate-50 mt-2 border border-slate-200 border-dashed">
+                        <i class="fas fa-medal w-5 text-center"></i> ตั้งค่าเกณฑ์เกรด
+                    </button>
                 </div>
 
                 <button id="nav-admin" onclick="switchView('admin')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-rose-600 hover:bg-rose-50 hidden mt-8 bg-rose-50/50" data-target="admin">
@@ -321,9 +324,14 @@
                         <div class="table-container bg-white">
                             <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                                 <h3 class="text-lg font-bold text-slate-800"><i class="fas fa-chart-line text-primary mr-2"></i> สรุปภาพรวมรายวิชา</h3>
-                                <button onclick="exportScoresToExcel()" class="bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition border border-emerald-200">
-                                    <i class="fas fa-download"></i> โหลดตารางนี้ (Excel)
-                                </button>
+                                <div class="flex gap-2">
+                                    <button onclick="openGradeCriteriaModalForCurrentCourse()" class="bg-indigo-50 text-primary hover:bg-indigo-100 px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition border border-indigo-200">
+                                        <i class="fas fa-medal"></i> ตั้งค่าเกณฑ์เกรด
+                                    </button>
+                                    <button onclick="exportScoresToExcel()" class="bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition border border-emerald-200">
+                                        <i class="fas fa-download"></i> โหลดตารางนี้ (Excel)
+                                    </button>
+                                </div>
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left border-collapse text-sm whitespace-nowrap" id="course-summary-table">
@@ -384,7 +392,10 @@
                                             <tbody id="attendance-list"></tbody>
                                         </table>
                                     </div>
-                                    <div class="p-5 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 mt-auto">
+                                    <div class="p-5 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-3 mt-auto">
+                                        <button onclick="deleteAttendance()" id="btn-delete-attendance" class="bg-rose-100 hover:bg-rose-200 text-rose-600 px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition shadow-sm w-full sm:w-auto justify-center hidden">
+                                            <i class="fas fa-trash-alt text-lg"></i> ลบข้อมูลวันนี้
+                                        </button>
                                         <button onclick="saveAttendance()" class="bg-primary hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-indigo-200 w-full sm:w-auto justify-center">
                                             <i class="fas fa-save text-lg"></i> บันทึกข้อมูล
                                         </button>
@@ -594,6 +605,30 @@
         </div>
     </div>
 
+    <!-- Grade Criteria Modal -->
+    <div id="grade-criteria-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center fade-in p-4">
+        <div class="bg-white rounded-[2rem] w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="p-6 border-b flex justify-between items-center bg-slate-50">
+                <h3 class="text-xl font-bold text-slate-800"><i class="fas fa-medal text-amber-500 mr-2"></i> ตั้งค่าเกณฑ์เกรด</h3>
+                <button onclick="closeModal('grade-criteria-modal')" class="w-8 h-8 flex items-center justify-center bg-white border text-slate-500 rounded-full hover:bg-slate-100"><i class="fas fa-times"></i></button>
+            </div>
+            <form onsubmit="event.preventDefault(); handleGradeCriteriaSubmit();" class="p-6 space-y-4">
+                <p class="text-sm text-slate-500 mb-4">กำหนดคะแนนขั้นต่ำสำหรับแต่ละเกรด</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 4</label><input type="number" id="grade-crit-4" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
+                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 3.5</label><input type="number" id="grade-crit-35" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
+                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 3</label><input type="number" id="grade-crit-3" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
+                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 2.5</label><input type="number" id="grade-crit-25" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
+                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 2</label><input type="number" id="grade-crit-2" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
+                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 1.5</label><input type="number" id="grade-crit-15" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
+                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 1</label><input type="number" id="grade-crit-1" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" required></div>
+                    <div class="flex items-center gap-2"><label class="w-12 font-bold text-slate-700 text-right">เกรด 0</label><input type="number" id="grade-crit-0" class="w-full border rounded-xl p-2 bg-slate-50 text-center font-bold text-slate-400" value="0" disabled></div>
+                </div>
+                <div class="pt-4 flex gap-3"><button type="button" onclick="closeModal('grade-criteria-modal')" class="w-1/2 py-3 bg-slate-100 rounded-xl font-bold text-slate-600">ยกเลิก</button><button type="submit" class="w-1/2 py-3 text-white bg-primary rounded-xl font-bold shadow-lg shadow-indigo-200">บันทึก</button></div>
+            </form>
+        </div>
+    </div>
+
     <!-- Core Logic via JS Module -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -621,7 +656,7 @@
         let currentUser = null;
         let isAdmin = false;
         // Data Structure remains IDENTICAL
-        let state = { courses: [], students: [], scores: [], attendance: {}, coursePlans: {} };
+        let state = { courses: [], students: [], scores: [], attendance: {}, coursePlans: {}, courseGrades: {} };
         window.isSocialAuthenticating = false; 
         
         let currentActiveCourseId = null; // New logic for contextual nav
@@ -720,8 +755,9 @@
                     const data = docSnap.data();
                     state.courses = data.courses || []; state.students = data.students || [];
                     state.scores = data.scores || []; state.attendance = data.attendance || {}; state.coursePlans = data.coursePlans || {};
+                    state.courseGrades = data.courseGrades || {};
                 } else {
-                    state = { courses: [], students: [], scores: [], attendance: {}, coursePlans: {} };
+                    state = { courses: [], students: [], scores: [], attendance: {}, coursePlans: {}, courseGrades: {} };
                     await saveStateToDB();
                 }
                 updateGlobalViews();
@@ -1072,6 +1108,68 @@
             if(added > 0) { await saveStateToDB(); showCustomAlert("สำเร็จ", `นำเข้านักเรียน ${added} รายการสำเร็จ`); }
         };
 
+        // Grade Criteria Logic
+        const defaultGradeCriteria = { 4: 80, 3.5: 75, 3: 70, 2.5: 65, 2: 60, 1.5: 55, 1: 50 };
+
+        window.openGradeCriteriaModalForCurrentCourse = () => {
+            if(!currentActiveCourseId) return;
+            const cid = currentActiveCourseId;
+            if(!state.courseGrades) state.courseGrades = {};
+            const criteria = state.courseGrades[cid] || defaultGradeCriteria;
+            
+            document.getElementById('grade-crit-4').value = criteria['4'];
+            document.getElementById('grade-crit-35').value = criteria['3.5'];
+            document.getElementById('grade-crit-3').value = criteria['3'];
+            document.getElementById('grade-crit-25').value = criteria['2.5'];
+            document.getElementById('grade-crit-2').value = criteria['2'];
+            document.getElementById('grade-crit-15').value = criteria['1.5'];
+            document.getElementById('grade-crit-1').value = criteria['1'];
+
+            window.openModal('grade-criteria-modal');
+        };
+
+        window.handleGradeCriteriaSubmit = async () => {
+            if(!currentActiveCourseId) return;
+            const cid = currentActiveCourseId;
+            if(!state.courseGrades) state.courseGrades = {};
+
+            const newCriteria = {
+                4: Number(document.getElementById('grade-crit-4').value),
+                3.5: Number(document.getElementById('grade-crit-35').value),
+                3: Number(document.getElementById('grade-crit-3').value),
+                2.5: Number(document.getElementById('grade-crit-25').value),
+                2: Number(document.getElementById('grade-crit-2').value),
+                1.5: Number(document.getElementById('grade-crit-15').value),
+                1: Number(document.getElementById('grade-crit-1').value),
+            };
+
+            // Basic Validation (ensure descending order)
+            if (newCriteria['4'] <= newCriteria['3.5'] || newCriteria['3.5'] <= newCriteria['3'] || newCriteria['3'] <= newCriteria['2.5'] || newCriteria['2.5'] <= newCriteria['2'] || newCriteria['2'] <= newCriteria['1.5'] || newCriteria['1.5'] <= newCriteria['1']) {
+                showCustomAlert("ข้อมูลไม่ถูกต้อง", "กรุณากำหนดคะแนนให้ลดหลั่นกันตามลำดับเกรด", true);
+                return;
+            }
+
+            state.courseGrades[cid] = newCriteria;
+            window.closeModal('grade-criteria-modal');
+            await saveStateToDB();
+            showCustomAlert('สำเร็จ', 'บันทึกเกณฑ์คะแนนเรียบร้อยแล้ว');
+            
+            if (!document.getElementById('course-tab-overview').classList.contains('hidden')) {
+                renderCourseOverview();
+            }
+        };
+
+        function calculateGrade(score, criteria) {
+            if (score >= criteria['4']) return '4';
+            if (score >= criteria['3.5']) return '3.5';
+            if (score >= criteria['3']) return '3';
+            if (score >= criteria['2.5']) return '2.5';
+            if (score >= criteria['2']) return '2';
+            if (score >= criteria['1.5']) return '1.5';
+            if (score >= criteria['1']) return '1';
+            return '0';
+        }
+
         window.editStudent = (id) => {
             const s = state.students.find(x => x.id === id); if(!s) return;
             editingStudentId = id;
@@ -1105,6 +1203,7 @@
             const attDates = Object.keys(history);
             const plans = (state.coursePlans[cid] || []).sort((a,b) => a.week - b.week);
             const courseScores = state.scores.filter(s => s.courseId === cid);
+            const gradeCriteria = (state.courseGrades && state.courseGrades[cid]) ? state.courseGrades[cid] : defaultGradeCriteria;
 
             // Build Header
             let thead = `<thead><tr><th class="sticky left-0 bg-slate-50 z-10 w-24 border-r">รหัส</th><th class="sticky left-24 bg-slate-50 z-10 border-r min-w-[200px]">ชื่อ - นามสกุล</th>`;
@@ -1114,7 +1213,8 @@
                 thead += `<th class="text-center bg-indigo-50 text-indigo-700 min-w-[100px] whitespace-nowrap" title="สัปดาห์ ${p.week}">${p.title}<br><span class="text-[10px] text-slate-500">เต็ม ${p.maxScore}</span></th>`; 
                 totalMax += Number(p.maxScore); 
             });
-            thead += `<th class="text-center bg-slate-800 text-white font-bold whitespace-nowrap">รวมคะแนน<br><span class="text-[10px] text-slate-300">เต็ม ${totalMax}</span></th></tr></thead>`;
+            thead += `<th class="text-center bg-slate-800 text-white font-bold whitespace-nowrap">รวมคะแนน<br><span class="text-[10px] text-slate-300">เต็ม ${totalMax}</span></th>`;
+            thead += `<th class="text-center bg-amber-50 text-amber-700 font-bold whitespace-nowrap">เกรดที่ได้</th></tr></thead>`;
             table.innerHTML = thead;
 
             let tbody = '<tbody>';
@@ -1136,7 +1236,19 @@
                     if(score !== '-') totalScore += score;
                     tbody += `<td class="text-center font-mono ${score==='-'?'text-slate-300':'text-slate-700 font-bold'}">${score}</td>`;
                 });
-                tbody += `<td class="text-center font-bold text-primary bg-slate-50 text-lg">${totalScore}</td></tr>`;
+                tbody += `<td class="text-center font-bold text-primary bg-slate-50 text-lg border-r">${totalScore}</td>`;
+                
+                // Calculate and display grade
+                let gradeDisplay = '-';
+                let gradeColor = 'text-slate-400';
+                if (totalMax > 0) { // Only calculate grade if there are plans
+                     gradeDisplay = calculateGrade(totalScore, gradeCriteria);
+                     if(gradeDisplay === '4' || gradeDisplay === '3.5') gradeColor = 'text-emerald-500';
+                     else if (gradeDisplay === '3' || gradeDisplay === '2.5') gradeColor = 'text-blue-500';
+                     else if (gradeDisplay === '2' || gradeDisplay === '1.5') gradeColor = 'text-amber-500';
+                     else if (gradeDisplay === '1' || gradeDisplay === '0') gradeColor = 'text-rose-500';
+                }
+                tbody += `<td class="text-center font-bold text-xl ${gradeColor} bg-amber-50/30">${gradeDisplay}</td></tr>`;
             });
             tbody += '</tbody>';
             table.innerHTML += tbody;
@@ -1233,6 +1345,14 @@
             if(!cid || !date || state.students.length===0) return; tbody.innerHTML = '';
             if(!state.attendance[cid]) state.attendance[cid] = {};
             const existing = state.attendance[cid][date] || { records: {}, updatedAt: null };
+            const hasData = !!state.attendance[cid][date];
+            
+            const delBtn = document.getElementById('btn-delete-attendance');
+            if (delBtn) {
+                if (hasData) delBtn.classList.remove('hidden');
+                else delBtn.classList.add('hidden');
+            }
+
             document.getElementById('att-last-saved').innerHTML = existing.updatedAt ? `<i class="fas fa-history text-emerald-500"></i> ล่าสุด: ${new Date(existing.updatedAt).toLocaleString('th-TH')}` : `<i class="fas fa-asterisk text-amber-500"></i> ยังไม่ได้บันทึก`;
             state.students.forEach(s => {
                 const st = existing.records[s.id] || 'present';
@@ -1254,6 +1374,19 @@
             const records = {}; state.students.forEach(s => { const checked = document.querySelector(`input[name="att_${s.id}"]:checked`); if(checked) records[s.id] = checked.value; });
             if(!state.attendance[cid]) state.attendance[cid] = {}; state.attendance[cid][date] = { records, updatedAt: Date.now() };
             await saveStateToDB(); window.initCalendar(); showCustomAlert('สำเร็จ', 'บันทึกเช็คชื่อเรียบร้อย');
+        };
+        
+        window.deleteAttendance = () => {
+            const cid = currentActiveCourseId; const date = document.getElementById('att-date').value; if(!cid || !date) return;
+            if(!state.attendance[cid] || !state.attendance[cid][date]) return;
+            
+            window.showCustomConfirm("ยืนยันการลบ", "คุณต้องการลบข้อมูลการเช็คชื่อของวันที่เลือกใช่หรือไม่?\n(สถานะของทุกคนในวันนี้จะถูกรีเซ็ต)", async () => {
+                delete state.attendance[cid][date];
+                await saveStateToDB();
+                window.initCalendar();
+                window.renderAttendanceList();
+                showCustomAlert('สำเร็จ', 'ลบข้อมูลเช็คชื่อของวันนี้เรียบร้อยแล้ว');
+            });
         };
 
         // Score Logic
@@ -1321,18 +1454,27 @@
             const history = state.attendance[cid] || {}; const attDates = Object.keys(history);
             const plans = (state.coursePlans[cid] || []).sort((a,b) => a.week - b.week);
             const courseScores = state.scores.filter(s => s.courseId === cid);
+            const gradeCriteria = (state.courseGrades && state.courseGrades[cid]) ? state.courseGrades[cid] : defaultGradeCriteria;
             
             const aoa = [[`สรุปภาพรวมวิชา: ${cName}`], []];
             const headerRow = ["รหัส", "ชื่อ", "ชั้น", "มา", "สาย", "ขาด"];
             let tMax = 0; plans.forEach(p => { headerRow.push(`${p.title}(เต็ม ${p.maxScore})`); tMax+=Number(p.maxScore); });
-            headerRow.push(`รวมคะแนน(เต็ม ${tMax})`); aoa.push(headerRow);
+            headerRow.push(`รวมคะแนน(เต็ม ${tMax})`);
+            headerRow.push(`เกรดที่ได้`);
+            aoa.push(headerRow);
             
             state.students.forEach(s => {
                 let pr=0, la=0, ab=0; attDates.forEach(d => { const st = history[d].records[s.id]; if(st==='present') pr++; else if(st==='late') la++; else if(st==='absent') ab++; });
                 const row = [s.code, s.name, s.grade, pr, la, ab];
                 let totalScore = 0;
                 plans.forEach(p => { const task = courseScores.find(ts => ts.week === p.week && ts.title === p.title); const sc = (task && task.records[s.id] !== undefined) ? Number(task.records[s.id]) : 0; totalScore += sc; row.push(sc); });
-                row.push(totalScore); aoa.push(row);
+                row.push(totalScore);
+                
+                let gradeDisplay = '-';
+                if(tMax > 0) gradeDisplay = calculateGrade(totalScore, gradeCriteria);
+                row.push(gradeDisplay);
+                
+                aoa.push(row);
             });
             window.downloadExcelMultiSheet({ "สรุปภาพรวม": aoa }, `ภาพรวม_${cName}`);
         };
