@@ -681,6 +681,19 @@
             }
         }
 
+
+        /* Landing page + announcements */
+        .landing-bg { background: radial-gradient(circle at top left, rgba(79,70,229,.18), transparent 32%), radial-gradient(circle at bottom right, rgba(14,165,233,.16), transparent 30%), linear-gradient(135deg, #f8fafc 0%, #eef2ff 48%, #ffffff 100%); }
+        .landing-card { background: rgba(255,255,255,.82); backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,.7); }
+        .announcement-topbar { position: sticky; top: 0; z-index: 120; }
+        @media (max-width: 768px) {
+            #landing-view { overflow-y: auto !important; }
+            #landing-view .landing-hero { padding-top: 5.5rem !important; }
+            #auth-view { padding: 1rem !important; overflow-y: auto !important; align-items: flex-start !important; }
+            #auth-view > div:last-child { margin-top: 4.5rem !important; margin-bottom: 1.5rem !important; padding: 1.5rem !important; border-radius: 1.5rem !important; }
+            #admin-announcement-table { min-width: 760px !important; }
+        }
+
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen overflow-hidden selection:bg-indigo-100 selection:text-indigo-900">
@@ -712,10 +725,94 @@
         <p class="text-slate-600 font-semibold tracking-wide">กำลังเชื่อมต่อข้อมูล...</p>
     </div>
 
+
+    <!-- Landing View -->
+    <div id="landing-view" class="fixed inset-0 landing-bg z-[90] flex flex-col hidden overflow-y-auto">
+        <div id="public-announcement-topbar" class="announcement-topbar hidden"></div>
+        <nav class="w-full px-4 md:px-10 py-4 flex items-center justify-between fixed top-0 left-0 z-[95] bg-white/60 backdrop-blur-xl border-b border-white/60">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl shadow-lg shadow-indigo-200"><i class="fas fa-graduation-cap"></i></div>
+                <div>
+                    <div class="text-xl md:text-2xl font-black text-slate-900 leading-tight">School<span class="text-primary">Hub</span></div>
+                    <div class="text-[11px] md:text-xs text-slate-500 font-semibold">ระบบจัดการห้องเรียนอัจฉริยะ</div>
+                </div>
+            </div>
+            <button onclick="openLoginFromLanding()" class="bg-white hover:bg-indigo-50 text-primary border border-indigo-100 px-4 md:px-6 py-2.5 rounded-2xl font-bold shadow-sm transition flex items-center gap-2">
+                <i class="fas fa-right-to-bracket"></i> <span>เข้าสู่ระบบ</span>
+            </button>
+        </nav>
+
+        <section class="landing-hero px-4 md:px-10 pt-32 pb-10 md:pt-36 md:pb-16 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+            <div class="slide-up">
+                <div class="inline-flex items-center gap-2 bg-white/80 border border-indigo-100 text-primary px-4 py-2 rounded-full text-sm font-bold shadow-sm mb-5">
+                    <i class="fas fa-bolt"></i> จัดการรายวิชา เช็คชื่อ และคะแนนในที่เดียว
+                </div>
+                <h1 class="text-4xl md:text-6xl font-black text-slate-900 leading-tight tracking-tight mb-5">ยินดีต้อนรับสู่<br><span class="text-primary">SchoolHub</span></h1>
+                <p class="text-slate-600 text-base md:text-lg leading-8 mb-8 max-w-xl">ระบบช่วยครูจัดการห้องเรียนแบบครบวงจร รองรับการบันทึกคะแนน เช็คชื่อ ดูภาพรวม ส่งออก Excel และใช้งานบนโทรศัพท์ได้สะดวก</p>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <button onclick="openLoginFromLanding()" class="bg-primary hover:bg-indigo-700 text-white px-8 py-4 rounded-2xl font-bold shadow-xl shadow-indigo-200 transition flex items-center justify-center gap-2">
+                        <i class="fas fa-play"></i> เริ่มใช้งาน
+                    </button>
+                    <button onclick="scrollToLandingAnnouncements()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-8 py-4 rounded-2xl font-bold shadow-sm transition flex items-center justify-center gap-2">
+                        <i class="fas fa-bullhorn"></i> ดูประกาศ
+                    </button>
+                </div>
+            </div>
+
+            <div class="landing-card rounded-[2rem] p-5 md:p-7 shadow-2xl shadow-indigo-100 slide-up">
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div class="bg-indigo-50 rounded-3xl p-5 border border-indigo-100"><i class="fas fa-book text-primary text-2xl mb-4"></i><h3 class="font-bold text-slate-800">จัดการวิชา</h3><p class="text-xs text-slate-500 mt-1">สร้างรายวิชาและสัปดาห์เรียน</p></div>
+                    <div class="bg-emerald-50 rounded-3xl p-5 border border-emerald-100"><i class="fas fa-user-check text-emerald-600 text-2xl mb-4"></i><h3 class="font-bold text-slate-800">เช็คชื่อ</h3><p class="text-xs text-slate-500 mt-1">บันทึกมา สาย ขาด</p></div>
+                    <div class="bg-amber-50 rounded-3xl p-5 border border-amber-100"><i class="fas fa-star text-amber-600 text-2xl mb-4"></i><h3 class="font-bold text-slate-800">คะแนน</h3><p class="text-xs text-slate-500 mt-1">บันทึกและลบได้</p></div>
+                    <div class="bg-sky-50 rounded-3xl p-5 border border-sky-100"><i class="fas fa-mobile-screen text-sky-600 text-2xl mb-4"></i><h3 class="font-bold text-slate-800">มือถือ</h3><p class="text-xs text-slate-500 mt-1">ปรับหน้าให้ใช้งานง่าย</p></div>
+                </div>
+                <div class="bg-slate-900 text-white rounded-3xl p-5 overflow-hidden relative">
+                    <div class="absolute -right-8 -top-8 w-32 h-32 bg-indigo-500/30 rounded-full blur-2xl"></div>
+                    <p class="text-sm text-slate-300 mb-2">ภาพรวมระบบ</p>
+                    <div class="flex items-end gap-2 mb-5"><span class="text-4xl font-black">พร้อมใช้งาน</span><span class="text-emerald-300 font-bold mb-1">Online</span></div>
+                    <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                        <div class="bg-white/10 rounded-2xl p-3"><div class="text-lg font-bold">20</div><div class="text-slate-300">สัปดาห์</div></div>
+                        <div class="bg-white/10 rounded-2xl p-3"><div class="text-lg font-bold">Excel</div><div class="text-slate-300">ส่งออก</div></div>
+                        <div class="bg-white/10 rounded-2xl p-3"><div class="text-lg font-bold">Cloud</div><div class="text-slate-300">บันทึก</div></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="landing-announcements-section" class="px-4 md:px-10 pb-12 max-w-7xl mx-auto w-full">
+            <div class="bg-white/80 backdrop-blur-xl rounded-[2rem] border border-white shadow-sm p-5 md:p-7">
+                <div class="flex items-center justify-between mb-5">
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-900"><i class="fas fa-bullhorn text-primary mr-2"></i>ประกาศ</h2>
+                        <p class="text-sm text-slate-500 mt-1">ข่าวสารและข้อความสำคัญก่อนเข้าใช้งานระบบ</p>
+                    </div>
+                </div>
+                <div id="landing-announcement-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                <div id="landing-announcement-empty" class="hidden text-center py-12 text-slate-400 border border-dashed rounded-3xl bg-slate-50/70">
+                    <i class="fas fa-inbox text-4xl mb-3 text-slate-300"></i>
+                    <p class="font-semibold">ยังไม่มีประกาศในขณะนี้</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Public Announcement Popup -->
+    <div id="public-announcement-popup" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[140] hidden flex items-center justify-center p-4 fade-in">
+        <div class="bg-white rounded-[2rem] w-full max-w-lg p-7 shadow-2xl relative">
+            <button onclick="closePublicAnnouncementPopup()" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500"><i class="fas fa-times"></i></button>
+            <div class="w-16 h-16 rounded-3xl bg-indigo-50 text-primary flex items-center justify-center text-3xl mb-4"><i class="fas fa-bullhorn"></i></div>
+            <h3 id="public-popup-title" class="text-2xl font-black text-slate-900 mb-3">ประกาศ</h3>
+            <p id="public-popup-message" class="text-slate-600 leading-8 whitespace-pre-line"></p>
+            <img id="public-popup-image" src="" alt="ประกาศ" class="hidden mt-4 w-full max-h-72 object-cover rounded-3xl border border-slate-100">
+            <button onclick="closePublicAnnouncementPopup()" class="mt-6 w-full bg-primary hover:bg-indigo-700 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-indigo-200">รับทราบ</button>
+        </div>
+    </div>
+
     <!-- Auth View -->
-    <div id="auth-view" class="fixed inset-0 bg-[url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2071&auto=format&fit=crop')] bg-cover bg-center z-[100] flex items-center justify-center hidden">
-        <div class="absolute inset-0 bg-dark/70 backdrop-blur-sm"></div>
+    <div id="auth-view" class="fixed inset-0 landing-bg z-[100] flex items-center justify-center hidden p-4">
+        <div class="absolute inset-0 bg-white/30 backdrop-blur-sm"></div>
         <div class="bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-2xl w-full max-w-md p-10 fade-in my-8 relative z-10 border border-white/20">
+            <button onclick="backToLanding()" class="absolute top-5 left-5 text-slate-400 hover:text-primary transition"><i class="fas fa-arrow-left"></i> <span class="text-sm font-semibold">หน้าแรก</span></button>
             <div class="text-center mb-8">
                 <div class="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-indigo-50 text-primary text-4xl mb-4 shadow-inner">
                     <i class="fas fa-graduation-cap"></i>
@@ -789,11 +886,11 @@
             </div>
 
             <nav class="flex-1 p-4 space-y-1 overflow-y-auto font-medium">
-                <p class="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 mt-2">เมนูหลัก</p>
-                <button onclick="goToHome()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all bg-indigo-50 text-primary" data-target="dashboard">
+                <p id="nav-main-label" class="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 mt-2">เมนูหลัก</p>
+                <button id="nav-dashboard" onclick="goToHome()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all bg-indigo-50 text-primary" data-target="dashboard">
                     <i class="fas fa-border-all w-5 text-center"></i> ห้องเรียนของฉัน
                 </button>
-                <button onclick="openStudentsManager()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all" data-target="students-master">
+                <button id="nav-students" onclick="openStudentsManager()" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all" data-target="students-master">
                     <i class="fas fa-users w-5 text-center"></i> ฐานข้อมูลนักเรียน
                 </button>
                 
@@ -816,9 +913,15 @@
                     </button>
                 </div>
 
-                <button id="nav-admin" onclick="switchView('admin')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-rose-600 hover:bg-rose-50 hidden mt-8 bg-rose-50/50" data-target="admin">
-                    <i class="fas fa-shield-alt w-5 text-center"></i> ระบบแอดมิน
-                </button>
+                <div id="admin-menu-group" class="hidden mt-8">
+                    <p class="px-4 text-xs font-bold text-rose-400 uppercase tracking-wider mb-2 border-t pt-6">ระบบแอดมิน</p>
+                    <button id="nav-admin-permissions" onclick="switchView('admin-permissions')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-rose-600 hover:bg-rose-50 bg-rose-50/50" data-target="admin-permissions">
+                        <i class="fas fa-user-shield w-5 text-center"></i> จัดการสิทธิ์
+                    </button>
+                    <button id="nav-admin-announcements" onclick="switchView('admin-announcements')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-indigo-600 hover:bg-indigo-50 mt-2" data-target="admin-announcements">
+                        <i class="fas fa-bullhorn w-5 text-center"></i> ประกาศ
+                    </button>
+                </div>
             </nav>
             
             <div class="p-4 border-t border-slate-100">
@@ -841,8 +944,13 @@
                     <button onclick="toggleMobileMenu()" class="p-2 bg-white rounded-lg border shadow-sm"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="p-4 overflow-y-auto flex-1 space-y-2">
-                    <button onclick="goToHome(); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left bg-indigo-50 text-primary font-medium"><i class="fas fa-border-all"></i> ห้องเรียนของฉัน</button>
-                    <button onclick="openStudentsManager(); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-slate-700 hover:bg-slate-50 font-medium"><i class="fas fa-users"></i> ฐานข้อมูลนักเรียน</button>
+                    <button id="mobile-nav-dashboard" onclick="goToHome(); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left bg-indigo-50 text-primary font-medium"><i class="fas fa-border-all"></i> ห้องเรียนของฉัน</button>
+                    <button id="mobile-nav-students" onclick="openStudentsManager(); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-slate-700 hover:bg-slate-50 font-medium"><i class="fas fa-users"></i> ฐานข้อมูลนักเรียน</button>
+                    <div id="mobile-admin-menu-group" class="hidden space-y-2 mt-4">
+                        <p class="px-4 text-xs font-bold text-rose-400 uppercase tracking-wider">ระบบแอดมิน</p>
+                        <button onclick="switchView('admin-permissions'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-rose-600 bg-rose-50 font-medium"><i class="fas fa-user-shield"></i> จัดการสิทธิ์</button>
+                        <button onclick="switchView('admin-announcements'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-indigo-600 bg-indigo-50 font-medium"><i class="fas fa-bullhorn"></i> ประกาศ</button>
+                    </div>
                     <button onclick="doLogout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-rose-600 font-medium mt-8 bg-rose-50"><i class="fas fa-sign-out-alt"></i> ออกจากระบบ</button>
                 </div>
             </div>
@@ -1099,8 +1207,8 @@
                     </div>
                 </div>
 
-                <!-- Admin View -->
-                <div id="view-admin" class="view-section hidden fade-in">
+                <!-- Admin View: Permissions -->
+                <div id="view-admin-permissions" class="view-section hidden fade-in">
                     <div class="table-container bg-white">
                         <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-rose-50/30">
                             <h3 class="text-lg font-bold text-slate-800">จัดการสิทธิ์ระบบ</h3>
@@ -1116,6 +1224,63 @@
                     </div>
                 </div>
 
+                <!-- Admin View: Announcements -->
+                <div id="view-admin-announcements" class="view-section hidden fade-in">
+                    <div class="table-container bg-white">
+                        <div class="p-6 border-b border-slate-100 bg-indigo-50/40">
+                            <h3 class="text-lg font-bold text-slate-800"><i class="fas fa-bullhorn text-primary mr-2"></i>ประกาศ</h3>
+                            <p class="text-sm text-slate-500 mt-1">เพิ่มประกาศ เลือกรูปแบบ ใส่ลิงก์รูป ตั้งวันเวลาแสดง และกำหนดเวลาสลับเมื่อมีประกาศหลายอันแสดงพร้อมกัน</p>
+                        </div>
+                        <div class="p-6 border-b border-slate-100">
+                            <form onsubmit="event.preventDefault(); saveAdminAnnouncementForm();" class="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+                                <input type="hidden" id="announcement-edit-id">
+                                <div class="md:col-span-2">
+                                    <label class="block text-xs font-bold text-slate-500 mb-1">หัวข้อ</label>
+                                    <input id="announcement-title" type="text" required class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="เช่น แจ้งปรับปรุงระบบ">
+                                </div>
+                                <div class="md:col-span-4">
+                                    <label class="block text-xs font-bold text-slate-500 mb-1">ข้อความ</label>
+                                    <textarea id="announcement-message" required rows="1" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="รายละเอียดประกาศ"></textarea>
+                                </div>
+                                <div class="md:col-span-3">
+                                    <label class="block text-xs font-bold text-slate-500 mb-1">ลิงก์รูปภาพ (ไม่บังคับ)</label>
+                                    <input id="announcement-image" type="url" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="https://...">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1">รูปแบบ</label>
+                                    <select id="announcement-type" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none">
+                                        <option value="topbar">แถบด้านบน</option>
+                                        <option value="popup">ป็อปอัพ</option>
+                                        <option value="both">ทั้งสองแบบ</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1">เริ่มแสดง</label>
+                                    <input id="announcement-start" type="datetime-local" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1">หยุดแสดง</label>
+                                    <input id="announcement-end" type="datetime-local" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1">เวลาสลับ (วินาที)</label>
+                                    <input id="announcement-rotation" type="number" min="2" value="6" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none">
+                                </div>
+                                <div class="md:col-span-5 flex flex-col sm:flex-row gap-3 justify-end">
+                                    <label class="flex items-center gap-2 bg-slate-50 px-4 py-3 rounded-xl border text-sm font-semibold text-slate-600"><input id="announcement-active" type="checkbox" checked class="w-4 h-4 text-primary rounded"> เปิดใช้งาน</label>
+                                    <button type="button" onclick="resetAdminAnnouncementForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-3 rounded-xl font-bold">ล้างฟอร์ม</button>
+                                    <button type="submit" class="bg-primary hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-200"><i class="fas fa-save"></i> บันทึกประกาศ</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table id="admin-announcement-table" class="w-full text-left border-collapse">
+                                <thead><tr><th>หัวข้อ</th><th>ข้อความ</th><th class="text-center">รูปแบบ</th><th class="text-center">ช่วงเวลา</th><th class="text-center">สถานะ</th><th class="text-right">จัดการ</th></tr></thead>
+                                <tbody id="admin-announcement-list"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -1287,13 +1452,19 @@
         const getUserKey = (user) => user.email || user.uid;
         const getPrivatePath = (userKey) => `users/${userKey}/school_data`;
         const getPublicPath = () => `public_users_directory`;
+        const getAnnouncementDocRef = () => doc(db, 'system_settings', 'announcements');
 
         let currentUser = null;
         let isAdmin = false;
         let state = { courses: [], students: [], scores: [], attendance: {}, coursePlans: {}, courseGrades: {} };
         window.isSocialAuthenticating = false; 
         
-        let currentActiveCourseId = null; 
+        let currentActiveCourseId = null;
+        let publicAnnouncements = [];
+        let announcementTopbarTimer = null;
+        let announcementPopupTimer = null;
+        let announcementTopbarIndex = 0;
+        let announcementPopupIndex = 0; 
         
         let editingCourseId = null;
         let editingStudentId = null;
@@ -1301,6 +1472,258 @@
 
         let calendarYear = new Date().getFullYear();
         let calendarMonth = new Date().getMonth();
+
+
+        async function loadPublicAnnouncements() {
+            try {
+                const snap = await getDoc(getAnnouncementDocRef());
+                publicAnnouncements = snap.exists() ? (snap.data().items || []) : [];
+            } catch (e) { publicAnnouncements = []; }
+            renderPublicAnnouncements();
+            if (isAdmin) renderAdminAnnouncements();
+        }
+
+        function parseAnnouncementTime(value) {
+            if (!value) return null;
+            const t = new Date(value).getTime();
+            return Number.isFinite(t) ? t : null;
+        }
+
+        function isAnnouncementInSchedule(a, now = Date.now()) {
+            const start = parseAnnouncementTime(a.startAt);
+            const end = parseAnnouncementTime(a.endAt);
+            return (!start || now >= start) && (!end || now <= end);
+        }
+
+        function getActiveAnnouncements() {
+            const now = Date.now();
+            return (publicAnnouncements || [])
+                .filter(a => a && a.active !== false && isAnnouncementInSchedule(a, now))
+                .sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        }
+
+        function announcementMatchesType(a, type) {
+            return a.type === type || a.type === 'both';
+        }
+
+        function getRotationMs(items) {
+            const first = (items || []).find(a => Number(a.rotationSeconds) > 0);
+            const sec = Math.max(2, Number(first?.rotationSeconds || 6));
+            return sec * 1000;
+        }
+
+        function escapeHTML(text) {
+            return String(text || '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+        }
+
+        function formatAdminDateTime(value) {
+            if (!value) return 'ไม่กำหนด';
+            const d = new Date(value);
+            if (Number.isNaN(d.getTime())) return 'ไม่กำหนด';
+            return d.toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' });
+        }
+
+        function imageMarkup(url, extraClass = '') {
+            if (!url) return '';
+            return `<img src="${escapeHTML(url)}" alt="ประกาศ" class="${extraClass}" onerror="this.classList.add('hidden')">`;
+        }
+
+        function renderTopbarAnnouncement(items) {
+            const topbar = document.getElementById('public-announcement-topbar');
+            if (!topbar) return;
+            const visible = (items || []).filter(a => !localStorage.getItem(`schoolhub_announcement_closed_${a.id}`));
+            if (!visible.length) {
+                topbar.classList.add('hidden');
+                topbar.innerHTML = '';
+                if (announcementTopbarTimer) clearInterval(announcementTopbarTimer);
+                announcementTopbarTimer = null;
+                return;
+            }
+            announcementTopbarIndex = announcementTopbarIndex % visible.length;
+            const top = visible[announcementTopbarIndex];
+            topbar.classList.remove('hidden');
+            topbar.innerHTML = `<div class="bg-indigo-600 text-white px-4 py-3 shadow-lg"><div class="max-w-7xl mx-auto flex items-start gap-3"><i class="fas fa-bullhorn mt-1"></i>${top.imageUrl ? `<img src="${escapeHTML(top.imageUrl)}" class="w-12 h-12 object-cover rounded-xl border border-white/20 hidden sm:block" onerror="this.classList.add('hidden')">` : ''}<div class="flex-1 min-w-0"><b>ประกาศ</b><span class="mx-2 hidden sm:inline">•</span><span class="font-bold break-words">${escapeHTML(top.title)}</span><span class="mx-2 hidden sm:inline">•</span><span class="block sm:inline break-words">${escapeHTML(top.message)}</span></div><button onclick="dismissTopAnnouncement('${top.id}')" class="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 shrink-0"><i class="fas fa-times"></i></button></div></div>`;
+            if (announcementTopbarTimer) clearInterval(announcementTopbarTimer);
+            announcementTopbarTimer = null;
+            if (visible.length >= 2) {
+                announcementTopbarTimer = setInterval(() => {
+                    announcementTopbarIndex = (announcementTopbarIndex + 1) % visible.length;
+                    renderTopbarAnnouncement(visible);
+                }, getRotationMs(visible));
+            }
+        }
+
+        window.renderPublicAnnouncements = () => {
+            const active = getActiveAnnouncements();
+            const list = document.getElementById('landing-announcement-list');
+            const empty = document.getElementById('landing-announcement-empty');
+            if (list) {
+                list.innerHTML = active.map(a => `
+                    <div class="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition overflow-hidden">
+                        ${imageMarkup(a.imageUrl, 'w-full h-36 object-cover rounded-2xl mb-4 border border-slate-100')}
+                        <div class="flex items-start gap-3">
+                            <div class="w-11 h-11 rounded-2xl ${announcementMatchesType(a, 'popup') ? 'bg-amber-50 text-amber-600' : 'bg-indigo-50 text-primary'} flex items-center justify-center shrink-0"><i class="fas ${announcementMatchesType(a, 'popup') ? 'fa-window-restore' : 'fa-thumbtack'}"></i></div>
+                            <div class="min-w-0">
+                                <h3 class="font-black text-slate-800 mb-1 break-words">${escapeHTML(a.title)}</h3>
+                                <p class="text-sm text-slate-500 leading-6 whitespace-pre-line break-words">${escapeHTML(a.message)}</p>
+                            </div>
+                        </div>
+                    </div>`).join('');
+                if (empty) empty.classList.toggle('hidden', active.length > 0);
+            }
+
+            renderTopbarAnnouncement(active.filter(a => announcementMatchesType(a, 'topbar')));
+            showFirstVisitPopupAnnouncement();
+        };
+
+        window.dismissTopAnnouncement = (id) => {
+            localStorage.setItem(`schoolhub_announcement_closed_${id}`, 'true');
+            renderPublicAnnouncements();
+        };
+
+        function renderPopupAnnouncement(popup) {
+            const modal = document.getElementById('public-announcement-popup');
+            if (!modal || currentUser || !popup) return;
+            document.getElementById('public-popup-title').textContent = 'ประกาศ';
+            document.getElementById('public-popup-message').textContent = `${popup.title ? popup.title + '\n' : ''}${popup.message || ''}`;
+            const img = document.getElementById('public-popup-image');
+            if (img) {
+                if (popup.imageUrl) { img.src = popup.imageUrl; img.classList.remove('hidden'); }
+                else { img.src = ''; img.classList.add('hidden'); }
+            }
+            modal.dataset.announcementId = popup.id;
+            modal.classList.remove('hidden');
+        }
+
+        function showFirstVisitPopupAnnouncement() {
+            const popups = getActiveAnnouncements().filter(a => announcementMatchesType(a, 'popup') && !localStorage.getItem(`schoolhub_announcement_seen_${a.id}`));
+            if (!popups.length) return;
+            if (announcementPopupTimer) clearInterval(announcementPopupTimer);
+            announcementPopupTimer = null;
+            announcementPopupIndex = announcementPopupIndex % popups.length;
+            renderPopupAnnouncement(popups[announcementPopupIndex]);
+            if (popups.length >= 2) {
+                announcementPopupTimer = setInterval(() => {
+                    announcementPopupIndex = (announcementPopupIndex + 1) % popups.length;
+                    renderPopupAnnouncement(popups[announcementPopupIndex]);
+                }, getRotationMs(popups));
+            }
+        }
+
+        window.closePublicAnnouncementPopup = () => {
+            const modal = document.getElementById('public-announcement-popup');
+            if (announcementPopupTimer) clearInterval(announcementPopupTimer);
+            announcementPopupTimer = null;
+            if (modal.dataset.announcementId) localStorage.setItem(`schoolhub_announcement_seen_${modal.dataset.announcementId}`, 'true');
+            modal.classList.add('hidden');
+        };
+
+        window.openLoginFromLanding = () => {
+            document.getElementById('landing-view').classList.add('hidden');
+            document.getElementById('auth-view').classList.remove('hidden');
+            window.toggleAuthMode('login');
+        };
+
+        window.backToLanding = () => {
+            document.getElementById('auth-view').classList.add('hidden');
+            document.getElementById('landing-view').classList.remove('hidden');
+            renderPublicAnnouncements();
+        };
+
+        window.scrollToLandingAnnouncements = () => {
+            document.getElementById('landing-announcements-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
+
+        function renderAdminAnnouncements() {
+            const tbody = document.getElementById('admin-announcement-list');
+            if (!tbody) return;
+            const items = (publicAnnouncements || []).sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+            if (!items.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center p-8 text-slate-400">ยังไม่มีประกาศ</td></tr>';
+                return;
+            }
+            tbody.innerHTML = items.map(a => `
+                <tr>
+                    <td class="font-bold text-slate-700">${escapeHTML(a.title)}${a.imageUrl ? '<div class="text-xs text-indigo-500 mt-1"><i class="fas fa-image"></i> มีรูปภาพ</div>' : ''}</td>
+                    <td class="text-sm text-slate-500 max-w-md whitespace-pre-line">${escapeHTML(a.message)}</td>
+                    <td class="text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ${a.type === 'popup' ? 'bg-amber-100 text-amber-700' : (a.type === 'both' ? 'bg-purple-100 text-purple-700' : 'bg-indigo-100 text-indigo-700')}">${a.type === 'popup' ? 'ป็อปอัพ' : (a.type === 'both' ? 'ทั้งสองแบบ' : 'แถบด้านบน')}</span></td>
+                    <td class="text-center text-xs text-slate-500 whitespace-nowrap"><div>เริ่ม: ${formatAdminDateTime(a.startAt)}</div><div>หยุด: ${formatAdminDateTime(a.endAt)}</div><div>สลับ: ${Number(a.rotationSeconds || 6)} วิ</div></td>
+                    <td class="text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ${a.active !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}">${a.active !== false ? 'เปิด' : 'ปิด'}</span></td>
+                    <td class="text-right whitespace-nowrap">
+                        <button onclick="editAdminAnnouncement('${a.id}')" class="bg-amber-50 text-amber-600 border border-amber-100 px-3 py-1.5 rounded-lg text-sm font-bold"><i class="fas fa-pen"></i> แก้ไข</button>
+                        <button onclick="deleteAdminAnnouncement('${a.id}')" class="bg-rose-50 text-rose-600 border border-rose-100 px-3 py-1.5 rounded-lg text-sm font-bold ml-1"><i class="fas fa-trash"></i> ลบ</button>
+                    </td>
+                </tr>`).join('');
+        }
+
+        window.resetAdminAnnouncementForm = () => {
+            const id = document.getElementById('announcement-edit-id'); if (!id) return;
+            id.value = '';
+            document.getElementById('announcement-title').value = '';
+            document.getElementById('announcement-message').value = '';
+            document.getElementById('announcement-image').value = '';
+            document.getElementById('announcement-type').value = 'topbar';
+            document.getElementById('announcement-start').value = '';
+            document.getElementById('announcement-end').value = '';
+            document.getElementById('announcement-rotation').value = '6';
+            document.getElementById('announcement-active').checked = true;
+        };
+
+        window.editAdminAnnouncement = (id) => {
+            const a = (publicAnnouncements || []).find(x => x.id === id); if (!a) return;
+            document.getElementById('announcement-edit-id').value = a.id;
+            document.getElementById('announcement-title').value = a.title || '';
+            document.getElementById('announcement-message').value = a.message || '';
+            document.getElementById('announcement-image').value = a.imageUrl || '';
+            document.getElementById('announcement-type').value = a.type || 'topbar';
+            document.getElementById('announcement-start').value = a.startAt || '';
+            document.getElementById('announcement-end').value = a.endAt || '';
+            document.getElementById('announcement-rotation').value = Number(a.rotationSeconds || 6);
+            document.getElementById('announcement-active').checked = a.active !== false;
+            document.getElementById('announcement-title').focus();
+        };
+
+        window.saveAdminAnnouncementForm = async () => {
+            if (!isAdmin) return showCustomAlert('ไม่มีสิทธิ์', 'เฉพาะแอดมินเท่านั้น', true);
+            const editId = document.getElementById('announcement-edit-id').value;
+            const startAt = document.getElementById('announcement-start').value;
+            const endAt = document.getElementById('announcement-end').value;
+            if (startAt && endAt && new Date(startAt).getTime() > new Date(endAt).getTime()) {
+                return showCustomAlert('ช่วงเวลาไม่ถูกต้อง', 'เวลาเริ่มแสดงต้องไม่เกินเวลาหยุดแสดง', true);
+            }
+            const item = {
+                id: editId || `ann_${Date.now()}`,
+                title: document.getElementById('announcement-title').value.trim(),
+                message: document.getElementById('announcement-message').value.trim(),
+                imageUrl: document.getElementById('announcement-image').value.trim(),
+                type: document.getElementById('announcement-type').value,
+                startAt,
+                endAt,
+                rotationSeconds: Math.max(2, Number(document.getElementById('announcement-rotation').value || 6)),
+                active: document.getElementById('announcement-active').checked,
+                updatedAt: Date.now()
+            };
+            if (!item.title || !item.message) return showCustomAlert('ข้อมูลไม่ครบ', 'กรุณากรอกหัวข้อและข้อความประกาศ', true);
+            const next = (publicAnnouncements || []).filter(a => a.id !== item.id);
+            next.push(item); publicAnnouncements = next;
+            toggleLoader(true);
+            try {
+                await setDoc(getAnnouncementDocRef(), { items: publicAnnouncements, updatedAt: Date.now() }, { merge: true });
+                resetAdminAnnouncementForm(); renderAdminAnnouncements(); renderPublicAnnouncements();
+                showCustomAlert('บันทึกแล้ว', 'ประกาศถูกบันทึกเรียบร้อย');
+            } catch (e) { showCustomAlert('ผิดพลาด', 'บันทึกประกาศไม่ได้ โปรดตรวจสอบสิทธิ์ Firestore', true); }
+            toggleLoader(false);
+        };
+
+        window.deleteAdminAnnouncement = (id) => {
+            window.showCustomConfirm('ลบประกาศ', 'ต้องการลบประกาศนี้หรือไม่?', async () => {
+                publicAnnouncements = (publicAnnouncements || []).filter(a => a.id !== id);
+                toggleLoader(true);
+                try { await setDoc(getAnnouncementDocRef(), { items: publicAnnouncements, updatedAt: Date.now() }, { merge: true }); renderAdminAnnouncements(); renderPublicAnnouncements(); }
+                catch(e) { showCustomAlert('ผิดพลาด', 'ลบประกาศไม่ได้', true); }
+                toggleLoader(false);
+            });
+        };
 
         window.initStaticDropdowns = () => {
             const planWeek = document.getElementById('plan-week');
@@ -1474,6 +1897,7 @@
                 try {
                     toggleLoader(true);
                     currentUser = user; isAdmin = false;
+                    document.getElementById('landing-view').classList.add('hidden');
                     document.getElementById('auth-view').classList.add('hidden');
                     document.getElementById('main-app').classList.remove('hidden');
                     
@@ -1482,7 +1906,7 @@
                     document.getElementById('user-display-email').textContent = getUserKey(user);
                     document.getElementById('user-avatar-initial').textContent = dName.charAt(0).toUpperCase();
                     
-                    document.getElementById('nav-admin').classList.add('hidden');
+                    setAdminNavigationMode(false);
 
                     await loadStateFromDB();
                     window.goToHome(); 
@@ -1490,8 +1914,10 @@
                 finally { toggleLoader(false); }
             } else {
                 currentUser = null; isAdmin = false;
-                document.getElementById('auth-view').classList.remove('hidden');
+                document.getElementById('auth-view').classList.add('hidden');
                 document.getElementById('main-app').classList.add('hidden');
+                document.getElementById('landing-view').classList.remove('hidden');
+                await loadPublicAnnouncements();
                 toggleLoader(false);
             }
         });
@@ -1502,12 +1928,23 @@
             else { currentUser = null; isAdmin = false; window.location.reload(); }
         };
 
+        function setAdminNavigationMode(enabled) {
+            ['nav-main-label','nav-dashboard','nav-students','course-context-menu','mobile-nav-dashboard','mobile-nav-students'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.toggle('hidden', enabled);
+            });
+            ['admin-menu-group','mobile-admin-menu-group'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.toggle('hidden', !enabled);
+            });
+        }
+
         async function enterAdminMode() {
             currentUser = { uid: 'admin-bypass', email: 'Admin' }; isAdmin = true;
-            document.getElementById('auth-view').classList.add('hidden'); document.getElementById('main-app').classList.remove('hidden');
+            document.getElementById('landing-view').classList.add('hidden'); document.getElementById('auth-view').classList.add('hidden'); document.getElementById('main-app').classList.remove('hidden');
             document.getElementById('user-display-name').textContent = 'Administrator'; document.getElementById('user-display-email').textContent = 'ระบบควบคุม';
-            document.getElementById('nav-admin').classList.remove('hidden');
-            toggleLoader(true); await loadStateFromDB(); window.switchView('admin'); toggleLoader(false);
+            setAdminNavigationMode(true);
+            toggleLoader(true); await loadStateFromDB(); window.switchView('admin-permissions'); toggleLoader(false);
         }
 
         window.switchView = (viewId) => {
@@ -1519,7 +1956,8 @@
                 if(btn.dataset.target === viewId) btn.classList.add('bg-indigo-50', 'text-primary');
             });
             
-            if(viewId === 'admin' && isAdmin) loadAdminData();
+            if(viewId === 'admin-permissions' && isAdmin) { document.getElementById('page-title').textContent = 'จัดการสิทธิ์'; document.getElementById('page-subtitle').textContent = 'ควบคุมสถานะผู้ใช้งานระบบ'; loadAdminData(); }
+            if(viewId === 'admin-announcements' && isAdmin) { document.getElementById('page-title').textContent = 'ประกาศ'; document.getElementById('page-subtitle').textContent = 'จัดการประกาศหน้าแรก แถบบน และป็อปอัพ'; loadPublicAnnouncements(); renderAdminAnnouncements(); }
         };
 
         window.goToHome = () => {
