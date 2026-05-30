@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -51,6 +50,637 @@
         td { padding: 1rem; border-bottom: 1px solid #f1f5f9; color: #334155; }
         tr:last-child td { border-bottom: none; }
         tr:hover td { background-color: #f8fafc; }
+
+        /* Compact score overview: full matrix, tiny equal week cells, centered headers, no ellipsis */
+        #course-summary-table {
+            table-layout: fixed !important;
+            width: max-content !important;
+            min-width: 100% !important;
+            font-size: 10px !important;
+            border-collapse: collapse !important;
+        }
+
+        #course-summary-table th,
+        #course-summary-table td {
+            padding: 2px 2px !important;
+            line-height: 1.08 !important;
+            height: 28px !important;
+            vertical-align: middle !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            white-space: nowrap !important;
+        }
+
+        #course-summary-table th {
+            text-align: center !important;
+            vertical-align: middle !important;
+            font-size: 10px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0 !important;
+            text-transform: none !important;
+        }
+
+        #course-summary-table td {
+            font-size: 10px !important;
+        }
+
+        #course-summary-table .summary-no-col {
+            width: 32px !important;
+            min-width: 32px !important;
+            max-width: 32px !important;
+            text-align: center !important;
+        }
+
+        #course-summary-table .summary-code-col {
+            width: 92px !important;
+            min-width: 92px !important;
+            max-width: 92px !important;
+            left: 32px !important;
+            text-align: center !important;
+            font-size: 10px !important;
+            white-space: nowrap !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+        }
+
+        #course-summary-table .summary-name-col {
+            width: 170px !important;
+            min-width: 170px !important;
+            max-width: 170px !important;
+            left: 124px !important;
+            font-size: 10px !important;
+            white-space: nowrap !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+        }
+
+        #course-summary-table th.summary-name-col {
+            text-align: center !important;
+        }
+
+        #course-summary-table td.summary-name-col {
+            text-align: left !important;
+        }
+
+        #course-summary-table .summary-att-col {
+            width: 56px !important;
+            min-width: 56px !important;
+            max-width: 56px !important;
+            text-align: center !important;
+        }
+
+        #course-summary-table .summary-score-col {
+            width: 24px !important;
+            min-width: 24px !important;
+            max-width: 24px !important;
+            text-align: center !important;
+            padding-left: 1px !important;
+            padding-right: 1px !important;
+        }
+
+        #course-summary-table .summary-total-col {
+            width: 40px !important;
+            min-width: 40px !important;
+            max-width: 40px !important;
+            text-align: center !important;
+        }
+
+        #course-summary-table .summary-grade-col {
+            width: 36px !important;
+            min-width: 36px !important;
+            max-width: 36px !important;
+            text-align: center !important;
+        }
+
+        #course-summary-table .week-detail-btn {
+            width: 18px !important;
+            height: 18px !important;
+            border-radius: 0.35rem !important;
+            font-size: 8.5px !important;
+            line-height: 1 !important;
+            padding: 0 !important;
+        }
+
+
+        /* Force every overview score cell (number, dash, check, x) to keep identical height */
+        #course-summary-table .summary-score-cell-content {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 18px !important;
+            height: 18px !important;
+            line-height: 18px !important;
+            font-size: 10px !important;
+            font-weight: 700 !important;
+            vertical-align: middle !important;
+        }
+
+        #course-summary-table .summary-score-cell-content i {
+            font-size: 10px !important;
+            line-height: 18px !important;
+        }
+
+        #course-summary-table .summary-sticky-no { left: 0 !important; }
+        #course-summary-table .summary-sticky-code { left: 32px !important; }
+        #course-summary-table .summary-sticky-name { left: 124px !important; }
+
+        #course-summary-table .summary-code-col,
+        #course-summary-table .summary-name-col,
+        #course-summary-table .summary-no-col {
+            z-index: 20;
+        }
+
+        @media (max-width: 1366px) {
+            #course-summary-table {
+                font-size: 9.5px !important;
+            }
+
+            #course-summary-table th,
+            #course-summary-table td {
+                font-size: 9.5px !important;
+                height: 26px !important;
+                padding: 1px 1px !important;
+            }
+
+            #course-summary-table .summary-no-col {
+                width: 30px !important;
+                min-width: 30px !important;
+                max-width: 30px !important;
+            }
+
+            #course-summary-table .summary-code-col {
+                width: 88px !important;
+                min-width: 88px !important;
+                max-width: 88px !important;
+                left: 30px !important;
+                font-size: 9.5px !important;
+            }
+
+            #course-summary-table .summary-name-col {
+                width: 150px !important;
+                min-width: 150px !important;
+                max-width: 150px !important;
+                left: 118px !important;
+                font-size: 9.5px !important;
+            }
+
+            #course-summary-table .summary-sticky-code { left: 30px !important; }
+            #course-summary-table .summary-sticky-name { left: 118px !important; }
+
+            #course-summary-table .summary-att-col {
+                width: 52px !important;
+                min-width: 52px !important;
+                max-width: 52px !important;
+            }
+
+            #course-summary-table .summary-score-col {
+                width: 22px !important;
+                min-width: 22px !important;
+                max-width: 22px !important;
+            }
+
+            #course-summary-table .summary-total-col {
+                width: 38px !important;
+                min-width: 38px !important;
+                max-width: 38px !important;
+            }
+
+            #course-summary-table .summary-grade-col {
+                width: 34px !important;
+                min-width: 34px !important;
+                max-width: 34px !important;
+            }
+
+            #course-summary-table .week-detail-btn {
+                width: 17px !important;
+                height: 17px !important;
+                font-size: 8px !important;
+            }
+        }
+
+
+        /* =========================================================
+           Mobile responsive patch: keep every screen usable on phones
+           ========================================================= */
+        * { box-sizing: border-box; }
+        html, body { width: 100%; max-width: 100%; }
+        img, svg, canvas, video { max-width: 100%; height: auto; }
+        input, select, textarea, button { font-family: inherit; }
+        input, select, textarea { font-size: 16px; }
+
+        .overflow-x-auto {
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
+
+        .table-container {
+            max-width: 100%;
+        }
+
+        .table-container table:not(#course-summary-table) {
+            min-width: 640px;
+        }
+
+        #score-area table,
+        #attendance-area table {
+            min-width: 560px !important;
+        }
+
+        #score-area th,
+        #score-area td,
+        #attendance-area th,
+        #attendance-area td {
+            vertical-align: middle !important;
+        }
+
+        #score-list input[type="number"] {
+            min-width: 84px;
+            max-width: 110px;
+            text-align: center;
+        }
+
+        .cal-day {
+            min-width: 0;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @supports (height: 100dvh) {
+            body.h-screen,
+            #main-app,
+            main.h-screen {
+                height: 100dvh !important;
+            }
+        }
+
+        @media (max-width: 767px) {
+            body {
+                overflow: hidden !important;
+                -webkit-text-size-adjust: 100%;
+            }
+
+            #auth-view {
+                align-items: flex-start !important;
+                overflow-y: auto !important;
+                padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom)) !important;
+            }
+
+            #auth-view > div:last-child {
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 1.5rem !important;
+                border-radius: 1.5rem !important;
+            }
+
+            #main-app {
+                width: 100% !important;
+                max-width: 100vw !important;
+                overflow: hidden !important;
+            }
+
+            main {
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: 100vw !important;
+            }
+
+            main > header#main-header {
+                padding: 1rem !important;
+                gap: 0.75rem !important;
+            }
+
+            #page-title {
+                font-size: 1.35rem !important;
+                line-height: 1.25 !important;
+                word-break: break-word !important;
+            }
+
+            #page-subtitle {
+                font-size: 0.85rem !important;
+                line-height: 1.45 !important;
+            }
+
+            #header-actions {
+                width: 100% !important;
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 0.5rem !important;
+            }
+
+            #header-actions button,
+            #header-actions a {
+                flex: 1 1 auto !important;
+                min-height: 42px !important;
+                justify-content: center !important;
+                white-space: nowrap !important;
+            }
+
+            main > div.flex-1.overflow-y-auto {
+                padding: 1rem !important;
+                overflow-x: hidden !important;
+                -webkit-overflow-scrolling: touch !important;
+                padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)) !important;
+            }
+
+            .grid {
+                min-width: 0 !important;
+            }
+
+            #view-dashboard .grid,
+            #view-course-detail .grid,
+            #course-tab-attendance .grid,
+            #course-tab-scores .grid {
+                gap: 0.85rem !important;
+            }
+
+            #view-dashboard .grid.grid-cols-2 {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+
+            #course-grid {
+                grid-template-columns: 1fr !important;
+            }
+
+            .table-container {
+                border-radius: 1rem !important;
+                overflow: hidden !important;
+            }
+
+            .table-container > .overflow-x-auto,
+            .overflow-x-auto {
+                width: 100% !important;
+                overflow-x: auto !important;
+            }
+
+            th, td {
+                padding: 0.75rem !important;
+                font-size: 0.86rem !important;
+                white-space: nowrap !important;
+            }
+
+            #course-summary-table {
+                min-width: 760px !important;
+                width: max-content !important;
+                font-size: 9px !important;
+            }
+
+            #course-summary-table th,
+            #course-summary-table td {
+                height: 25px !important;
+                padding: 1px !important;
+                font-size: 9px !important;
+            }
+
+            #course-summary-table .summary-no-col {
+                width: 28px !important;
+                min-width: 28px !important;
+                max-width: 28px !important;
+            }
+
+            #course-summary-table .summary-code-col {
+                width: 82px !important;
+                min-width: 82px !important;
+                max-width: 82px !important;
+                left: 28px !important;
+            }
+
+            #course-summary-table .summary-name-col {
+                width: 130px !important;
+                min-width: 130px !important;
+                max-width: 130px !important;
+                left: 110px !important;
+            }
+
+            #course-summary-table .summary-sticky-code { left: 28px !important; }
+            #course-summary-table .summary-sticky-name { left: 110px !important; }
+
+            #course-summary-table .summary-score-col {
+                width: 20px !important;
+                min-width: 20px !important;
+                max-width: 20px !important;
+            }
+
+            #course-summary-table .summary-score-cell-content,
+            #course-summary-table .week-detail-btn {
+                width: 16px !important;
+                height: 16px !important;
+                line-height: 16px !important;
+                font-size: 8px !important;
+            }
+
+            #course-summary-table .summary-att-col {
+                width: 48px !important;
+                min-width: 48px !important;
+                max-width: 48px !important;
+            }
+
+            #course-summary-table .summary-total-col {
+                width: 34px !important;
+                min-width: 34px !important;
+                max-width: 34px !important;
+            }
+
+            #course-summary-table .summary-grade-col {
+                width: 32px !important;
+                min-width: 32px !important;
+                max-width: 32px !important;
+            }
+
+            #course-tab-overview .p-6,
+            #course-tab-attendance .p-6,
+            #course-tab-scores .p-6,
+            #view-students-master .p-6,
+            #view-admin .p-6 {
+                padding: 1rem !important;
+            }
+
+            #course-tab-overview .flex.justify-between,
+            #view-students-master .flex.justify-between,
+            #view-admin .flex.justify-between,
+            #score-area .p-5,
+            #attendance-area .p-5 {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 0.75rem !important;
+            }
+
+            #course-tab-overview .flex.gap-2,
+            #view-students-master .flex.gap-2,
+            #view-admin .flex.gap-2 {
+                display: grid !important;
+                grid-template-columns: 1fr !important;
+                width: 100% !important;
+            }
+
+            #course-tab-overview button,
+            #view-students-master button,
+            #view-admin button,
+            #course-tab-scores button,
+            #attendance-area button,
+            #score-area button {
+                min-height: 42px !important;
+                justify-content: center !important;
+            }
+
+            #course-tab-attendance .grid.grid-cols-1.lg\:grid-cols-3 {
+                grid-template-columns: 1fr !important;
+            }
+
+            #calendar-container {
+                width: 100% !important;
+            }
+
+            #calendar-grid {
+                gap: 0.25rem !important;
+            }
+
+            #calendar-grid .cal-day {
+                font-size: 0.8rem !important;
+                border-radius: 0.65rem !important;
+                min-height: 38px !important;
+            }
+
+            #attendance-placeholder,
+            #score-placeholder,
+            #empty-course-grid {
+                padding: 2rem 1rem !important;
+                min-height: 220px !important;
+            }
+
+            #score-area .p-5.bg-slate-50,
+            #attendance-area .p-5.bg-slate-50 {
+                display: grid !important;
+                grid-template-columns: 1fr !important;
+            }
+
+            #score-area .p-5.bg-slate-50 button,
+            #attendance-area .p-5.bg-slate-50 button {
+                width: 100% !important;
+            }
+
+            #score-title-container,
+            #course-tab-scores input,
+            #course-tab-scores select,
+            #course-tab-attendance input,
+            #course-tab-attendance select {
+                min-width: 0 !important;
+                width: 100% !important;
+            }
+
+            #mobile-menu > div {
+                width: min(86vw, 360px) !important;
+            }
+
+            .fixed.inset-0.z-50,
+            .fixed.inset-0.z-\[150\],
+            .fixed.inset-0.z-\[160\] {
+                align-items: flex-start !important;
+                overflow-y: auto !important;
+                padding: max(0.75rem, env(safe-area-inset-top)) 0.75rem max(0.75rem, env(safe-area-inset-bottom)) !important;
+            }
+
+            .fixed.inset-0.z-50 > div,
+            #custom-alert-box,
+            #custom-confirm-box {
+                max-width: 100% !important;
+                width: 100% !important;
+                max-height: calc(100dvh - 1.5rem) !important;
+                overflow-y: auto !important;
+                border-radius: 1.25rem !important;
+            }
+
+            #plan-modal > div,
+            #multi-student-modal > div {
+                max-height: calc(100dvh - 1.5rem) !important;
+            }
+
+            #plan-modal .grid.grid-cols-1.md\:grid-cols-5,
+            #course-tab-scores .grid.grid-cols-1.md\:grid-cols-3,
+            #course-modal .flex.gap-2.items-center {
+                grid-template-columns: 1fr !important;
+            }
+
+            #course-modal .flex.gap-2.items-center,
+            #course-modal .pt-2.flex.gap-3,
+            #grade-criteria-modal .pt-4.flex.gap-3,
+            #student-edit-modal .pt-4.flex.gap-3,
+            #custom-confirm .flex.gap-4 {
+                flex-direction: column !important;
+            }
+
+            #course-modal .pt-2.flex.gap-3 button,
+            #grade-criteria-modal .pt-4.flex.gap-3 button,
+            #student-edit-modal .pt-4.flex.gap-3 button,
+            #custom-confirm .flex.gap-4 button {
+                width: 100% !important;
+            }
+
+            #course-days-container label {
+                flex: 1 1 calc(33.333% - 0.5rem) !important;
+                justify-content: center !important;
+            }
+
+            #grade-criteria-modal .grid.grid-cols-2 {
+                grid-template-columns: 1fr !important;
+            }
+
+            #multi-student-modal .p-6,
+            #plan-modal .p-6,
+            #course-modal .p-6,
+            #student-edit-modal .p-6,
+            #grade-criteria-modal .p-6 {
+                padding: 1rem !important;
+            }
+
+            #multi-student-modal .p-6.border-t,
+            #plan-modal .p-6.border-b,
+            #multi-student-modal .p-6.border-b {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 0.75rem !important;
+            }
+
+            #multi-student-modal .p-6.border-t > div {
+                display: grid !important;
+                grid-template-columns: 1fr !important;
+                gap: 0.75rem !important;
+            }
+
+            #multi-student-modal .p-6.border-t button,
+            #plan-modal button,
+            #multi-student-modal button {
+                min-height: 42px !important;
+                justify-content: center !important;
+            }
+        }
+
+        @media (max-width: 420px) {
+            #view-dashboard .grid.grid-cols-2 {
+                grid-template-columns: 1fr !important;
+            }
+
+            th, td {
+                padding: 0.65rem !important;
+                font-size: 0.8rem !important;
+            }
+
+            #calendar-grid .cal-day {
+                min-height: 34px !important;
+                font-size: 0.75rem !important;
+            }
+
+            #page-title {
+                font-size: 1.2rem !important;
+            }
+
+            #course-summary-table {
+                min-width: 720px !important;
+            }
+        }
+
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen overflow-hidden selection:bg-indigo-100 selection:text-indigo-900">
@@ -332,7 +962,7 @@
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left border-collapse text-sm whitespace-nowrap" id="course-summary-table">
-                                    <!-- Rendered via JS -->
+                                    <!-- Rendered via JS: compact full matrix, week number headers are clickable -->
                                 </table>
                                 <div id="empty-summary" class="p-10 text-center hidden">
                                     <i class="fas fa-table text-4xl text-slate-200 mb-3"></i>
@@ -433,6 +1063,13 @@
                         </div>
 
                         <div id="score-area" class="table-container bg-white hidden">
+                            <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3 bg-slate-50/50">
+                                <div>
+                                    <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-star text-primary"></i> บันทึกคะแนน</h3>
+                                    <p id="score-current-work-label" class="text-sm text-slate-500 font-medium mt-1"></p>
+                                </div>
+                                <span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-white border shadow-sm text-slate-500" id="score-last-saved">ยังไม่เคยบันทึกคะแนน</span>
+                            </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left border-collapse">
                                     <thead>
@@ -445,7 +1082,10 @@
                                     <tbody id="score-list"></tbody>
                                 </table>
                             </div>
-                            <div class="p-5 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                            <div class="p-5 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-3">
+                                <button onclick="deleteScores()" id="btn-delete-scores" class="bg-rose-100 hover:bg-rose-200 text-rose-600 px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition shadow-sm w-full sm:w-auto justify-center hidden">
+                                    <i class="fas fa-trash-alt text-lg"></i> ลบคะแนนนี้
+                                </button>
                                 <button onclick="saveScores()" class="bg-primary hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-indigo-200 w-full sm:w-auto justify-center">
                                     <i class="fas fa-save text-lg"></i> บันทึกคะแนน
                                 </button>
@@ -1171,6 +1811,13 @@
         window.deleteStudent = (id) => { window.showCustomConfirm("ยืนยันการลบ", "ลบนักเรียนคนนี้ออกจากฐานข้อมูล?", async () => { state.students = state.students.filter(s => s.id !== id); renderStudentsMaster(); updateGlobalViews(); await saveStateToDB(); }); };
 
         // --- THE NEW OVERVIEW SUMMARY TABLE (Horizontal Matrix) ---
+        window.showPlanDetail = (courseId, planId) => {
+            const plan = ((state.coursePlans && state.coursePlans[courseId]) || []).find(p => p.id === planId);
+            if(!plan) return;
+            const isChecklist = Number(plan.maxScore) === 0;
+            const scoreText = isChecklist ? 'เช็คงาน' : `${plan.maxScore} คะแนน`;
+            showCustomAlert(`สัปดาห์ที่ ${plan.week}`, `ชื่องาน: ${plan.title}\nคะแนนเต็ม: ${scoreText}`);
+        };
         window.renderCourseOverview = () => {
             const table = document.getElementById('course-summary-table'); table.innerHTML = '';
             if(!currentActiveCourseId || state.students.length === 0) {
@@ -1186,21 +1833,21 @@
             const gradeCriteria = (state.courseGrades && state.courseGrades[cid]) ? state.courseGrades[cid] : defaultGradeCriteria;
 
             // Build Header
-            let thead = `<thead><tr><th class="sticky left-0 bg-slate-50 z-10 w-24 border-r">รหัส</th><th class="sticky left-24 bg-slate-50 z-10 border-r min-w-[200px]">ชื่อ - นามสกุล</th>`;
-            thead += `<th class="text-center bg-emerald-50 text-emerald-700 whitespace-nowrap">เช็คชื่อ<br>(มา/สาย/ขาด)</th>`;
+            let thead = `<thead><tr><th class="sticky summary-sticky-no summary-no-col bg-slate-50 z-20 border-r text-center align-middle">ลำดับ</th><th class="sticky summary-sticky-code summary-code-col bg-slate-50 z-20 border-r text-center align-middle">รหัสนักเรียน</th><th class="sticky summary-sticky-name summary-name-col bg-slate-50 z-20 border-r text-center align-middle">ชื่อ - นามสกุล</th>`;
+            thead += `<th class="text-center bg-emerald-50 text-emerald-700 summary-att-col">เช็คชื่อ<br><span class="text-[9px]">มา/สาย/ขาด</span></th>`;
             let totalMax = 0;
             plans.forEach(p => { 
                 const isChecklist = Number(p.maxScore) === 0;
                 const subtitle = isChecklist ? 'เช็คงาน' : `เต็ม ${p.maxScore}`;
-                thead += `<th class="text-center bg-indigo-50 text-indigo-700 min-w-[100px] whitespace-nowrap" title="สัปดาห์ ${p.week}">${p.title}<br><span class="text-[10px] text-slate-500">${subtitle}</span></th>`; 
+                thead += `<th class="text-center bg-indigo-50 text-indigo-700 summary-score-col" title="คลิกเพื่อดูรายละเอียด: สัปดาห์ ${p.week} | ${p.title} | ${subtitle}"><button type="button" onclick="showPlanDetail('${cid}', '${p.id}')" class="week-detail-btn inline-flex items-center justify-center bg-white border border-indigo-200 text-primary font-bold hover:bg-primary hover:text-white transition shadow-sm">${p.week}</button></th>`; 
                 if (!isChecklist) totalMax += Number(p.maxScore); 
             });
-            thead += `<th class="text-center bg-slate-800 text-white font-bold whitespace-nowrap">รวมคะแนน<br><span class="text-[10px] text-slate-300">เต็ม ${totalMax}</span></th>`;
-            thead += `<th class="text-center bg-amber-50 text-amber-700 font-bold whitespace-nowrap">เกรดที่ได้</th></tr></thead>`;
+            thead += `<th class="text-center bg-slate-800 text-white font-bold summary-total-col">รวม<br><span class="text-[9px] text-slate-300">${totalMax}</span></th>`;
+            thead += `<th class="text-center bg-amber-50 text-amber-700 font-bold summary-grade-col">เกรด</th></tr></thead>`;
             table.innerHTML = thead;
 
             let tbody = '<tbody>';
-            state.students.forEach(s => {
+            state.students.forEach((s, index) => {
                 // Calculate Attendance
                 let pr=0, la=0, ab=0;
                 attDates.forEach(d => {
@@ -1208,8 +1855,8 @@
                     if(st==='present') pr++; else if(st==='late') la++; else if(st==='absent') ab++;
                 });
 
-                tbody += `<tr><td class="sticky left-0 bg-white z-10 border-r font-mono text-slate-500">${s.code}</td><td class="sticky left-24 bg-white z-10 border-r font-bold text-slate-700">${s.name}</td>`;
-                tbody += `<td class="text-center font-bold"><span class="text-emerald-500">${pr}</span> / <span class="text-amber-500">${la}</span> / <span class="text-rose-500">${ab}</span></td>`;
+                tbody += `<tr><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center font-bold text-slate-500">${index + 1}</td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700" title="${s.code}">${s.code}</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700" title="${s.name}">${s.name}</td>`;
+                tbody += `<td class="text-center font-bold summary-att-col"><span class="text-emerald-500">${pr}</span>/<span class="text-amber-500">${la}</span>/<span class="text-rose-500">${ab}</span></td>`;
                 
                 let totalScore = 0;
                 plans.forEach(p => {
@@ -1218,25 +1865,25 @@
                     const isChecklist = Number(p.maxScore) === 0;
                     
                     if (isChecklist) {
-                        const icon = rawScore === 1 ? '<i class="fas fa-check text-emerald-500 text-lg"></i>' : (rawScore === 0 ? '<i class="fas fa-times text-rose-300"></i>' : '<span class="text-slate-300">-</span>');
-                        tbody += `<td class="text-center">${icon}</td>`;
+                        const icon = rawScore === 1 ? '<span class="summary-score-cell-content text-emerald-500"><i class="fas fa-check"></i></span>' : (rawScore === 0 ? '<span class="summary-score-cell-content text-rose-300"><i class="fas fa-times"></i></span>' : '<span class="summary-score-cell-content text-slate-300">-</span>');
+                        tbody += `<td class="text-center summary-score-col">${icon}</td>`;
                     } else {
                         if(rawScore !== null && rawScore !== '') totalScore += Number(rawScore);
                         
                         let displayHtml = '';
                         if (!task) {
                             // ยังไม่มีการบันทึกสัปดาห์นี้
-                            displayHtml = `<span class="text-slate-300">-</span>`;
+                            displayHtml = `<span class="summary-score-cell-content text-slate-300">-</span>`;
                         } else if (rawScore === '') {
                             // มีการบันทึกแล้ว แต่ช่องของเด็กคนนี้เว้นว่างไว้ (ไม่ได้กรอก)
-                            displayHtml = `<span class="text-rose-500 font-bold text-lg">-</span>`;
+                            displayHtml = `<span class="summary-score-cell-content text-rose-500">-</span>`;
                         } else {
-                            displayHtml = `<span class="text-slate-700 font-bold">${rawScore}</span>`;
+                            displayHtml = `<span class="summary-score-cell-content text-slate-700">${rawScore}</span>`;
                         }
-                        tbody += `<td class="text-center font-mono">${displayHtml}</td>`;
+                        tbody += `<td class="text-center font-mono summary-score-col">${displayHtml}</td>`;
                     }
                 });
-                tbody += `<td class="text-center font-bold text-primary bg-slate-50 text-lg border-r">${totalScore}</td>`;
+                tbody += `<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col">${totalScore}</td>`;
                 
                 // Calculate and display grade
                 let gradeDisplay = '-';
@@ -1248,7 +1895,7 @@
                      else if (gradeDisplay === '2' || gradeDisplay === '1.5') gradeColor = 'text-amber-500';
                      else if (gradeDisplay === '1' || gradeDisplay === '0') gradeColor = 'text-rose-500';
                 }
-                tbody += `<td class="text-center font-bold text-xl ${gradeColor} bg-amber-50/30">${gradeDisplay}</td></tr>`;
+                tbody += `<td class="text-center font-bold ${gradeColor} bg-amber-50/30 summary-grade-col">${gradeDisplay}</td></tr>`;
             });
             tbody += '</tbody>';
             table.innerHTML += tbody;
@@ -1434,11 +2081,45 @@
         window.updateMaxScores = () => { const max = parseFloat(document.getElementById('score-max').value) || 0; document.querySelectorAll('.score-input').forEach(inp => { inp.max = max; if(parseFloat(inp.value)>max) inp.value = max; }); };
         window.getScoreTitle = () => { const inf = document.getElementById('score-title-input'); return !inf.classList.contains('hidden') ? inf.value.trim() : document.getElementById('score-title-select').value; };
 
+        window.formatSavedAtThai = (dateValue) => {
+            if (!dateValue) return '';
+            const d = new Date(dateValue);
+            if (isNaN(d.getTime())) return '';
+            return d.toLocaleString('th-TH', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        };
+
+        window.updateScoreSavedStatus = (existing, week, title) => {
+            const lastSavedEl = document.getElementById('score-last-saved');
+            const deleteBtn = document.getElementById('btn-delete-scores');
+            const workLabel = document.getElementById('score-current-work-label');
+            if (workLabel) workLabel.textContent = week && title ? `สัปดาห์ที่ ${week} : ${title}` : '';
+            if (!lastSavedEl || !deleteBtn) return;
+
+            if (existing) {
+                const savedText = window.formatSavedAtThai(existing.savedAt || existing.updatedAt || existing.createdAt);
+                lastSavedEl.textContent = savedText ? `บันทึกล่าสุด: ${savedText}` : 'มีข้อมูลคะแนนที่เคยบันทึกไว้';
+                lastSavedEl.className = 'text-xs font-semibold px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 shadow-sm text-emerald-700';
+                deleteBtn.classList.remove('hidden');
+            } else {
+                lastSavedEl.textContent = 'ยังไม่เคยบันทึกคะแนน';
+                lastSavedEl.className = 'text-xs font-semibold px-3 py-1.5 rounded-full bg-white border shadow-sm text-slate-500';
+                deleteBtn.classList.add('hidden');
+            }
+        };
+
         window.renderScoreList = () => {
             const cid = currentActiveCourseId; const week = document.getElementById('score-week').value; const title = window.getScoreTitle(); const area = document.getElementById('score-area'); const tbody = document.getElementById('score-list'); const max = document.getElementById('score-max').value;
-            if(!cid || state.students.length===0 || !week || (!title || title === '__custom__')) { area.classList.add('hidden'); return; }
+            if(!cid || state.students.length===0 || !week || (!title || title === '__custom__')) { area.classList.add('hidden'); window.updateScoreSavedStatus(null, week, title); return; }
             area.classList.remove('hidden'); document.getElementById('score-placeholder').classList.add('hidden'); tbody.innerHTML = '';
             const existing = state.scores.find(s => s.courseId === cid && s.week === week && s.title === title); const saved = existing ? existing.records : {};
+            window.updateScoreSavedStatus(existing, week, title);
             const maxScoreNum = parseFloat(max);
             
             state.students.forEach(s => {
@@ -1474,14 +2155,33 @@
                 });
             }
             
+            const nowSavedAt = new Date().toISOString();
             const idx = state.scores.findIndex(s => s.courseId === cId && s.week === week && s.title === title);
-            if (idx !== -1) { state.scores[idx].maxScore = maxScore; state.scores[idx].records = records; } else { state.scores.push({ id: Date.now().toString(), courseId: cId, week: week, title: title, maxScore: maxScore, records: records }); }
+            if (idx !== -1) { state.scores[idx].maxScore = maxScore; state.scores[idx].records = records; state.scores[idx].savedAt = nowSavedAt; } else { state.scores.push({ id: Date.now().toString(), courseId: cId, week: week, title: title, maxScore: maxScore, records: records, savedAt: nowSavedAt }); }
             await saveStateToDB(); 
             
             document.getElementById('score-week').value = '';
             window.handleScoreWeekChange();
             
             showCustomAlert('สำเร็จ', 'บันทึกคะแนนเรียบร้อยแล้ว\nระบบได้เคลียร์หน้าจอเพื่อพร้อมรับข้อมูลของงานใหม่ทันทีครับ');
+        };
+
+        window.deleteScores = async () => {
+            const cId = currentActiveCourseId;
+            const week = document.getElementById('score-week').value;
+            const title = window.getScoreTitle();
+            if(!cId || !week || !title || title === '__custom__') return showCustomAlert("ข้อมูลไม่ครบ", "กรุณาเลือกสัปดาห์และชื่องานที่ต้องการลบ", true);
+
+            const idx = state.scores.findIndex(s => s.courseId === cId && s.week === week && s.title === title);
+            if (idx === -1) return showCustomAlert("ไม่มีข้อมูลให้ลบ", "งานนี้ยังไม่เคยบันทึกคะแนนไว้", true);
+
+            showCustomConfirm("ยืนยันการลบคะแนน", `ต้องการลบคะแนนของ\nสัปดาห์ที่ ${week} : ${title}\nใช่หรือไม่?\n\nเมื่อลบแล้ว ระบบจะกลับไปเหมือนไม่เคยตั้ง/บันทึกคะแนนนี้ไว้`, async () => {
+                state.scores.splice(idx, 1);
+                await saveStateToDB();
+                window.renderScoreList();
+                renderCourseSummary();
+                showCustomAlert("ลบเรียบร้อย", "ลบคะแนนนี้แล้ว ระบบกลับไปเหมือนไม่เคยบันทึกคะแนนนี้ไว้");
+            });
         };
 
         // Export Logics
