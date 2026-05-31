@@ -925,6 +925,99 @@
 
         #global-loader { z-index: 800000 !important; }
 </style>
+
+
+
+
+
+<style>
+/* SchoolHub Admin Plans Popup Color + Click Fix */
+#admin-plan-edit-panel {
+    display: none !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+}
+
+#admin-plan-cards,
+#admin-plan-cards * {
+    pointer-events: auto !important;
+}
+
+#admin-plan-popup-backdrop.hidden {
+    display: none !important;
+    pointer-events: none !important;
+}
+
+#admin-plan-popup-backdrop:not(.hidden) {
+    display: flex !important;
+    pointer-events: auto !important;
+}
+
+#admin-plan-popup {
+    pointer-events: auto !important;
+    box-shadow: 0 30px 90px rgba(15,23,42,.24) !important;
+}
+
+/* เพิ่ม = สีเขียว */
+#admin-plan-popup.popup-add {
+    border: 3px solid #22c55e !important;
+}
+
+#admin-plan-popup.popup-add .popup-header {
+    background: rgba(220, 252, 231, .92) !important;
+    border-color: #bbf7d0 !important;
+}
+
+#admin-plan-popup.popup-add input,
+#admin-plan-popup.popup-add textarea,
+#admin-plan-popup.popup-add select {
+    border-color: #86efac !important;
+}
+
+#admin-plan-popup.popup-add input:focus,
+#admin-plan-popup.popup-add textarea:focus,
+#admin-plan-popup.popup-add select:focus {
+    box-shadow: 0 0 0 3px rgba(34,197,94,.22) !important;
+    border-color: #22c55e !important;
+}
+
+/* แก้ไข = สีเหลือง */
+#admin-plan-popup.popup-edit {
+    border: 3px solid #facc15 !important;
+}
+
+#admin-plan-popup.popup-edit .popup-header {
+    background: rgba(254, 249, 195, .95) !important;
+    border-color: #fde68a !important;
+}
+
+#admin-plan-popup.popup-edit input,
+#admin-plan-popup.popup-edit textarea,
+#admin-plan-popup.popup-edit select {
+    border-color: #fde68a !important;
+}
+
+#admin-plan-popup.popup-edit input:focus,
+#admin-plan-popup.popup-edit textarea:focus,
+#admin-plan-popup.popup-edit select:focus {
+    box-shadow: 0 0 0 3px rgba(250,204,21,.25) !important;
+    border-color: #facc15 !important;
+}
+</style>
+
+
+<style>
+/* SchoolHub Admin Plans Single Popup Form Fix */
+#admin-plan-edit-panel {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+}
+</style>
+
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen overflow-hidden selection:bg-indigo-100 selection:text-indigo-900">
 
@@ -1333,11 +1426,13 @@
                     <button id="nav-admin-permissions" onclick="switchView('admin-permissions')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-rose-600 hover:bg-rose-50 bg-rose-50/50" data-target="admin-permissions">
                         <i class="fas fa-user-shield w-5 text-center"></i> จัดการสิทธิ์ <span id="admin-plan-request-badge" class="hidden ml-auto bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">0</span>
                     </button>
+                    <button id="nav-admin-dashboard" onclick="switchView('admin-dashboard')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-indigo-600 hover:bg-indigo-50 mt-2" data-target="admin-dashboard">
+                        <i class="fas fa-chart-line w-5 text-center"></i> แดชบอร์ดรวม
+                    </button>
                     <button id="nav-admin-announcements" onclick="switchView('admin-announcements')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-indigo-600 hover:bg-indigo-50 mt-2" data-target="admin-announcements">
                         <i class="fas fa-bullhorn w-5 text-center"></i> ประกาศ
                     </button>
                     <button id="nav-admin-plans" onclick="switchView('admin-plans')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-emerald-600 hover:bg-emerald-50 mt-2" data-target="admin-plans"><i class="fas fa-layer-group w-5 text-center"></i> แผนการใช้งาน</button>
-                    <button id="nav-admin-blocked-users" onclick="switchView('admin-blocked-users'); renderBlockedUsersList();" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-rose-600 hover:bg-rose-50 mt-2" data-target="admin-blocked-users"><i class="fas fa-user-lock w-5 text-center"></i> ผู้ใช้ที่ถูกบล็อก <span id="blocked-users-badge" class="hidden ml-auto bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">0</span></button>
                 </div>
             </nav>
 
@@ -1370,9 +1465,9 @@
                     <div id="mobile-admin-menu-group" class="hidden space-y-2 mt-4">
                         <p class="px-4 text-xs font-bold text-rose-400 uppercase tracking-wider">ระบบแอดมิน</p>
                         <button onclick="switchView('admin-permissions'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-rose-600 bg-rose-50 font-medium"><i class="fas fa-user-shield"></i> จัดการสิทธิ์</button>
+                        <button onclick="switchView('admin-dashboard'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-indigo-600 bg-indigo-50 font-medium"><i class="fas fa-chart-line"></i> แดชบอร์ดรวม</button>
                         <button onclick="switchView('admin-announcements'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-indigo-600 bg-indigo-50 font-medium"><i class="fas fa-bullhorn"></i> ประกาศ</button>
                         <button onclick="switchView('admin-plans'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-emerald-600 bg-emerald-50 font-medium"><i class="fas fa-layer-group"></i> แผนการใช้งาน</button>
-                        <button onclick="switchView('admin-blocked-users'); renderBlockedUsersList(); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-rose-600 bg-rose-50 font-medium"><i class="fas fa-user-lock"></i> ผู้ใช้ที่ถูกบล็อก</button>
                     </div>
                     <button onclick="doLogout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-rose-600 font-medium mt-8 bg-rose-50"><i class="fas fa-sign-out-alt"></i> ออกจากระบบ</button>
                 </div>
@@ -1748,24 +1843,61 @@
                 </div>
 
 
-                <!-- Admin View: Blocked Users -->
-                <div id="view-admin-blocked-users" class="view-section hidden fade-in">
+                
+                <!-- Admin View: Global Dashboard -->
+                <div id="view-admin-dashboard" class="view-section hidden fade-in">
                     <div class="table-container bg-white">
-                        <div class="p-6 border-b border-slate-100 flex flex-col md:flex-row md:justify-between md:items-center gap-4 bg-rose-50/40">
+                        <div class="p-6 border-b border-slate-100 flex flex-col md:flex-row md:justify-between md:items-center gap-4 bg-indigo-50/40">
                             <div>
-                                <h3 class="text-lg font-bold text-slate-800"><i class="fas fa-user-lock text-rose-500 mr-2"></i>ผู้ใช้ที่ถูกบล็อก</h3>
-                                <p class="text-sm text-slate-500">แสดงรายชื่อผู้ใช้ที่ถูกบล็อกทั้งหมด ข้อมูลเดิมยังไม่ถูกลบ สามารถปลดบล็อกได้ทันที</p>
+                                <h3 class="text-lg font-bold text-slate-800"><i class="fas fa-chart-line text-primary mr-2"></i>แดชบอร์ดรวม</h3>
+                                <p class="text-sm text-slate-500">ดึงข้อมูลจาก Firebase: global_stats/summary</p>
                             </div>
-                            <button onclick="renderBlockedUsersList(); loadAdminData && loadAdminData();" class="bg-white border text-slate-700 px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-50"><i class="fas fa-sync-alt"></i> รีเฟรช</button>
+                            <button onclick="loadAdminGlobalDashboard()" class="bg-primary text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 shadow-sm">
+                                <i class="fas fa-sync-alt mr-1"></i> รีเฟรช
+                            </button>
                         </div>
-                        <div class="p-4 bg-white border-b border-slate-100 text-xs text-slate-500">
-                            <i class="fas fa-circle-info text-rose-500 mr-1"></i> การบล็อกเป็นเพียงการปิดสิทธิ์เข้าใช้งาน ไม่ลบรายวิชา คะแนน รายชื่อนักเรียน หรือประวัติของผู้ใช้
+
+                        <div class="p-6">
+                            <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+                                <div class="rounded-3xl bg-indigo-50 border border-indigo-100 p-5">
+                                    <div id="gd-total-users" class="text-4xl font-black text-primary">0</div>
+                                    <div class="text-xs font-bold text-slate-500 mt-2">ครู/ผู้ใช้งาน</div>
+                                </div>
+                                <div class="rounded-3xl bg-sky-50 border border-sky-100 p-5">
+                                    <div id="gd-total-courses" class="text-4xl font-black text-sky-600">0</div>
+                                    <div class="text-xs font-bold text-slate-500 mt-2">รายวิชา</div>
+                                </div>
+                                <div class="rounded-3xl bg-emerald-50 border border-emerald-100 p-5">
+                                    <div id="gd-total-students" class="text-4xl font-black text-emerald-600">0</div>
+                                    <div class="text-xs font-bold text-slate-500 mt-2">นักเรียน</div>
+                                </div>
+                                <div class="rounded-3xl bg-amber-50 border border-amber-100 p-5">
+                                    <div id="gd-total-attendance" class="text-4xl font-black text-amber-600">0</div>
+                                    <div class="text-xs font-bold text-slate-500 mt-2">เช็คชื่อ</div>
+                                </div>
+                                <div class="rounded-3xl bg-rose-50 border border-rose-100 p-5">
+                                    <div id="gd-total-assignments" class="text-4xl font-black text-rose-600">0</div>
+                                    <div class="text-xs font-bold text-slate-500 mt-2">งานทั้งหมด</div>
+                                </div>
+                                <div class="rounded-3xl bg-violet-50 border border-violet-100 p-5">
+                                    <div id="gd-total-scores" class="text-4xl font-black text-violet-600">0</div>
+                                    <div class="text-xs font-bold text-slate-500 mt-2">รายการคะแนน</div>
+                                </div>
+                            </div>
+
+                            <p id="gd-updated-at" class="text-xs text-slate-400 mt-4">อัปเดตล่าสุด: —</p>
+
+                            <div class="mt-6 rounded-[2rem] border border-slate-100 bg-slate-50 p-5">
+                                <h4 class="font-black text-slate-900 mb-3">
+                                    <i class="fas fa-database text-primary mr-2"></i>ข้อมูลจาก global_stats/summary
+                                </h4>
+                                <pre id="gd-summary-json" class="text-xs bg-white rounded-2xl p-4 overflow-auto max-h-72 border border-slate-100 text-slate-700">กำลังโหลด...</pre>
+                            </div>
                         </div>
-                        <div id="blocked-users-card-list" class="p-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
                     </div>
                 </div>
 
-                <!-- Admin View: Announcements -->
+<!-- Admin View: Announcements -->
                 <div id="view-admin-announcements" class="view-section hidden fade-in">
                     <div class="table-container bg-white">
                         <div class="p-6 border-b border-slate-100 bg-indigo-50/40">
@@ -1844,109 +1976,9 @@
                     </div>
 
                     <!-- Edit / Add Plan Panel (slide in below) -->
-                    <div id="admin-plan-edit-panel" class="hidden bg-white rounded-3xl border border-indigo-100 shadow-sm overflow-hidden">
-                        <div class="p-5 border-b border-indigo-100 bg-indigo-50/60 flex items-center justify-between">
-                            <h3 class="font-black text-slate-800 text-base" id="admin-plan-panel-title"><i class="fas fa-pen text-primary mr-2"></i>เพิ่ม / แก้ไขแผน</h3>
-                            <button onclick="closePlanEditPanel()" class="w-8 h-8 rounded-full bg-white border text-slate-500 hover:bg-slate-100 text-sm"><i class="fas fa-times"></i></button>
-                        </div>
-                        <form onsubmit="event.preventDefault(); saveAdminPlanForm();" class="p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <input type="hidden" id="plan-sub-edit-id">
+                    
+                    <!-- admin-plan-edit-panel removed: popup is the only plan form -->
 
-                            <!-- Col 1 -->
-                            <div class="space-y-4">
-                                <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-3">
-                                    <div class="text-xs font-black text-slate-500 uppercase tracking-wide">ข้อมูลพื้นฐาน</div>
-                                    <div><label class="block text-sm font-semibold text-slate-700 mb-1">ชื่อแผน <span class="text-rose-500">*</span></label>
-                                        <input id="plan-sub-name" required class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm" placeholder="เช่น ฟรี / Pro / School"></div>
-                                    <div><label class="block text-sm font-semibold text-slate-700 mb-1">คำอธิบายสั้น</label>
-                                        <input id="plan-sub-desc" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm" placeholder="เหมาะสำหรับ..."></div>
-                                    <div><label class="block text-sm font-semibold text-slate-700 mb-1">ป้ายราคาที่แสดง</label>
-                                        <input id="plan-sub-price" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm" placeholder="เช่น 0 บาท / ฟรีตลอด / ติดต่อแอดมิน"></div>
-                                </div>
-
-                                <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-3">
-                                    <div class="text-xs font-black text-slate-500 uppercase tracking-wide">การเงิน</div>
-                                    <div class="grid grid-cols-2 gap-3">
-                                        <div><label class="block text-sm font-semibold text-slate-700 mb-1">ราคา/เดือน (บาท)</label>
-                                            <input id="plan-sub-monthly-price" type="number" min="0" value="0" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm"></div>
-                                        <div><label class="block text-sm font-semibold text-slate-700 mb-1">ราคา/ปี (บาท)</label>
-                                            <input id="plan-sub-yearly-price" type="number" min="0" value="0" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm"></div>
-                                    </div>
-                                    <div><label class="block text-sm font-semibold text-slate-700 mb-1">รอบเก็บเงิน</label>
-                                        <select id="plan-sub-billing-cycle" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm">
-                                            <option value="monthly">รายเดือน</option>
-                                            <option value="yearly">รายปี</option>
-                                            <option value="forever">ฟรีตลอด (ไม่มีรอบเก็บ)</option>
-                                        </select></div>
-                                    <label class="flex items-center gap-2 bg-indigo-50 px-3 py-2.5 rounded-xl border border-indigo-100 text-sm font-semibold text-indigo-700 cursor-pointer">
-                                        <input id="plan-sub-free-first-month" type="checkbox" class="w-4 h-4 text-primary rounded">
-                                        <span>ฟรีเดือนแรก แล้วเก็บเงินรอบถัดไป</span>
-                                    </label>
-                                    <div><label class="block text-sm font-semibold text-slate-700 mb-1"><i class="fas fa-qrcode mr-1 text-slate-400"></i>เบอร์พร้อมเพย์รับเงิน</label>
-                                        <input id="plan-sub-promptpay" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm" placeholder="0812345678 หรือเลขบัตรประชาชน"></div>
-                                </div>
-                            </div>
-
-                            <!-- Col 2 -->
-                            <div class="space-y-4">
-                                <div class="bg-emerald-50/70 rounded-2xl p-4 border border-emerald-100 space-y-3">
-                                    <div class="text-xs font-black text-emerald-700 uppercase tracking-wide"><i class="fas fa-sliders mr-1"></i>สิทธิ์การใช้งาน</div>
-                                    <div class="grid grid-cols-2 gap-3">
-                                        <div><label class="block text-sm font-semibold text-slate-700 mb-1">รายวิชาสูงสุด</label>
-                                            <input id="plan-sub-course-limit" type="number" min="0" value="1" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm" placeholder="0 = ไม่จำกัด"></div>
-                                        <div><label class="block text-sm font-semibold text-slate-700 mb-1">นักเรียนสูงสุด</label>
-                                            <input id="plan-sub-student-limit" type="number" min="0" value="0" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm" placeholder="0 = ไม่จำกัด"></div>
-                                        <div><label class="block text-sm font-semibold text-slate-700 mb-1">สัปดาห์ใช้งาน</label>
-                                            <input id="plan-sub-week-limit" type="number" min="1" value="20" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm" placeholder="0 = ไม่จำกัด"></div>
-                                        <div><label class="block text-sm font-semibold text-slate-700 mb-1">สมาชิกทีม</label>
-                                            <input id="plan-sub-team-limit" type="number" min="1" value="1" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm" placeholder="1 = คนเดียว"></div>
-                                    </div>
-                                    <div class="grid grid-cols-1 gap-2 pt-1">
-                                        <label class="flex items-center gap-2 bg-white px-3 py-2.5 rounded-xl border text-sm font-semibold text-slate-700 cursor-pointer hover:border-emerald-300">
-                                            <input id="plan-sub-allow-attendance" type="checkbox" checked class="w-4 h-4 text-primary rounded">
-                                            <i class="fas fa-user-check text-emerald-500 w-4 text-center"></i> เช็คชื่อได้
-                                        </label>
-                                        <label class="flex items-center gap-2 bg-white px-3 py-2.5 rounded-xl border text-sm font-semibold text-slate-700 cursor-pointer hover:border-emerald-300">
-                                            <input id="plan-sub-allow-export" type="checkbox" checked class="w-4 h-4 text-primary rounded">
-                                            <i class="fas fa-file-excel text-green-500 w-4 text-center"></i> Export ไฟล์ได้
-                                        </label>
-                                        <label class="flex items-center gap-2 bg-white px-3 py-2.5 rounded-xl border text-sm font-semibold text-slate-700 cursor-pointer hover:border-emerald-300">
-                                            <input id="plan-sub-allow-team" type="checkbox" class="w-4 h-4 text-primary rounded">
-                                            <i class="fas fa-users text-sky-500 w-4 text-center"></i> ใช้งานแบบทีมได้
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-3">
-                                    <div class="text-xs font-black text-slate-500 uppercase tracking-wide">รายการสิทธิ์ที่แสดง</div>
-                                    <textarea id="plan-sub-features" rows="5" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm" placeholder="สร้างรายวิชาได้ 1 วิชา&#10;เช็คชื่อได้&#10;บันทึกคะแนนได้"></textarea>
-                                    <div class="text-xs text-slate-400">บรรทัดละ 1 รายการ</div>
-                                </div>
-
-                                <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-3">
-                                    <div class="text-xs font-black text-slate-500 uppercase tracking-wide">การแสดงผล</div>
-                                    <div class="grid grid-cols-2 gap-3">
-                                        <div><label class="block text-sm font-semibold text-slate-700 mb-1">ลำดับ</label>
-                                            <input id="plan-sub-order" type="number" value="1" class="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none"></div>
-                                        <div class="flex flex-col gap-2 pt-1">
-                                            <label class="flex items-center gap-2 bg-white px-3 py-2.5 rounded-xl border text-sm font-semibold text-slate-700 cursor-pointer mt-4">
-                                                <input id="plan-sub-featured" type="checkbox" class="w-4 h-4 text-primary rounded"> ⭐ แนะนำ
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <label class="flex items-center gap-2 bg-white px-3 py-2.5 rounded-xl border text-sm font-semibold text-slate-700 cursor-pointer">
-                                        <input id="plan-sub-active" type="checkbox" checked class="w-4 h-4 text-primary rounded">
-                                        <i class="fas fa-eye text-slate-400 w-4 text-center"></i> แสดงในหน้าแรก
-                                    </label>
-                                </div>
-
-                                <div class="flex gap-3">
-                                    <button type="button" onclick="closePlanEditPanel()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl text-sm">ยกเลิก</button>
-                                    <button type="submit" class="flex-1 bg-primary hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-sm shadow-lg shadow-indigo-200"><i class="fas fa-save mr-1"></i> บันทึกแผน</button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
                 </div>
             </div>
         </main>
@@ -3874,6 +3906,7 @@ ${resetUrl.toString()}
 
             if(viewId === 'user-plans' && !isAdmin) { document.getElementById('page-title').textContent = 'เลือก / เปลี่ยนแผน'; document.getElementById('page-subtitle').textContent = 'เลือกแผนการใช้งานที่ต้องการ'; renderUserPlans(); }
             if(viewId === 'admin-permissions' && isAdmin) { document.getElementById('page-title').textContent = 'จัดการสิทธิ์'; document.getElementById('page-subtitle').textContent = 'ควบคุมสถานะผู้ใช้งานระบบ'; loadPlanRequests(); loadAdminData(); }
+            if(viewId === 'admin-dashboard' && isAdmin) { document.getElementById('page-title').textContent = 'แดชบอร์ดรวม'; document.getElementById('page-subtitle').textContent = 'ภาพรวมข้อมูลทั้งหมดจาก global_stats/summary'; if(typeof loadAdminGlobalDashboard === 'function') loadAdminGlobalDashboard(); }
             if(viewId === 'admin-announcements' && isAdmin) { document.getElementById('page-title').textContent = 'ประกาศ'; document.getElementById('page-subtitle').textContent = 'จัดการประกาศหน้าแรก แถบบน และป็อปอัพ'; loadPublicAnnouncements(); renderAdminAnnouncements(); }
             if(viewId === 'admin-plans' && isAdmin) { document.getElementById('page-title').textContent = 'แผนการใช้งาน'; document.getElementById('page-subtitle').textContent = 'ตั้งค่าระดับ ราคา และสิทธิ์การใช้งาน'; loadPublicPlans(); renderAdminPlans(); }
         };
@@ -6072,10 +6105,10 @@ ${resetUrl.toString()}
           </div>
         </div>
         <div class="flex gap-2">
-          <button onclick="editAdminPlan('${esc(p.id)}')" class="flex-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-100 rounded-xl py-2 text-xs font-black transition">
+          <button onclick="editAdminPlan(${jsStr(p.id)})" class="flex-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-100 rounded-xl py-2 text-xs font-black transition">
             <i class="fas fa-pen mr-1"></i> แก้ไข
           </button>
-          <button onclick="deleteAdminPlan('${esc(p.id)}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100 rounded-xl px-3 py-2 text-xs font-black transition">
+          <button onclick="deleteAdminPlan(${jsStr(p.id)})" class="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100 rounded-xl px-3 py-2 text-xs font-black transition">
             <i class="fas fa-trash"></i>
           </button>
         </div>
@@ -7008,6 +7041,1953 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 9000);
     });
 })();
+</script>
+
+
+
+
+
+
+
+<!-- Admin Plan Popup -->
+<div id="admin-plan-popup-backdrop" class="fixed inset-0 bg-slate-900/55 backdrop-blur-sm z-[999998] hidden items-center justify-center p-4">
+    <div id="admin-plan-popup" class="bg-white rounded-[2rem] w-full max-w-4xl max-h-[92dvh] overflow-y-auto">
+        <div class="popup-header p-6 border-b flex items-center justify-between gap-4 sticky top-0 z-10">
+            <div>
+                <h3 id="admin-plan-popup-title" class="text-2xl font-black text-slate-900">
+                    <i class="fas fa-sliders mr-2"></i>เพิ่ม / แก้ไขแผนการใช้งาน
+                </h3>
+                <p class="text-sm text-slate-500 mt-1">บันทึกลง /system_settings/subscription_plans ใน field items</p>
+            </div>
+            <button type="button" onclick="closeAdminPlanPopup()" class="w-10 h-10 rounded-full bg-white border text-slate-500 hover:bg-slate-100">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <form onsubmit="event.preventDefault(); saveAdminPlanForm();" class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+            <input type="hidden" id="plan-sub-edit-id">
+
+            <div class="space-y-4">
+                <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-3">
+                    <div class="text-xs font-black text-slate-500 uppercase tracking-wide">ข้อมูลพื้นฐาน</div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">ชื่อแผน <span class="text-rose-500">*</span></label>
+                        <input id="plan-sub-name" required class="w-full bg-white border rounded-xl p-3 focus:outline-none text-sm" placeholder="เช่น ฟรี / Pro / School">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">คำอธิบายสั้น</label>
+                        <input id="plan-sub-desc" class="w-full bg-white border rounded-xl p-3 focus:outline-none text-sm" placeholder="เหมาะสำหรับ...">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">ป้ายราคาที่แสดง</label>
+                        <input id="plan-sub-price" class="w-full bg-white border rounded-xl p-3 focus:outline-none text-sm" placeholder="เช่น 0 บาท / ฟรีตลอด / ติดต่อแอดมิน">
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-3">
+                    <div class="text-xs font-black text-slate-500 uppercase tracking-wide">การเงิน</div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">ราคา/เดือน</label>
+                            <input id="plan-sub-monthly-price" type="number" min="0" value="0" class="w-full bg-white border rounded-xl p-3 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">ราคา/ปี</label>
+                            <input id="plan-sub-yearly-price" type="number" min="0" value="0" class="w-full bg-white border rounded-xl p-3 text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">รอบเก็บเงิน</label>
+                        <select id="plan-sub-billing-cycle" class="w-full bg-white border rounded-xl p-3 text-sm">
+                            <option value="monthly">รายเดือน</option>
+                            <option value="yearly">รายปี</option>
+                            <option value="forever">ฟรีตลอด</option>
+                        </select>
+                    </div>
+                    <label class="flex items-center gap-2 bg-white px-3 py-2.5 rounded-xl border text-sm font-semibold text-slate-700 cursor-pointer">
+                        <input id="plan-sub-free-first-month" type="checkbox" class="w-4 h-4 rounded">
+                        <span>ฟรีเดือนแรก แล้วเก็บเงินรอบถัดไป</span>
+                    </label>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">เบอร์พร้อมเพย์รับเงิน</label>
+                        <input id="plan-sub-promptpay" class="w-full bg-white border rounded-xl p-3 text-sm" placeholder="0812345678 หรือเลขบัตรประชาชน">
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div class="bg-emerald-50/70 rounded-2xl p-4 border border-emerald-100 space-y-3">
+                    <div class="text-xs font-black text-emerald-700 uppercase tracking-wide">สิทธิ์การใช้งาน</div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">รายวิชาสูงสุด</label>
+                            <input id="plan-sub-course-limit" type="number" min="0" value="1" class="w-full bg-white border rounded-xl p-3 text-sm" placeholder="0 = ไม่จำกัด">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">นักเรียนสูงสุด</label>
+                            <input id="plan-sub-student-limit" type="number" min="0" value="0" class="w-full bg-white border rounded-xl p-3 text-sm" placeholder="0 = ไม่จำกัด">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">สัปดาห์ใช้งาน</label>
+                            <input id="plan-sub-week-limit" type="number" min="1" value="20" class="w-full bg-white border rounded-xl p-3 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">สมาชิกทีม</label>
+                            <input id="plan-sub-team-limit" type="number" min="1" value="1" class="w-full bg-white border rounded-xl p-3 text-sm">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 gap-2 pt-1">
+                        <label class="flex items-center gap-2 bg-white px-3 py-2.5 rounded-xl border text-sm font-semibold text-slate-700 cursor-pointer">
+                            <input id="plan-sub-allow-attendance" type="checkbox" checked class="w-4 h-4 rounded"> เช็คชื่อได้
+                        </label>
+                        <label class="flex items-center gap-2 bg-white px-3 py-2.5 rounded-xl border text-sm font-semibold text-slate-700 cursor-pointer">
+                            <input id="plan-sub-allow-export" type="checkbox" checked class="w-4 h-4 rounded"> Export ไฟล์ได้
+                        </label>
+                        <label class="flex items-center gap-2 bg-white px-3 py-2.5 rounded-xl border text-sm font-semibold text-slate-700 cursor-pointer">
+                            <input id="plan-sub-allow-team" type="checkbox" class="w-4 h-4 rounded"> ใช้งานแบบทีมได้
+                        </label>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-3">
+                    <div class="text-xs font-black text-slate-500 uppercase tracking-wide">รายการสิทธิ์ที่แสดง</div>
+                    <textarea id="plan-sub-features" rows="5" class="w-full bg-white border rounded-xl p-3 text-sm" placeholder="บรรทัดละ 1 รายการ"></textarea>
+                </div>
+
+                <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-3">
+                    <div class="text-xs font-black text-slate-500 uppercase tracking-wide">การแสดงผล</div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">ลำดับ</label>
+                            <input id="plan-sub-order" type="number" value="1" class="w-full bg-white border rounded-xl p-3 text-sm">
+                        </div>
+                        <div class="flex items-end">
+                            <label class="flex items-center gap-2 bg-white px-3 py-3 rounded-xl border text-sm font-semibold text-slate-700 cursor-pointer w-full">
+                                <input id="plan-sub-featured" type="checkbox" class="w-4 h-4 rounded"> แนะนำ
+                            </label>
+                        </div>
+                    </div>
+                    <label class="flex items-center gap-2 bg-white px-3 py-2.5 rounded-xl border text-sm font-semibold text-slate-700 cursor-pointer">
+                        <input id="plan-sub-active" type="checkbox" checked class="w-4 h-4 rounded"> แสดงในหน้าแรก
+                    </label>
+                </div>
+
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeAdminPlanPopup()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl text-sm">ยกเลิก</button>
+                    <button id="admin-plan-popup-save-btn" type="submit" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-3 rounded-xl text-sm shadow-lg shadow-emerald-100">
+                        <i class="fas fa-save mr-1"></i> บันทึกแผน
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<script type="module">
+/* SchoolHub Admin Plans Popup Patch */
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const plansPopupConfig = {
+    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
+    authDomain: "schoolhub-5677d.firebaseapp.com",
+    projectId: "schoolhub-5677d",
+    storageBucket: "schoolhub-5677d.firebasestorage.app",
+    messagingSenderId: "803574136389",
+    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
+    measurementId: "G-ME7E38XNX6"
+};
+
+const plansPopupApp = getApps().length ? getApp() : initializeApp(plansPopupConfig);
+const plansPopupDb = getFirestore(plansPopupApp);
+const plansDocRef = doc(plansPopupDb, 'system_settings', 'subscription_plans');
+let patchPlans = [];
+
+function esc(v) {
+    return String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+window.escapeHTML = window.escapeHTML || esc;
+
+function jsArg(v) {
+    return JSON.stringify(String(v ?? ''));
+}
+
+function planDisplay(p) {
+    if (!p) return 'ฟรี';
+    if (p.freeForever || p.billingCycle === 'forever') return p.price || 'ฟรีตลอด';
+    if (p.price) return p.price;
+    if (Number(p.monthlyPrice || 0) > 0) return Number(p.monthlyPrice || 0).toLocaleString('th-TH') + ' บาท/เดือน';
+    if (Number(p.yearlyPrice || 0) > 0) return Number(p.yearlyPrice || 0).toLocaleString('th-TH') + ' บาท/ปี';
+    return 'ฟรี';
+}
+window.planDisplayPrice = window.planDisplayPrice || planDisplay;
+
+function localDefaultPlans() {
+    return [
+        {id:'standard', name:'มาตรฐาน', price:'99 บาทต่อเดือน', monthlyPrice:99, yearlyPrice:990, billingCycle:'monthly', freeFirstMonth:true, courseLimit:3, studentLimit:0, weekLimit:20, teamMemberLimit:1, desc:'เหมาะสำหรับเริ่มใช้งาน ฟรีเดือนแรก เดือนถัดไปชำระตามราคาที่ตั้ง', features:['เพิ่มรายวิชาได้ 3 วิชา','เช็คชื่อและบันทึกคะแนน','ดูภาพรวมและแชร์ผลคะแนน'], order:1, featured:true, active:true, updatedAt:Date.now()},
+        {id:'pro', name:'โปร', price:'199 บาทต่อเดือน', monthlyPrice:199, yearlyPrice:1990, billingCycle:'monthly', freeFirstMonth:false, courseLimit:10, studentLimit:0, weekLimit:20, teamMemberLimit:1, desc:'เหมาะสำหรับครูที่ใช้หลายรายวิชาและต้องการความยืดหยุ่น', features:['เพิ่มรายวิชาได้ 10 วิชา','ส่งออก Excel','จัดการนักเรียนและแผนคะแนนได้มากขึ้น'], order:2, featured:false, active:true, updatedAt:Date.now()}
+    ];
+}
+
+function normalizePlan(p) {
+    const id = String(p.id || ('plan_' + Date.now()));
+    const cycle = p.billingCycle || (p.freeForever ? 'forever' : 'monthly');
+    const item = {
+        id,
+        name: String(p.name || '').trim(),
+        price: String(p.price || '').trim(),
+        desc: String(p.desc || '').trim(),
+        features: Array.isArray(p.features) ? p.features.map(x => String(x).trim()).filter(Boolean) : [],
+        monthlyPrice: Number(p.monthlyPrice || 0),
+        yearlyPrice: Number(p.yearlyPrice || 0),
+        billingCycle: cycle,
+        freeForever: cycle === 'forever' || p.freeForever === true,
+        freeFirstMonth: !!p.freeFirstMonth,
+        courseLimit: Number(p.courseLimit || 0),
+        studentLimit: Number(p.studentLimit || 0),
+        weekLimit: Math.max(1, Number(p.weekLimit || p.maxWeeks || 20)),
+        teamMemberLimit: Math.max(1, Number(p.teamMemberLimit || p.maxTeamMembers || 1)),
+        allowTeam: !!p.allowTeam,
+        allowAttendance: p.allowAttendance !== false,
+        allowExport: p.allowExport !== false,
+        promptpay: String(p.promptpay || '').trim(),
+        order: Number(p.order || 1),
+        featured: !!p.featured,
+        active: p.active !== false,
+        updatedAt: p.updatedAt || Date.now()
+    };
+    if (!item.price) item.price = planDisplay(item);
+    return item;
+}
+
+function syncGlobalPlans() {
+    patchPlans = patchPlans.map(normalizePlan);
+    window.subscriptionPlans = patchPlans;
+    try {
+        localStorage.setItem('schoolhub_subscription_plans', JSON.stringify(patchPlans));
+        localStorage.setItem('schoolhub_public_plans', JSON.stringify(patchPlans));
+    } catch(e) {}
+}
+
+async function loadPlansFromFirebase() {
+    let loaded = [];
+    try {
+        const snap = await getDoc(plansDocRef);
+        if (snap.exists() && Array.isArray((snap.data() || {}).items)) loaded = snap.data().items;
+    } catch(e) {
+        console.warn('โหลดแผนจาก Firebase ไม่สำเร็จ:', e);
+    }
+
+    if (!loaded.length) {
+        try {
+            const cached1 = JSON.parse(localStorage.getItem('schoolhub_subscription_plans') || '[]');
+            const cached2 = JSON.parse(localStorage.getItem('schoolhub_public_plans') || '[]');
+            loaded = cached1.length ? cached1 : cached2;
+        } catch(e) {}
+    }
+
+    patchPlans = loaded.length ? loaded.map(normalizePlan) : localDefaultPlans().map(normalizePlan);
+    syncGlobalPlans();
+    renderPlanCards();
+    return patchPlans;
+}
+
+async function saveItemsToFirebase() {
+    syncGlobalPlans();
+    await setDoc(plansDocRef, { items: patchPlans, updatedAt: Date.now() }, { merge: true });
+}
+
+function limitText(p) {
+    const courseLimit = Number(p.courseLimit || 0);
+    const studentLimit = Number(p.studentLimit || 0);
+    const weekLimit = Number(p.weekLimit || p.maxWeeks || 20);
+    const teamLimit = Number(p.teamMemberLimit || p.maxTeamMembers || 1);
+    return [
+        'รายวิชา: ' + (courseLimit === 0 ? 'ไม่จำกัด' : courseLimit + ' วิชา'),
+        'นักเรียน: ' + (studentLimit === 0 ? 'ไม่จำกัด' : studentLimit + ' คน'),
+        'สัปดาห์: ' + (weekLimit === 0 ? 'ไม่จำกัด' : weekLimit + ' สัปดาห์'),
+        'ทีม: ' + teamLimit + ' คน'
+    ];
+}
+
+function patchTitles() {
+    const view = document.getElementById('view-admin-plans');
+    if (!view) return;
+    const listCard = view.querySelector(':scope > .bg-white.rounded-3xl');
+    if (listCard) {
+        const h = listCard.querySelector('h3');
+        const p = listCard.querySelector('p');
+        if (h) h.innerHTML = '<i class="fas fa-layer-group text-emerald-600 mr-2"></i>แผนที่ตั้งไว้';
+        if (p) p.textContent = 'แสดงแผนทั้งหมดที่บันทึกไว้ใน /system_settings/subscription_plans > items';
+    }
+}
+
+function renderPlanCards() {
+    const box = document.getElementById('admin-plan-cards');
+    const tbody = document.getElementById('admin-plan-list');
+    const items = patchPlans.slice().sort((a,b)=>Number(a.order||0)-Number(b.order||0));
+
+    if (box) {
+        if (!items.length) {
+            box.className = 'p-5';
+            box.innerHTML = '<div class="text-center p-10 text-slate-400 border border-dashed rounded-3xl bg-slate-50"><i class="fas fa-layer-group text-4xl mb-3 text-slate-300"></i><div class="font-bold text-slate-500">ยังไม่มีแผนการใช้งาน</div><div class="text-xs mt-1">กดเพิ่มแผนใหม่เพื่อสร้างแผน</div></div>';
+        } else {
+            box.className = 'p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4';
+            box.innerHTML = items.map(p => {
+                const active = p.active !== false;
+                const features = Array.isArray(p.features) ? p.features : [];
+                return `
+                <div class="schoolhub-plan-card rounded-3xl border ${p.featured ? 'border-indigo-200 bg-indigo-50/40' : 'border-slate-100 bg-white'} p-5 shadow-sm relative z-[1]">
+                    <div class="flex items-start justify-between gap-3 mb-3">
+                        <div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h4 class="text-xl font-black text-slate-900">${esc(p.name || '-')}</h4>
+                                ${p.featured ? '<span class="text-[10px] font-black bg-primary text-white px-2 py-1 rounded-full">แนะนำ</span>' : ''}
+                            </div>
+                            <p class="text-xs text-slate-400 mt-1">ID: ${esc(p.id || '')}</p>
+                        </div>
+                        <span class="px-3 py-1 rounded-full text-xs font-bold ${active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}">${active ? 'แสดง' : 'ซ่อน'}</span>
+                    </div>
+                    <div class="text-3xl font-black text-primary mb-2">${esc(planDisplay(p))}</div>
+                    <p class="text-sm text-slate-500 min-h-[38px]">${esc(p.desc || '')}</p>
+                    <div class="grid grid-cols-2 gap-2 my-4">${limitText(p).map(t => `<div class="bg-slate-50 border border-slate-100 rounded-2xl px-3 py-2 text-xs font-bold text-slate-600">${esc(t)}</div>`).join('')}</div>
+                    <div class="space-y-2 mb-5">${features.length ? features.slice(0, 6).map(f => `<div class="flex gap-2 text-sm text-slate-600"><i class="fas fa-check text-emerald-500 mt-1"></i><span>${esc(f)}</span></div>`).join('') : '<div class="text-sm text-slate-400">ยังไม่มีรายการสิทธิ์</div>'}</div>
+                    <div class="flex gap-2 relative z-[5]">
+                        <button type="button" data-plan-edit="${esc(p.id)}" class="plan-edit-btn flex-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-100 px-4 py-2.5 rounded-2xl text-sm font-black"><i class="fas fa-pen mr-1"></i> แก้ไข</button>
+                        <button type="button" data-plan-delete="${esc(p.id)}" class="plan-delete-btn flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-100 px-4 py-2.5 rounded-2xl text-sm font-black"><i class="fas fa-trash mr-1"></i> ลบ</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+    }
+
+    if (tbody) tbody.innerHTML = items.length ? items.map(p => `<tr><td>${esc(p.name || '')}</td><td>${esc(planDisplay(p))}</td><td>${limitText(p).map(esc).join('<br>')}</td><td>${p.active !== false ? 'แสดง' : 'ซ่อน'}</td><td><button type="button" data-plan-edit="${esc(p.id)}">แก้ไข</button><button type="button" data-plan-delete="${esc(p.id)}">ลบ</button></td></tr>`).join('') : '<tr><td colspan="5" class="text-center p-8 text-slate-400">ยังไม่มีแผนการใช้งาน</td></tr>';
+}
+
+function setVal(id, v) {
+    const el = document.getElementById(id);
+    if (el) el.value = v ?? '';
+}
+function setCheck(id, v) {
+    const el = document.getElementById(id);
+    if (el) el.checked = !!v;
+}
+
+window.resetAdminPlanForm = function(){
+    ['plan-sub-edit-id','plan-sub-name','plan-sub-price','plan-sub-promptpay','plan-sub-desc','plan-sub-features','plan-sub-monthly-price','plan-sub-yearly-price'].forEach(id => setVal(id, ''));
+    setVal('plan-sub-order','1'); setVal('plan-sub-course-limit','1'); setVal('plan-sub-week-limit','20'); setVal('plan-sub-student-limit','0'); setVal('plan-sub-team-limit','1'); setVal('plan-sub-billing-cycle','monthly');
+    setCheck('plan-sub-featured', false); setCheck('plan-sub-active', true); setCheck('plan-sub-free-first-month', false); setCheck('plan-sub-allow-attendance', true); setCheck('plan-sub-allow-export', true); setCheck('plan-sub-allow-team', false);
+};
+
+window.openAdminPlanPopup = function(mode = 'add') {
+    const modal = document.getElementById('admin-plan-popup-backdrop');
+    const popup = document.getElementById('admin-plan-popup');
+    const title = document.getElementById('admin-plan-popup-title');
+    const saveBtn = document.getElementById('admin-plan-popup-save-btn');
+
+    if (popup) {
+        popup.classList.remove('popup-add', 'popup-edit');
+        popup.classList.add(mode === 'edit' ? 'popup-edit' : 'popup-add');
+    }
+
+    if (title) title.innerHTML = mode === 'edit'
+        ? '<i class="fas fa-pen text-yellow-500 mr-2"></i>แก้ไขแผนการใช้งาน'
+        : '<i class="fas fa-plus text-emerald-500 mr-2"></i>เพิ่มแผนการใช้งาน';
+
+    if (saveBtn) {
+        saveBtn.className = mode === 'edit'
+            ? 'flex-1 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-black py-3 rounded-xl text-sm shadow-lg shadow-yellow-100'
+            : 'flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-3 rounded-xl text-sm shadow-lg shadow-emerald-100';
+    }
+
+    if (modal) modal.classList.remove('hidden');
+};
+
+window.closeAdminPlanPopup = function() {
+    document.getElementById('admin-plan-popup-backdrop')?.classList.add('hidden');
+};
+
+window.openAddPlanPanel = function(){
+    window.resetAdminPlanForm();
+    window.openAdminPlanPopup('add');
+    setTimeout(() => document.getElementById('plan-sub-name')?.focus(), 100);
+};
+
+window.closePlanEditPanel = function(){
+    window.closeAdminPlanPopup();
+    window.resetAdminPlanForm();
+};
+
+window.editAdminPlan = function(id){
+    const p = patchPlans.find(x => String(x.id) === String(id));
+    if (!p) return alert('ไม่พบแผนที่ต้องการแก้ไข');
+
+    setVal('plan-sub-edit-id', p.id); setVal('plan-sub-name', p.name || ''); setVal('plan-sub-price', p.price || planDisplay(p)); setVal('plan-sub-promptpay', p.promptpay || ''); setVal('plan-sub-desc', p.desc || ''); setVal('plan-sub-features', (p.features || []).join('\n'));
+    setVal('plan-sub-order', Number(p.order || 1)); setVal('plan-sub-course-limit', Number(p.courseLimit || 0)); setVal('plan-sub-week-limit', Number(p.weekLimit || p.maxWeeks || 20)); setVal('plan-sub-student-limit', Number(p.studentLimit || 0)); setVal('plan-sub-team-limit', Math.max(1, Number(p.teamMemberLimit || p.maxTeamMembers || 1)));
+    setVal('plan-sub-monthly-price', Number(p.monthlyPrice || 0)); setVal('plan-sub-yearly-price', Number(p.yearlyPrice || 0)); setVal('plan-sub-billing-cycle', p.freeForever ? 'forever' : (p.billingCycle || 'monthly'));
+    setCheck('plan-sub-featured', p.featured); setCheck('plan-sub-active', p.active !== false); setCheck('plan-sub-free-first-month', p.freeFirstMonth); setCheck('plan-sub-allow-attendance', p.allowAttendance !== false); setCheck('plan-sub-allow-export', p.allowExport !== false); setCheck('plan-sub-allow-team', !!p.allowTeam);
+
+    window.openAdminPlanPopup('edit');
+};
+
+window.saveAdminPlanForm = async function(){
+    const name = document.getElementById('plan-sub-name')?.value.trim() || '';
+    if (!name) return alert('กรุณากรอกชื่อแผน');
+
+    const editId = document.getElementById('plan-sub-edit-id')?.value || '';
+    const cycle = document.getElementById('plan-sub-billing-cycle')?.value || 'monthly';
+
+    const item = normalizePlan({
+        id: editId || `plan_${Date.now()}`,
+        name,
+        monthlyPrice: Number(document.getElementById('plan-sub-monthly-price')?.value || 0),
+        yearlyPrice: Number(document.getElementById('plan-sub-yearly-price')?.value || 0),
+        billingCycle: cycle, freeForever: cycle === 'forever',
+        freeFirstMonth: document.getElementById('plan-sub-free-first-month')?.checked || false,
+        courseLimit: Number(document.getElementById('plan-sub-course-limit')?.value || 0),
+        weekLimit: Math.max(1, Number(document.getElementById('plan-sub-week-limit')?.value || 20)),
+        studentLimit: Number(document.getElementById('plan-sub-student-limit')?.value || 0),
+        allowTeam: document.getElementById('plan-sub-allow-team')?.checked || false,
+        teamMemberLimit: Math.max(1, Number(document.getElementById('plan-sub-team-limit')?.value || 1)),
+        allowAttendance: document.getElementById('plan-sub-allow-attendance')?.checked !== false,
+        allowExport: document.getElementById('plan-sub-allow-export')?.checked !== false,
+        price: document.getElementById('plan-sub-price')?.value.trim() || '',
+        promptpay: document.getElementById('plan-sub-promptpay')?.value.trim() || '',
+        desc: document.getElementById('plan-sub-desc')?.value.trim() || '',
+        features: (document.getElementById('plan-sub-features')?.value || '').split('\n').map(x=>x.trim()).filter(Boolean),
+        order: Number(document.getElementById('plan-sub-order')?.value || 1),
+        featured: document.getElementById('plan-sub-featured')?.checked || false,
+        active: document.getElementById('plan-sub-active')?.checked !== false,
+        updatedAt: Date.now()
+    });
+
+    patchPlans = patchPlans.filter(p => String(p.id) !== String(item.id));
+    patchPlans.push(item);
+    syncGlobalPlans();
+    renderPlanCards();
+
+    try {
+        if (typeof window.toggleLoader === 'function') window.toggleLoader(true);
+        await saveItemsToFirebase();
+        await loadPlansFromFirebase();
+        if (typeof window.renderLandingPlans === 'function') window.renderLandingPlans();
+        window.closeAdminPlanPopup();
+        window.resetAdminPlanForm();
+        if (typeof showCustomAlert === 'function') showCustomAlert('บันทึกแล้ว', 'บันทึกแผนลง /system_settings/subscription_plans > items เรียบร้อย');
+    } catch(e) {
+        console.error(e);
+        alert('บันทึกขึ้น Firebase ไม่สำเร็จ: ' + (e.message || e));
+    } finally {
+        if (typeof window.toggleLoader === 'function') window.toggleLoader(false);
+    }
+};
+
+window.deleteAdminPlan = async function(id){
+    if (!confirm('ต้องการลบแผนนี้ใช่หรือไม่')) return;
+    patchPlans = patchPlans.filter(p => String(p.id) !== String(id));
+    syncGlobalPlans();
+    renderPlanCards();
+    try {
+        await saveItemsToFirebase();
+        if (typeof window.renderLandingPlans === 'function') window.renderLandingPlans();
+    } catch(e) {
+        alert('ลบในหน้านี้แล้ว แต่บันทึกขึ้น Firebase ไม่สำเร็จ: ' + (e.message || e));
+    }
+};
+
+window.seedDefaultPlans = async function(){
+    patchPlans = localDefaultPlans().map(normalizePlan);
+    syncGlobalPlans();
+    renderPlanCards();
+    try {
+        await saveItemsToFirebase();
+        if (typeof window.renderLandingPlans === 'function') window.renderLandingPlans();
+        if (typeof showCustomAlert === 'function') showCustomAlert('สำเร็จ', 'สร้างแผนตัวอย่างลง /system_settings/subscription_plans แล้ว');
+    } catch(e) {
+        alert('สร้างตัวอย่างแล้ว แต่บันทึกขึ้น Firebase ไม่สำเร็จ: ' + (e.message || e));
+    }
+};
+
+window.renderAdminPlans = function(){ patchTitles(); renderPlanCards(); };
+window.__schoolhubAdminPlansReload = async function(){ patchTitles(); await loadPlansFromFirebase(); };
+
+document.addEventListener('click', function(e){
+    const editBtn = e.target.closest('[data-plan-edit]');
+    if (editBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.editAdminPlan(editBtn.getAttribute('data-plan-edit'));
+        return;
+    }
+    const delBtn = e.target.closest('[data-plan-delete]');
+    if (delBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.deleteAdminPlan(delBtn.getAttribute('data-plan-delete'));
+        return;
+    }
+}, true);
+
+const oldSwitchView = window.switchView;
+if (typeof oldSwitchView === 'function' && !oldSwitchView.__plansPopupWrapped) {
+    const wrapped = function(viewId) {
+        const result = oldSwitchView.apply(this, arguments);
+        if (viewId === 'admin-plans') setTimeout(() => { patchTitles(); loadPlansFromFirebase(); }, 80);
+        return result;
+    };
+    wrapped.__plansPopupWrapped = true;
+    window.switchView = wrapped;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => { patchTitles(); loadPlansFromFirebase(); }, 300);
+    setTimeout(() => { patchTitles(); loadPlansFromFirebase(); }, 1500);
+});
+</script>
+
+
+
+<script type="module">
+/* SchoolHub Admin Plans Single Popup Form Fix
+   แก้ปัญหาแก้ไขแล้วข้อมูลไม่มา เพราะมี input id ซ้ำในฟอร์มเก่า
+   ตอนนี้ Popup เป็นฟอร์มเดียวที่ใช้จริง
+*/
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const planFixConfig = {
+    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
+    authDomain: "schoolhub-5677d.firebaseapp.com",
+    projectId: "schoolhub-5677d",
+    storageBucket: "schoolhub-5677d.firebasestorage.app",
+    messagingSenderId: "803574136389",
+    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
+    measurementId: "G-ME7E38XNX6"
+};
+
+const planFixApp = getApps().length ? getApp() : initializeApp(planFixConfig);
+const planFixDb = getFirestore(planFixApp);
+const plansRef = doc(planFixDb, 'system_settings', 'subscription_plans');
+
+function $(id) {
+    return document.getElementById(id);
+}
+
+function setVal(id, value) {
+    const el = $(id);
+    if (el) el.value = value ?? '';
+}
+
+function setCheck(id, value) {
+    const el = $(id);
+    if (el) el.checked = !!value;
+}
+
+function esc(v) {
+    return String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+window.escapeHTML = window.escapeHTML || esc;
+
+function priceOf(p) {
+    if (!p) return 'ฟรี';
+    if (p.freeForever || p.billingCycle === 'forever') return p.price || 'ฟรีตลอด';
+    if (p.price) return p.price;
+    if (Number(p.monthlyPrice || 0) > 0) return Number(p.monthlyPrice || 0).toLocaleString('th-TH') + ' บาท/เดือน';
+    if (Number(p.yearlyPrice || 0) > 0) return Number(p.yearlyPrice || 0).toLocaleString('th-TH') + ' บาท/ปี';
+    return 'ฟรี';
+}
+window.planDisplayPrice = window.planDisplayPrice || priceOf;
+
+async function loadPlans() {
+    let items = [];
+    try {
+        const snap = await getDoc(plansRef);
+        if (snap.exists() && Array.isArray((snap.data() || {}).items)) {
+            items = snap.data().items;
+        }
+    } catch (e) {
+        console.warn('โหลด /system_settings/subscription_plans ไม่สำเร็จ:', e);
+    }
+
+    if (!items.length && Array.isArray(window.subscriptionPlans)) items = window.subscriptionPlans;
+
+    try {
+        if (!items.length) {
+            const cached = JSON.parse(localStorage.getItem('schoolhub_subscription_plans') || '[]');
+            if (Array.isArray(cached)) items = cached;
+        }
+    } catch(e) {}
+
+    window.subscriptionPlans = Array.isArray(items) ? items : [];
+    try {
+        localStorage.setItem('schoolhub_subscription_plans', JSON.stringify(window.subscriptionPlans));
+        localStorage.setItem('schoolhub_public_plans', JSON.stringify(window.subscriptionPlans));
+    } catch(e) {}
+    return window.subscriptionPlans;
+}
+
+function normalizePlan(item) {
+    const cycle = item.billingCycle || (item.freeForever ? 'forever' : 'monthly');
+    const normalized = {
+        id: String(item.id || ('plan_' + Date.now())),
+        name: String(item.name || '').trim(),
+        price: String(item.price || '').trim(),
+        desc: String(item.desc || '').trim(),
+        features: Array.isArray(item.features) ? item.features.map(x => String(x).trim()).filter(Boolean) : [],
+        monthlyPrice: Number(item.monthlyPrice || 0),
+        yearlyPrice: Number(item.yearlyPrice || 0),
+        billingCycle: cycle,
+        freeForever: cycle === 'forever' || item.freeForever === true,
+        freeFirstMonth: !!item.freeFirstMonth,
+        courseLimit: Number(item.courseLimit || 0),
+        studentLimit: Number(item.studentLimit || 0),
+        weekLimit: Math.max(1, Number(item.weekLimit || item.maxWeeks || 20)),
+        teamMemberLimit: Math.max(1, Number(item.teamMemberLimit || item.maxTeamMembers || 1)),
+        allowTeam: !!item.allowTeam,
+        allowAttendance: item.allowAttendance !== false,
+        allowExport: item.allowExport !== false,
+        promptpay: String(item.promptpay || '').trim(),
+        order: Number(item.order || 1),
+        featured: !!item.featured,
+        active: item.active !== false,
+        updatedAt: Date.now()
+    };
+    if (!normalized.price) normalized.price = priceOf(normalized);
+    return normalized;
+}
+
+function fillPopupFromPlan(p) {
+    setVal('plan-sub-edit-id', p.id);
+    setVal('plan-sub-name', p.name || '');
+    setVal('plan-sub-desc', p.desc || '');
+    setVal('plan-sub-price', p.price || priceOf(p));
+    setVal('plan-sub-monthly-price', Number(p.monthlyPrice || 0));
+    setVal('plan-sub-yearly-price', Number(p.yearlyPrice || 0));
+    setVal('plan-sub-billing-cycle', p.freeForever ? 'forever' : (p.billingCycle || 'monthly'));
+    setVal('plan-sub-promptpay', p.promptpay || '');
+    setVal('plan-sub-course-limit', Number(p.courseLimit || 0));
+    setVal('plan-sub-student-limit', Number(p.studentLimit || 0));
+    setVal('plan-sub-week-limit', Number(p.weekLimit || p.maxWeeks || 20));
+    setVal('plan-sub-team-limit', Math.max(1, Number(p.teamMemberLimit || p.maxTeamMembers || 1)));
+    setVal('plan-sub-features', Array.isArray(p.features) ? p.features.join('\n') : '');
+    setVal('plan-sub-order', Number(p.order || 1));
+
+    setCheck('plan-sub-free-first-month', p.freeFirstMonth);
+    setCheck('plan-sub-allow-attendance', p.allowAttendance !== false);
+    setCheck('plan-sub-allow-export', p.allowExport !== false);
+    setCheck('plan-sub-allow-team', !!p.allowTeam);
+    setCheck('plan-sub-featured', !!p.featured);
+    setCheck('plan-sub-active', p.active !== false);
+}
+
+function resetPopupForm() {
+    ['plan-sub-edit-id','plan-sub-name','plan-sub-desc','plan-sub-price','plan-sub-monthly-price','plan-sub-yearly-price','plan-sub-promptpay','plan-sub-features'].forEach(id => setVal(id, ''));
+    setVal('plan-sub-billing-cycle', 'monthly');
+    setVal('plan-sub-course-limit', 1);
+    setVal('plan-sub-student-limit', 0);
+    setVal('plan-sub-week-limit', 20);
+    setVal('plan-sub-team-limit', 1);
+    setVal('plan-sub-order', 1);
+    setCheck('plan-sub-free-first-month', false);
+    setCheck('plan-sub-allow-attendance', true);
+    setCheck('plan-sub-allow-export', true);
+    setCheck('plan-sub-allow-team', false);
+    setCheck('plan-sub-featured', false);
+    setCheck('plan-sub-active', true);
+}
+
+window.resetAdminPlanForm = resetPopupForm;
+
+window.openAdminPlanPopup = function(mode = 'add') {
+    const modal = $('admin-plan-popup-backdrop');
+    const popup = $('admin-plan-popup');
+    const title = $('admin-plan-popup-title');
+    const saveBtn = $('admin-plan-popup-save-btn');
+
+    if (popup) {
+        popup.classList.remove('popup-add', 'popup-edit');
+        popup.classList.add(mode === 'edit' ? 'popup-edit' : 'popup-add');
+    }
+
+    if (title) {
+        title.innerHTML = mode === 'edit'
+            ? '<i class="fas fa-pen text-yellow-500 mr-2"></i>แก้ไขแผนการใช้งาน'
+            : '<i class="fas fa-plus text-emerald-500 mr-2"></i>เพิ่มแผนการใช้งาน';
+    }
+
+    if (saveBtn) {
+        saveBtn.className = mode === 'edit'
+            ? 'flex-1 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-black py-3 rounded-xl text-sm shadow-lg shadow-yellow-100'
+            : 'flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-3 rounded-xl text-sm shadow-lg shadow-emerald-100';
+    }
+
+    if (modal) modal.classList.remove('hidden');
+};
+
+window.closeAdminPlanPopup = function() {
+    $('admin-plan-popup-backdrop')?.classList.add('hidden');
+};
+
+window.openAddPlanPanel = function() {
+    resetPopupForm();
+    window.openAdminPlanPopup('add');
+    setTimeout(() => $('plan-sub-name')?.focus(), 80);
+};
+
+window.editAdminPlan = async function(id) {
+    const plans = await loadPlans();
+    const p = plans.find(x => String(x.id) === String(id));
+    if (!p) {
+        alert('ไม่พบแผนที่ต้องการแก้ไข');
+        return;
+    }
+
+    fillPopupFromPlan(p);
+    window.openAdminPlanPopup('edit');
+    setTimeout(() => $('plan-sub-name')?.focus(), 80);
+};
+
+function getItemFromForm() {
+    const editId = $('plan-sub-edit-id')?.value || '';
+    const cycle = $('plan-sub-billing-cycle')?.value || 'monthly';
+    return normalizePlan({
+        id: editId || `plan_${Date.now()}`,
+        name: $('plan-sub-name')?.value || '',
+        desc: $('plan-sub-desc')?.value || '',
+        price: $('plan-sub-price')?.value || '',
+        monthlyPrice: $('plan-sub-monthly-price')?.value || 0,
+        yearlyPrice: $('plan-sub-yearly-price')?.value || 0,
+        billingCycle: cycle,
+        freeForever: cycle === 'forever',
+        freeFirstMonth: $('plan-sub-free-first-month')?.checked || false,
+        promptpay: $('plan-sub-promptpay')?.value || '',
+        courseLimit: $('plan-sub-course-limit')?.value || 0,
+        studentLimit: $('plan-sub-student-limit')?.value || 0,
+        weekLimit: $('plan-sub-week-limit')?.value || 20,
+        teamMemberLimit: $('plan-sub-team-limit')?.value || 1,
+        allowTeam: $('plan-sub-allow-team')?.checked || false,
+        allowAttendance: $('plan-sub-allow-attendance')?.checked !== false,
+        allowExport: $('plan-sub-allow-export')?.checked !== false,
+        features: ($('plan-sub-features')?.value || '').split('\n').map(x => x.trim()).filter(Boolean),
+        order: $('plan-sub-order')?.value || 1,
+        featured: $('plan-sub-featured')?.checked || false,
+        active: $('plan-sub-active')?.checked !== false
+    });
+}
+
+window.saveAdminPlanForm = async function() {
+    const name = $('plan-sub-name')?.value.trim() || '';
+    if (!name) return alert('กรุณากรอกชื่อแผน');
+
+    const item = getItemFromForm();
+    const plans = await loadPlans();
+    const nextPlans = plans.filter(p => String(p.id) !== String(item.id));
+    nextPlans.push(item);
+    nextPlans.sort((a,b) => Number(a.order || 0) - Number(b.order || 0));
+
+    window.subscriptionPlans = nextPlans;
+
+    try {
+        if (typeof window.toggleLoader === 'function') window.toggleLoader(true);
+
+        await setDoc(plansRef, { items: nextPlans, updatedAt: Date.now() }, { merge: true });
+
+        localStorage.setItem('schoolhub_subscription_plans', JSON.stringify(nextPlans));
+        localStorage.setItem('schoolhub_public_plans', JSON.stringify(nextPlans));
+
+        if (typeof window.renderAdminPlans === 'function') window.renderAdminPlans();
+        if (typeof window.renderLandingPlans === 'function') window.renderLandingPlans();
+
+        window.closeAdminPlanPopup();
+        resetPopupForm();
+
+        if (typeof showCustomAlert === 'function') {
+            showCustomAlert(item.id ? 'อัปเดตแล้ว' : 'บันทึกแล้ว', 'บันทึกแผนเรียบร้อย');
+        }
+    } catch(e) {
+        console.error(e);
+        alert('บันทึกขึ้น Firebase ไม่สำเร็จ: ' + (e.message || e));
+    } finally {
+        if (typeof window.toggleLoader === 'function') window.toggleLoader(false);
+    }
+};
+
+window.deleteAdminPlan = async function(id) {
+    if (!confirm('ต้องการลบแผนนี้ใช่หรือไม่')) return;
+    const plans = await loadPlans();
+    const nextPlans = plans.filter(p => String(p.id) !== String(id));
+    window.subscriptionPlans = nextPlans;
+
+    try {
+        await setDoc(plansRef, { items: nextPlans, updatedAt: Date.now() }, { merge: true });
+        localStorage.setItem('schoolhub_subscription_plans', JSON.stringify(nextPlans));
+        localStorage.setItem('schoolhub_public_plans', JSON.stringify(nextPlans));
+        if (typeof window.renderAdminPlans === 'function') window.renderAdminPlans();
+        if (typeof window.renderLandingPlans === 'function') window.renderLandingPlans();
+    } catch(e) {
+        alert('ลบไม่สำเร็จ: ' + (e.message || e));
+    }
+};
+
+document.addEventListener('click', function(e) {
+    const editBtn = e.target.closest('[data-plan-edit]');
+    if (editBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.editAdminPlan(editBtn.getAttribute('data-plan-edit'));
+        return;
+    }
+    const delBtn = e.target.closest('[data-plan-delete]');
+    if (delBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.deleteAdminPlan(delBtn.getAttribute('data-plan-delete'));
+        return;
+    }
+}, true);
+</script>
+
+
+<script type="module">
+/* SchoolHub Admin Global Dashboard Loader */
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const globalDashboardConfig = {
+    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
+    authDomain: "schoolhub-5677d.firebaseapp.com",
+    projectId: "schoolhub-5677d",
+    storageBucket: "schoolhub-5677d.firebasestorage.app",
+    messagingSenderId: "803574136389",
+    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
+    measurementId: "G-ME7E38XNX6"
+};
+
+const globalDashboardApp = getApps().length ? getApp() : initializeApp(globalDashboardConfig);
+const globalDashboardDb = getFirestore(globalDashboardApp);
+
+function gdNum(v) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+}
+
+function gdSet(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(gdNum(value));
+}
+
+function gdDate(v) {
+    try {
+        if (v && typeof v.toDate === 'function') return v.toDate().toLocaleString('th-TH');
+        if (v && typeof v.seconds === 'number') return new Date(v.seconds * 1000).toLocaleString('th-TH');
+        if (typeof v === 'number') return new Date(v).toLocaleString('th-TH');
+        return v ? String(v) : '—';
+    } catch(e) {
+        return '—';
+    }
+}
+
+window.loadAdminGlobalDashboard = async function() {
+    const pre = document.getElementById('gd-summary-json');
+    if (pre) pre.textContent = 'กำลังโหลด...';
+
+    try {
+        const snap = await getDoc(doc(globalDashboardDb, 'global_stats', 'summary'));
+        if (!snap.exists()) {
+            if (pre) pre.textContent = 'ยังไม่พบ global_stats/summary';
+            return;
+        }
+
+        const d = snap.data() || {};
+
+        gdSet('gd-total-users', d.totalTeachers || d.totalUsers || d.users || d.teachers);
+        gdSet('gd-total-courses', d.totalCourses || d.courses);
+        gdSet('gd-total-students', d.totalStudents || d.students);
+        gdSet('gd-total-attendance', d.totalAttendanceRecords || d.totalAttendance || d.attendanceRecords || d.attendance);
+        gdSet('gd-total-assignments', d.totalAssignments || d.assignments || d.works || d.tasks);
+        gdSet('gd-total-scores', d.totalScoreItems || d.totalScores || d.scores || d.scoreItems);
+
+        const updated = document.getElementById('gd-updated-at');
+        if (updated) updated.textContent = 'อัปเดตล่าสุด: ' + gdDate(d.updatedAt);
+
+        if (pre) {
+            const clean = {};
+            Object.keys(d).forEach(k => {
+                clean[k] = k === 'updatedAt' ? gdDate(d[k]) : d[k];
+            });
+            pre.textContent = JSON.stringify(clean, null, 2);
+        }
+    } catch (error) {
+        console.error('โหลดแดชบอร์ดรวมไม่สำเร็จ:', error);
+        if (pre) pre.textContent = 'โหลดข้อมูลไม่สำเร็จ: ' + (error.message || error);
+    }
+};
+</script>
+
+
+<script type="module">
+/* SchoolHub Stats Count Fix: attendance nested dates + coursePlans assignments
+   แก้การนับ:
+   - attendance เป็น map เช่น attendance.{courseId/timestamp}.{dateKey} จึงต้องนับชั้นวันที่ย่อย
+   - totalAssignments ให้นับจาก coursePlans เป็นหลัก
+   - อ่านจาก users/{userKey}/school_data/state
+   - เขียน user_stats และ global_stats/summary ใหม่
+*/
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getFirestore, collection, getDocs, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+const statsCountFixConfig = {
+    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
+    authDomain: "schoolhub-5677d.firebaseapp.com",
+    projectId: "schoolhub-5677d",
+    storageBucket: "schoolhub-5677d.firebasestorage.app",
+    messagingSenderId: "803574136389",
+    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
+    measurementId: "G-ME7E38XNX6"
+};
+
+const statsCountFixApp = getApps().length ? getApp() : initializeApp(statsCountFixConfig);
+const statsCountFixDb = getFirestore(statsCountFixApp);
+const statsCountFixAuth = getAuth(statsCountFixApp);
+
+let currentStatsUser = null;
+
+function n(v) {
+    const x = Number(v);
+    return Number.isFinite(x) ? x : 0;
+}
+
+function values(v) {
+    if (Array.isArray(v)) return v;
+    if (v && typeof v === 'object') return Object.values(v);
+    return [];
+}
+
+function objectKeys(v) {
+    return v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v) : [];
+}
+
+function countAny(v) {
+    if (!v) return 0;
+    if (Array.isArray(v)) return v.length;
+    if (typeof v === 'object') return Object.keys(v).length;
+    return 0;
+}
+
+/*
+ attendance ตัวอย่าง:
+ attendance: {
+   "1780116499482": {
+      "2026-05-31": {...},
+      "2026-06-01": {...}
+   }
+ }
+ ต้องนับ 2 ไม่ใช่ 1
+*/
+function countAttendanceNested(attendance) {
+    if (!attendance) return 0;
+
+    if (Array.isArray(attendance)) return attendance.length;
+
+    if (typeof attendance !== 'object') return 0;
+
+    let total = 0;
+
+    Object.values(attendance).forEach(group => {
+        if (!group) return;
+
+        if (Array.isArray(group)) {
+            total += group.length;
+            return;
+        }
+
+        if (typeof group === 'object') {
+            const keys = Object.keys(group);
+
+            // ถ้าด้านในเป็นวันที่/record ย่อย ให้นับ key ย่อย
+            // เช่น "2026-05-31", "31/05/2569", timestamp date key
+            if (keys.length) {
+                total += keys.length;
+            } else {
+                total += 1;
+            }
+            return;
+        }
+
+        total += 1;
+    });
+
+    return total;
+}
+
+function countCoursePlans(coursePlans) {
+    if (!coursePlans) return 0;
+
+    // ถ้าเป็น array ของงาน
+    if (Array.isArray(coursePlans)) return coursePlans.length;
+
+    if (typeof coursePlans !== 'object') return 0;
+
+    let total = 0;
+
+    Object.values(coursePlans).forEach(plan => {
+        if (!plan) return;
+
+        if (Array.isArray(plan)) {
+            total += plan.length;
+            return;
+        }
+
+        if (typeof plan === 'object') {
+            // รูปแบบที่เป็นไปได้: coursePlans.{courseId}.{weekId/taskId}
+            // นับชั้นย่อยเป็นจำนวนงาน
+            const innerKeys = Object.keys(plan);
+
+            // ถ้าใน plan มี arrays ที่เป็นงาน ให้รวม array เหล่านั้น
+            let arraySum = 0;
+            ['items','assignments','tasks','works','plans','scoreItems'].forEach(k => {
+                if (Array.isArray(plan[k])) arraySum += plan[k].length;
+                else if (plan[k] && typeof plan[k] === 'object') arraySum += Object.keys(plan[k]).length;
+            });
+
+            if (arraySum > 0) {
+                total += arraySum;
+            } else {
+                total += innerKeys.length;
+            }
+        }
+    });
+
+    return total;
+}
+
+function getCourses(state) {
+    return values(state?.courses || state?.courseList || state?.coursesMap);
+}
+
+function getStudents(state) {
+    return values(state?.students || state?.studentList || state?.masterStudents || state?.studentsMap);
+}
+
+function countStateCorrectly(state) {
+    const courses = getCourses(state);
+    const students = getStudents(state);
+
+    // เช็คชื่อ: ใช้ attendance แบบ nested ก่อน
+    let attendanceRecords = 0;
+    attendanceRecords += countAttendanceNested(state?.attendance);
+
+    // fallback เผื่อชื่ออื่น
+    if (!attendanceRecords) {
+        ['attendanceRecords','attendances','checkIns','checkins'].forEach(k => {
+            attendanceRecords += countAttendanceNested(state?.[k]);
+        });
+    }
+
+    // งาน: ให้นับจาก coursePlans เป็นหลัก
+    let assignments = countCoursePlans(state?.coursePlans);
+
+    // fallback เผื่อยังไม่มี coursePlans
+    if (!assignments) {
+        ['assignments','works','tasks','scoreItems'].forEach(k => {
+            assignments += countAny(state?.[k]);
+        });
+        courses.forEach(course => {
+            ['assignments','works','tasks','scoreItems'].forEach(k => {
+                assignments += countAny(course?.[k]);
+            });
+        });
+    }
+
+    let scoreItems = 0;
+    ['scores','scoreRecords','scoreList','studentScores'].forEach(k => {
+        scoreItems += countAny(state?.[k]);
+    });
+    courses.forEach(course => {
+        ['scores','scoreRecords','scoreList','studentScores'].forEach(k => {
+            scoreItems += countAny(course?.[k]);
+        });
+    });
+
+    return {
+        courses: courses.length,
+        students: students.length,
+        attendanceRecords,
+        assignments,
+        scoreItems
+    };
+}
+
+async function readState(userKey) {
+    if (!userKey) return null;
+    try {
+        const snap = await getDoc(doc(statsCountFixDb, 'users', String(userKey), 'school_data', 'state'));
+        return snap.exists() ? (snap.data() || {}) : null;
+    } catch (error) {
+        console.warn('อ่าน state ไม่สำเร็จ:', userKey, error);
+        return null;
+    }
+}
+
+function candidateKeysFromUser(user) {
+    return Array.from(new Set([
+        window.currentUserEmail,
+        window.userEmail,
+        user?.email,
+        user?.uid
+    ].filter(Boolean).map(String)));
+}
+
+async function findStateForCurrentUser() {
+    const user = currentStatsUser || statsCountFixAuth.currentUser || window.currentUser || {};
+    const keys = candidateKeysFromUser(user);
+    for (const key of keys) {
+        const state = await readState(key);
+        if (state) return { key, state };
+    }
+    return { key: keys[0] || '', state: null };
+}
+
+async function syncCurrentUserStatsCorrected() {
+    const user = currentStatsUser || statsCountFixAuth.currentUser || window.currentUser || {};
+    const found = await findStateForCurrentUser();
+    if (!found.state || !found.key) return null;
+
+    const counts = countStateCorrectly(found.state);
+    const statKey = user.uid || user.email || found.key;
+
+    const payload = {
+        uid: user.uid || '',
+        email: user.email || window.currentUserEmail || (String(found.key).includes('@') ? found.key : ''),
+        displayName: user.displayName || window.currentUserName || '',
+        role: window.currentUserRole || window.userRole || 'teacher',
+        status: window.currentUserStatus || 'active',
+        stateUserKey: found.key,
+        courses: counts.courses,
+        students: counts.students,
+        attendanceRecords: counts.attendanceRecords,
+        assignments: counts.assignments,
+        scoreItems: counts.scoreItems,
+        updatedAt: serverTimestamp()
+    };
+
+    await setDoc(doc(statsCountFixDb, 'user_stats', String(statKey)), payload, { merge: true });
+    return payload;
+}
+
+function isActiveUser(d) {
+    const status = String(d?.status || '').toLowerCase();
+    return status !== 'blocked' && status !== 'deleted' && d?.blocked !== true;
+}
+
+function isAdminUser(d) {
+    const role = String(d?.role || '').toLowerCase();
+    return role === 'admin' || d?.isAdmin === true;
+}
+
+async function rebuildGlobalSummaryFromUserStatsCorrected() {
+    let totalTeachers = 0;
+    let totalUsers = 0;
+    let totalCourses = 0;
+    let totalStudents = 0;
+    let totalAttendanceRecords = 0;
+    let totalAssignments = 0;
+    let totalScoreItems = 0;
+    let countedUserStats = 0;
+
+    const snap = await getDocs(collection(statsCountFixDb, 'user_stats'));
+    snap.forEach(docSnap => {
+        const d = docSnap.data() || {};
+        if (!isActiveUser(d)) return;
+
+        countedUserStats += 1;
+        totalUsers += 1;
+        if (!isAdminUser(d)) totalTeachers += 1;
+
+        totalCourses += n(d.courses ?? d.courseCount ?? d.totalCourses);
+        totalStudents += n(d.students ?? d.studentCount ?? d.totalStudents);
+        totalAttendanceRecords += n(d.attendanceRecords ?? d.attendanceCount ?? d.totalAttendanceRecords);
+        totalAssignments += n(d.assignments ?? d.assignmentCount ?? d.totalAssignments);
+        totalScoreItems += n(d.scoreItems ?? d.scoreCount ?? d.totalScoreItems);
+    });
+
+    const summary = {
+        totalTeachers,
+        totalUsers,
+        totalCourses,
+        totalStudents,
+        totalAttendanceRecords,
+        totalAssignments,
+        totalScoreItems,
+        countedUserStats,
+        updatedAt: serverTimestamp()
+    };
+
+    await setDoc(doc(statsCountFixDb, 'global_stats', 'summary'), summary, { merge: true });
+
+    if (typeof window.loadAdminGlobalDashboard === 'function') window.loadAdminGlobalDashboard();
+    if (typeof window.loadGlobalSiteStats === 'function') window.loadGlobalSiteStats();
+
+    return summary;
+}
+
+async function syncAndRebuildCorrected() {
+    try {
+        if (typeof window.toggleLoader === 'function') window.toggleLoader(true);
+        await syncCurrentUserStatsCorrected();
+        await rebuildGlobalSummaryFromUserStatsCorrected();
+    } catch (error) {
+        console.error('sync corrected stats failed:', error);
+    } finally {
+        if (typeof window.toggleLoader === 'function') window.toggleLoader(false);
+    }
+}
+
+window.__schoolhubCountAttendanceNested = countAttendanceNested;
+window.__schoolhubCountCoursePlans = countCoursePlans;
+window.__schoolhubSyncCorrectedStats = syncAndRebuildCorrected;
+window.__schoolhubCentralStatsRebuild = syncAndRebuildCorrected;
+window.__schoolhubSyncAndRebuildStats = syncAndRebuildCorrected;
+
+document.addEventListener('click', function(e) {
+    const text = (e.target?.innerText || e.target?.textContent || '').toString();
+    if (/บันทึก|เพิ่ม|ลบ|เช็คชื่อ|คะแนน|งาน|รีเฟรช|อัปเดตสถิติ/.test(text)) {
+        setTimeout(syncAndRebuildCorrected, 1300);
+    }
+}, true);
+
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(syncAndRebuildCorrected, 2200);
+});
+
+onAuthStateChanged(statsCountFixAuth, user => {
+    currentStatsUser = user;
+    if (user) setTimeout(syncAndRebuildCorrected, 1600);
+});
+</script>
+
+
+<script type="module">
+/* SchoolHub Stats Full Rebuild From Users State
+   ใช้ข้อมูลจริงจาก users/{email}/school_data/state
+   - attendance แบบ A: attendance.{courseId/timestamp}.{dateKey} => นับ dateKey ด้านใน
+   - coursePlans: coursePlans.{courseId/timestamp} = array งาน => นับ array.length
+   - เขียน user_stats ใหม่ทุกบัญชี
+   - รวม global_stats/summary ใหม่
+*/
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getFirestore, collection, getDocs, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const statsRebuildConfig = {
+    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
+    authDomain: "schoolhub-5677d.firebaseapp.com",
+    projectId: "schoolhub-5677d",
+    storageBucket: "schoolhub-5677d.firebasestorage.app",
+    messagingSenderId: "803574136389",
+    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
+    measurementId: "G-ME7E38XNX6"
+};
+
+const statsRebuildApp = getApps().length ? getApp() : initializeApp(statsRebuildConfig);
+const statsRebuildDb = getFirestore(statsRebuildApp);
+
+function num(v) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+}
+
+function arrOrValues(v) {
+    if (Array.isArray(v)) return v;
+    if (v && typeof v === 'object') return Object.values(v);
+    return [];
+}
+
+function countCollection(v) {
+    if (!v) return 0;
+    if (Array.isArray(v)) return v.length;
+    if (typeof v === 'object') return Object.keys(v).length;
+    return 0;
+}
+
+// attendance แบบ A:
+// attendance: {
+//   "1780116499482": {
+//      "2026-05-31": {...},
+//      "2026-06-01": {...}
+//   }
+// }
+// ต้องนับ = 2
+function countAttendance(attendance) {
+    if (!attendance) return 0;
+    if (Array.isArray(attendance)) return attendance.length;
+    if (typeof attendance !== 'object') return 0;
+
+    let total = 0;
+
+    Object.values(attendance).forEach(group => {
+        if (!group) return;
+
+        if (Array.isArray(group)) {
+            total += group.length;
+            return;
+        }
+
+        if (typeof group === 'object') {
+            // ถ้าข้างในมี dates ให้ใช้ dates
+            if (group.dates && typeof group.dates === 'object') {
+                total += Object.keys(group.dates).length;
+                return;
+            }
+
+            // ถ้าข้างในเป็นวันที่โดยตรง ให้นับ key ย่อย
+            const keys = Object.keys(group);
+            total += keys.length;
+            return;
+        }
+
+        total += 1;
+    });
+
+    return total;
+}
+
+// coursePlans ตามรูป:
+// coursePlans: {
+//   "1780116499482": [
+//      {id, week, maxScore, title},
+//      {id, week, maxScore, title}
+//   ]
+// }
+// ต้องนับ = จำนวน item ใน array
+function countCoursePlans(coursePlans) {
+    if (!coursePlans) return 0;
+
+    if (Array.isArray(coursePlans)) return coursePlans.length;
+
+    if (typeof coursePlans !== 'object') return 0;
+
+    let total = 0;
+
+    Object.values(coursePlans).forEach(group => {
+        if (!group) return;
+
+        if (Array.isArray(group)) {
+            total += group.length;
+            return;
+        }
+
+        if (typeof group === 'object') {
+            // รองรับกรณี group มี items เป็น array
+            if (Array.isArray(group.items)) {
+                total += group.items.length;
+                return;
+            }
+
+            // รองรับกรณี group มี assignments/tasks/works เป็น array หรือ map
+            let sub = 0;
+            ['assignments','tasks','works','plans','scoreItems'].forEach(k => {
+                if (Array.isArray(group[k])) sub += group[k].length;
+                else if (group[k] && typeof group[k] === 'object') sub += Object.keys(group[k]).length;
+            });
+
+            if (sub > 0) {
+                total += sub;
+                return;
+            }
+
+            // ถ้าเป็น map ของงานโดยตรง
+            total += Object.keys(group).length;
+        }
+    });
+
+    return total;
+}
+
+function countState(state) {
+    const courses = arrOrValues(state?.courses || state?.courseList || state?.coursesMap);
+    const students = arrOrValues(state?.students || state?.studentList || state?.masterStudents || state?.studentsMap);
+
+    const attendanceRecords = countAttendance(state?.attendance) ||
+        countAttendance(state?.attendanceRecords) ||
+        countAttendance(state?.attendances) ||
+        countAttendance(state?.checkIns);
+
+    let assignments = countCoursePlans(state?.coursePlans);
+
+    if (!assignments) {
+        assignments += countCollection(state?.assignments);
+        assignments += countCollection(state?.tasks);
+        assignments += countCollection(state?.works);
+        courses.forEach(c => {
+            assignments += countCollection(c?.assignments);
+            assignments += countCollection(c?.tasks);
+            assignments += countCollection(c?.works);
+        });
+    }
+
+    let scoreItems = 0;
+    scoreItems += countCollection(state?.scores);
+    scoreItems += countCollection(state?.scoreRecords);
+    scoreItems += countCollection(state?.scoreList);
+    scoreItems += countCollection(state?.studentScores);
+
+    return {
+        courses: courses.length,
+        students: students.length,
+        attendanceRecords,
+        assignments,
+        scoreItems
+    };
+}
+
+async function getAllUserKeys() {
+    const keys = new Set();
+
+    // users collection คือแหล่งหลัก เพราะ state อยู่ที่ users/{email}/school_data/state
+    try {
+        const usersSnap = await getDocs(collection(statsRebuildDb, 'users'));
+        usersSnap.forEach(d => keys.add(d.id));
+    } catch(e) {
+        console.warn('อ่าน users ไม่สำเร็จ:', e);
+    }
+
+    // เพิ่มจาก directory/status เผื่อมีอีเมลหรือ uid
+    for (const col of ['public_users_directory', 'users_status']) {
+        try {
+            const snap = await getDocs(collection(statsRebuildDb, col));
+            snap.forEach(d => {
+                const data = d.data() || {};
+                keys.add(d.id);
+                if (data.email) keys.add(String(data.email));
+                if (data.uid) keys.add(String(data.uid));
+                if (data.userKey) keys.add(String(data.userKey));
+            });
+        } catch(e) {
+            console.warn('อ่าน ' + col + ' ไม่สำเร็จ:', e);
+        }
+    }
+
+    return Array.from(keys).filter(Boolean);
+}
+
+async function readStateByKey(key) {
+    try {
+        const snap = await getDoc(doc(statsRebuildDb, 'users', String(key), 'school_data', 'state'));
+        return snap.exists() ? (snap.data() || {}) : null;
+    } catch(e) {
+        console.warn('อ่าน state ไม่สำเร็จ:', key, e);
+        return null;
+    }
+}
+
+async function rebuildAllStatsFromUsersState() {
+    const keys = await getAllUserKeys();
+
+    let totalUsers = 0;
+    let totalTeachers = 0;
+    let totalCourses = 0;
+    let totalStudents = 0;
+    let totalAttendanceRecords = 0;
+    let totalAssignments = 0;
+    let totalScoreItems = 0;
+    let foundStateCount = 0;
+
+    const usedStateKeys = new Set();
+
+    for (const key of keys) {
+        if (usedStateKeys.has(key)) continue;
+
+        const state = await readStateByKey(key);
+        if (!state) continue;
+
+        usedStateKeys.add(key);
+        foundStateCount += 1;
+        totalUsers += 1;
+        totalTeachers += 1;
+
+        const counts = countState(state);
+
+        totalCourses += counts.courses;
+        totalStudents += counts.students;
+        totalAttendanceRecords += counts.attendanceRecords;
+        totalAssignments += counts.assignments;
+        totalScoreItems += counts.scoreItems;
+
+        await setDoc(doc(statsRebuildDb, 'user_stats', String(key)), {
+            email: String(key).includes('@') ? String(key) : '',
+            stateUserKey: key,
+            role: 'teacher',
+            status: 'active',
+            courses: counts.courses,
+            students: counts.students,
+            attendanceRecords: counts.attendanceRecords,
+            assignments: counts.assignments,
+            scoreItems: counts.scoreItems,
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+    }
+
+    const summary = {
+        totalTeachers,
+        totalUsers,
+        totalCourses,
+        totalStudents,
+        totalAttendanceRecords,
+        totalAssignments,
+        totalScoreItems,
+        foundStateCount,
+        updatedAt: serverTimestamp()
+    };
+
+    await setDoc(doc(statsRebuildDb, 'global_stats', 'summary'), summary, { merge: true });
+
+    if (typeof window.loadAdminGlobalDashboard === 'function') window.loadAdminGlobalDashboard();
+    if (typeof window.loadGlobalSiteStats === 'function') window.loadGlobalSiteStats();
+
+    console.log('SchoolHub rebuilt stats from users state:', summary);
+    return summary;
+}
+
+window.__schoolhubCountAttendance = countAttendance;
+window.__schoolhubCountCoursePlans = countCoursePlans;
+window.__schoolhubRebuildAllStatsFromUsersState = rebuildAllStatsFromUsersState;
+window.__schoolhubSyncCorrectedStats = rebuildAllStatsFromUsersState;
+window.__schoolhubCentralStatsRebuild = rebuildAllStatsFromUsersState;
+window.__schoolhubSyncAndRebuildStats = rebuildAllStatsFromUsersState;
+
+// ให้ปุ่มในแดชบอร์ดรวมเรียกตัวใหม่นี้
+const oldLoadAdminGlobalDashboard = window.loadAdminGlobalDashboard;
+window.loadAdminGlobalDashboard = async function() {
+    if (typeof oldLoadAdminGlobalDashboard === 'function') {
+        await oldLoadAdminGlobalDashboard();
+    }
+};
+
+document.addEventListener('click', function(e) {
+    const text = (e.target?.innerText || e.target?.textContent || '').toString();
+    if (/อัปเดตสถิติ|รีเฟรช/.test(text)) {
+        setTimeout(rebuildAllStatsFromUsersState, 300);
+    }
+}, true);
+
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(rebuildAllStatsFromUsersState, 2500);
+});
+</script>
+
+
+<script type="module">
+/* SchoolHub User Stats First Correct Sync
+   เป้าหมาย:
+   1) อ่านข้อมูลจริงจาก users/{email}/school_data/state ก่อน
+   2) เขียน user_stats ให้ถูกก่อน
+   3) แล้วค่อยรวม global_stats จาก user_stats
+
+   โครงสร้างที่รองรับ:
+   - attendance.{courseId/timestamp}.{dateKey} => นับ dateKey
+   - coursePlans.{courseId/timestamp} = array งาน => นับ array.length
+*/
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getFirestore, collection, getDocs, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+const userStatsFixConfig = {
+    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
+    authDomain: "schoolhub-5677d.firebaseapp.com",
+    projectId: "schoolhub-5677d",
+    storageBucket: "schoolhub-5677d.firebasestorage.app",
+    messagingSenderId: "803574136389",
+    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
+    measurementId: "G-ME7E38XNX6"
+};
+
+const userStatsFixApp = getApps().length ? getApp() : initializeApp(userStatsFixConfig);
+const userStatsFixDb = getFirestore(userStatsFixApp);
+const userStatsFixAuth = getAuth(userStatsFixApp);
+let currentFixUser = null;
+
+function toNum(v) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+}
+
+function values(v) {
+    if (Array.isArray(v)) return v;
+    if (v && typeof v === 'object') return Object.values(v);
+    return [];
+}
+
+function countAny(v) {
+    if (!v) return 0;
+    if (Array.isArray(v)) return v.length;
+    if (v && typeof v === 'object') return Object.keys(v).length;
+    return 0;
+}
+
+// attendance ตัวอย่าง:
+// attendance: {
+//   "1780116499482": {
+//      "2026-05-31": {...},
+//      "2026-06-01": {...}
+//   }
+// }
+// นับ = 2
+function countAttendance(attendance) {
+    if (!attendance) return 0;
+    if (Array.isArray(attendance)) return attendance.length;
+    if (typeof attendance !== 'object') return 0;
+
+    let total = 0;
+
+    Object.values(attendance).forEach(group => {
+        if (!group) return;
+
+        if (Array.isArray(group)) {
+            total += group.length;
+            return;
+        }
+
+        if (typeof group === 'object') {
+            if (group.dates && typeof group.dates === 'object') {
+                total += Object.keys(group.dates).length;
+                return;
+            }
+
+            if (group.records && typeof group.records === 'object') {
+                total += Object.keys(group.records).length;
+                return;
+            }
+
+            total += Object.keys(group).length;
+            return;
+        }
+
+        total += 1;
+    });
+
+    return total;
+}
+
+// coursePlans ตัวอย่าง:
+// coursePlans: {
+//   "1780116499482": [
+//     {id, week, maxScore, title},
+//     {id, week, maxScore, title}
+//   ]
+// }
+// นับ = array.length
+function countCoursePlans(coursePlans) {
+    if (!coursePlans) return 0;
+    if (Array.isArray(coursePlans)) return coursePlans.length;
+    if (typeof coursePlans !== 'object') return 0;
+
+    let total = 0;
+
+    Object.values(coursePlans).forEach(group => {
+        if (!group) return;
+
+        if (Array.isArray(group)) {
+            total += group.length;
+            return;
+        }
+
+        if (typeof group === 'object') {
+            if (Array.isArray(group.items)) {
+                total += group.items.length;
+                return;
+            }
+
+            let sub = 0;
+            ['assignments','tasks','works','plans','scoreItems'].forEach(k => {
+                if (Array.isArray(group[k])) sub += group[k].length;
+                else if (group[k] && typeof group[k] === 'object') sub += Object.keys(group[k]).length;
+            });
+
+            total += sub || Object.keys(group).length;
+        }
+    });
+
+    return total;
+}
+
+function countState(state) {
+    const courses = values(state?.courses || state?.courseList || state?.coursesMap);
+    const students = values(state?.students || state?.studentList || state?.masterStudents || state?.studentsMap);
+
+    const attendanceRecords =
+        countAttendance(state?.attendance) ||
+        countAttendance(state?.attendanceRecords) ||
+        countAttendance(state?.attendances) ||
+        countAttendance(state?.checkIns) ||
+        countAttendance(state?.checkins);
+
+    let assignments = countCoursePlans(state?.coursePlans);
+
+    if (!assignments) {
+        assignments += countAny(state?.assignments);
+        assignments += countAny(state?.tasks);
+        assignments += countAny(state?.works);
+        courses.forEach(c => {
+            assignments += countAny(c?.assignments);
+            assignments += countAny(c?.tasks);
+            assignments += countAny(c?.works);
+        });
+    }
+
+    let scoreItems = 0;
+    scoreItems += countAny(state?.scores);
+    scoreItems += countAny(state?.scoreRecords);
+    scoreItems += countAny(state?.scoreList);
+    scoreItems += countAny(state?.studentScores);
+
+    return {
+        courses: courses.length,
+        students: students.length,
+        attendanceRecords,
+        assignments,
+        scoreItems
+    };
+}
+
+function isBlocked(data) {
+    const status = String(data?.status || '').toLowerCase();
+    return status === 'blocked' || status === 'deleted' || data?.blocked === true;
+}
+
+function isAdmin(data) {
+    const role = String(data?.role || '').toLowerCase();
+    return role === 'admin' || data?.isAdmin === true;
+}
+
+async function readStateByUserKey(userKey) {
+    if (!userKey) return null;
+    try {
+        const snap = await getDoc(doc(userStatsFixDb, 'users', String(userKey), 'school_data', 'state'));
+        return snap.exists() ? (snap.data() || {}) : null;
+    } catch (e) {
+        console.warn('อ่าน state ไม่สำเร็จ:', userKey, e);
+        return null;
+    }
+}
+
+// ดึงรายชื่อผู้ใช้จาก users_status/public_users_directory ก่อน
+// เพราะ users collection อาจไม่ list เอกสารที่มีแค่ subcollection
+async function getUserDirectoryRecords() {
+    const records = [];
+    const seen = new Set();
+
+    async function readDirectory(colName) {
+        try {
+            const snap = await getDocs(collection(userStatsFixDb, colName));
+            snap.forEach(docSnap => {
+                const data = docSnap.data() || {};
+                const key = data.uid || data.email || docSnap.id;
+                if (!key || seen.has(String(key))) return;
+                seen.add(String(key));
+
+                records.push({
+                    directoryId: docSnap.id,
+                    uid: data.uid || '',
+                    email: data.email || (String(docSnap.id).includes('@') ? docSnap.id : ''),
+                    displayName: data.displayName || data.name || data.fullName || '',
+                    role: data.role || 'teacher',
+                    status: data.status || 'active',
+                    data
+                });
+            });
+        } catch (e) {
+            console.warn('อ่าน ' + colName + ' ไม่สำเร็จ:', e);
+        }
+    }
+
+    await readDirectory('users_status');
+    await readDirectory('public_users_directory');
+
+    // เพิ่มผู้ใช้ปัจจุบัน เผื่อ directory ยังไม่มี
+    const user = currentFixUser || userStatsFixAuth.currentUser || window.currentUser || {};
+    const currentEmail = window.currentUserEmail || window.userEmail || user.email || '';
+    const currentUid = user.uid || '';
+    if ((currentEmail || currentUid) && !seen.has(currentUid || currentEmail)) {
+        records.push({
+            directoryId: currentUid || currentEmail,
+            uid: currentUid,
+            email: currentEmail,
+            displayName: user.displayName || window.currentUserName || '',
+            role: window.currentUserRole || window.userRole || 'teacher',
+            status: window.currentUserStatus || 'active',
+            data: {}
+        });
+    }
+
+    return records;
+}
+
+async function findStateForRecord(record) {
+    // สำคัญ: state อยู่ที่ users/{email}/school_data/state เป็นหลัก
+    const candidates = Array.from(new Set([
+        record.email,
+        record.directoryId,
+        record.uid,
+        record.data?.userKey,
+        record.data?.id
+    ].filter(Boolean).map(String)));
+
+    for (const key of candidates) {
+        const state = await readStateByUserKey(key);
+        if (state) return { stateKey: key, state };
+    }
+
+    return { stateKey: candidates[0] || '', state: null };
+}
+
+async function syncUserStatsOnly() {
+    const records = await getUserDirectoryRecords();
+
+    let updatedCount = 0;
+    let foundStateCount = 0;
+
+    for (const record of records) {
+        if (isBlocked(record.data)) continue;
+
+        const found = await findStateForRecord(record);
+        if (!found.state) {
+            console.warn('ไม่พบ state ของผู้ใช้:', record.email || record.uid || record.directoryId);
+            continue;
+        }
+
+        foundStateCount += 1;
+
+        const counts = countState(found.state);
+
+        // user_stats ให้ใช้ uid ถ้ามี ไม่งั้นใช้ email ไม่งั้นใช้ stateKey
+        const statDocId = record.uid || record.email || found.stateKey || record.directoryId;
+
+        const payload = {
+            uid: record.uid || '',
+            email: record.email || (String(found.stateKey).includes('@') ? found.stateKey : ''),
+            displayName: record.displayName || '',
+            role: isAdmin(record.data) ? 'admin' : (record.role || 'teacher'),
+            status: record.status || 'active',
+            stateUserKey: found.stateKey,
+            courses: counts.courses,
+            students: counts.students,
+            attendanceRecords: counts.attendanceRecords,
+            assignments: counts.assignments,
+            scoreItems: counts.scoreItems,
+            updatedAt: serverTimestamp()
+        };
+
+        await setDoc(doc(userStatsFixDb, 'user_stats', String(statDocId)), payload, { merge: true });
+
+        // ถ้า stateKey เป็น email แต่ statDocId เป็น uid ให้เขียน mirror email ด้วย เพื่อให้หาเจอใน Firebase ง่าย
+        if (record.email && String(record.email) !== String(statDocId)) {
+            await setDoc(doc(userStatsFixDb, 'user_stats', String(record.email)), {
+                ...payload,
+                mirrorOf: String(statDocId),
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+        }
+
+        updatedCount += 1;
+    }
+
+    console.log('syncUserStatsOnly completed:', { updatedCount, foundStateCount });
+    return { updatedCount, foundStateCount };
+}
+
+async function rebuildGlobalFromUserStats() {
+    const snap = await getDocs(collection(userStatsFixDb, 'user_stats'));
+
+    let totalUsers = 0;
+    let totalTeachers = 0;
+    let totalCourses = 0;
+    let totalStudents = 0;
+    let totalAttendanceRecords = 0;
+    let totalAssignments = 0;
+    let totalScoreItems = 0;
+
+    const counted = new Set();
+
+    snap.forEach(docSnap => {
+        const d = docSnap.data() || {};
+        if (isBlocked(d)) return;
+
+        // กัน mirror email นับซ้ำ
+        const canonical = d.mirrorOf || docSnap.id;
+        if (counted.has(canonical)) return;
+        counted.add(canonical);
+
+        totalUsers += 1;
+        if (!isAdmin(d)) totalTeachers += 1;
+
+        totalCourses += toNum(d.courses);
+        totalStudents += toNum(d.students);
+        totalAttendanceRecords += toNum(d.attendanceRecords);
+        totalAssignments += toNum(d.assignments);
+        totalScoreItems += toNum(d.scoreItems);
+    });
+
+    const summary = {
+        totalUsers,
+        totalTeachers,
+        totalCourses,
+        totalStudents,
+        totalAttendanceRecords,
+        totalAssignments,
+        totalScoreItems,
+        countedUserStats: counted.size,
+        updatedAt: serverTimestamp()
+    };
+
+    await setDoc(doc(userStatsFixDb, 'global_stats', 'summary'), summary, { merge: true });
+
+    if (typeof window.loadAdminGlobalDashboard === 'function') window.loadAdminGlobalDashboard();
+    if (typeof window.loadGlobalSiteStats === 'function') window.loadGlobalSiteStats();
+
+    return summary;
+}
+
+async function syncUserStatsThenGlobal() {
+    try {
+        if (typeof window.toggleLoader === 'function') window.toggleLoader(true);
+        await syncUserStatsOnly();
+        await rebuildGlobalFromUserStats();
+    } catch (error) {
+        console.error('syncUserStatsThenGlobal failed:', error);
+        alert('อัปเดต user_stats ไม่สำเร็จ: ' + (error.message || error));
+    } finally {
+        if (typeof window.toggleLoader === 'function') window.toggleLoader(false);
+    }
+}
+
+window.__schoolhubCountState = countState;
+window.__schoolhubCountAttendance = countAttendance;
+window.__schoolhubCountCoursePlans = countCoursePlans;
+window.__schoolhubSyncUserStatsOnly = syncUserStatsOnly;
+window.__schoolhubSyncUserStatsThenGlobal = syncUserStatsThenGlobal;
+window.__schoolhubRebuildAllStatsFromUsersState = syncUserStatsThenGlobal;
+window.__schoolhubSyncCorrectedStats = syncUserStatsThenGlobal;
+window.__schoolhubCentralStatsRebuild = syncUserStatsThenGlobal;
+window.__schoolhubSyncAndRebuildStats = syncUserStatsThenGlobal;
+
+// ปุ่มอัปเดตสถิติ / รีเฟรช ในแดชบอร์ดให้บังคับ sync user_stats ก่อน
+document.addEventListener('click', function(e) {
+    const text = (e.target?.innerText || e.target?.textContent || '').toString();
+    if (/อัปเดตสถิติ|รีเฟรช/.test(text)) {
+        setTimeout(syncUserStatsThenGlobal, 250);
+    }
+}, true);
+
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(syncUserStatsThenGlobal, 2500);
+});
+
+onAuthStateChanged(userStatsFixAuth, user => {
+    currentFixUser = user;
+    if (user) setTimeout(syncUserStatsThenGlobal, 1600);
+});
 </script>
 
 </body>
