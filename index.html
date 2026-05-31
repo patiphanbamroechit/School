@@ -1779,6 +1779,15 @@
                                 <input type="hidden" id="plan-sub-edit-id">
                                 <div><label class="block text-sm font-semibold text-slate-600 mb-1">ชื่อระดับ</label><input id="plan-sub-name" required class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="เช่น ฟรี / Pro / School"></div>
                                 <div><label class="block text-sm font-semibold text-slate-600 mb-1">ราคา</label><input id="plan-sub-price" required class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="เช่น 0 บาท / 199 บาทต่อเดือน"></div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div><label class="block text-sm font-semibold text-slate-600 mb-1">รอบเก็บเงิน</label><select id="plan-sub-billing-cycle" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none"><option value="monthly">รายเดือน</option><option value="yearly">รายปี</option><option value="forever">ฟรีตลอด</option></select></div>
+                                    <div><label class="block text-sm font-semibold text-slate-600 mb-1">เพิ่มรายวิชาได้กี่วิชา</label><input id="plan-sub-course-limit" type="number" min="0" value="1" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="0 = ไม่จำกัด"></div>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div><label class="block text-sm font-semibold text-slate-600 mb-1">ราคารายเดือน</label><input id="plan-sub-monthly-price" type="number" min="0" value="0" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="เช่น 199"></div>
+                                    <div><label class="block text-sm font-semibold text-slate-600 mb-1">ราคารายปี</label><input id="plan-sub-yearly-price" type="number" min="0" value="0" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="เช่น 1990"></div>
+                                </div>
+                                <label class="flex items-center gap-2 bg-indigo-50 px-4 py-3 rounded-xl border border-indigo-100 text-sm font-semibold text-indigo-700"><input id="plan-sub-free-first-month" type="checkbox" class="w-4 h-4 text-primary rounded"> ฟรีเดือนแรก แล้วเก็บเงินรอบถัดไป</label>
                                 <div><label class="block text-sm font-semibold text-slate-600 mb-1">เบอร์พร้อมเพย์สำหรับรับเงิน</label><input id="plan-sub-promptpay" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="เช่น 0812345678 หรือเลขบัตรประชาชน"></div>
                                 <div><label class="block text-sm font-semibold text-slate-600 mb-1">คำอธิบายสั้น</label><input id="plan-sub-desc" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="เหมาะสำหรับทดลองใช้งาน"></div>
                                 <div><label class="block text-sm font-semibold text-slate-600 mb-1">สิ่งที่ทำได้ <span class="text-xs text-slate-400">(บรรทัดละ 1 รายการ)</span></label><textarea id="plan-sub-features" rows="5" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="สร้างรายวิชาได้ 1 วิชา&#10;เช็คชื่อได้&#10;บันทึกคะแนนได้"></textarea></div>
@@ -2956,12 +2965,19 @@
                 name:payload.name||payload.email||'',role:'user',status:'active',
                 planId:payload.planId,planName:payload.planName,planPrice:payload.planPrice,
                 planApprovedAt:now,planStartAt:now,
+                planNextBillingAt:getPlanNextBillingAt(getPlanById(payload.planId)||payload,now,payload.planBillingCycle||'monthly'),
+                planExpiresAt:getPlanNextBillingAt(getPlanById(payload.planId)||payload,now,payload.planBillingCycle||'monthly'),
+                courseLimit:Number((getPlanById(payload.planId)||{}).courseLimit||0),
                 requestedPlanId:null,requestedPlanName:null,
                 lastAutoApprovedPaymentRef:verification.reference
             },{merge:true});
             await setDoc(doc(db,'users_status',payload.userKey||payload.email||payload.uid),{
                 status:'active',planId:payload.planId,planName:payload.planName,planPrice:payload.planPrice,
-                planApprovedAt:now,planStartAt:now,deletedAt:null,
+                planApprovedAt:now,planStartAt:now,
+                planNextBillingAt:getPlanNextBillingAt(getPlanById(payload.planId)||payload,now,payload.planBillingCycle||'monthly'),
+                planExpiresAt:getPlanNextBillingAt(getPlanById(payload.planId)||payload,now,payload.planBillingCycle||'monthly'),
+                courseLimit:Number((getPlanById(payload.planId)||{}).courseLimit||0),
+                deletedAt:null,
                 lastAutoApprovedPaymentRef:verification.reference
             },{merge:true});
             rememberUsedReference(verification.reference);
@@ -3050,6 +3066,10 @@
                 closePlanPaymentModal();
                 return openRegisterFromLanding();
             }
+            if(await hasPendingPlanRequestForCurrentUser()){
+                closePlanPaymentModal();
+                return showCustomAlert('มีคำขอรออนุมัติอยู่แล้ว','คุณส่งคำขอสมัครแผนไว้แล้ว กรุณารอแอดมินอนุมัติก่อน ไม่สามารถส่งซ้ำได้',true);
+            }
             const payerName=document.getElementById('payment-payer-name')?.value.trim();
             const paidAt=document.getElementById('payment-paid-at')?.value;
             const proofFile=document.getElementById('payment-proof-file')?.files?.[0];
@@ -3078,6 +3098,7 @@
                     name:currentUser.displayName||userKey,
                     planId:plan.id,planName:plan.name||'',planPrice:plan.price||'',
                     planDesc:plan.desc||'',planAmount:extractPlanAmount(plan.price),
+                    planBillingCycle:getSelectedPlanCycle(plan),
                     promptpay:plan.promptpay||'',
                     payerName,
                     paymentTime:paidAt,
@@ -3132,7 +3153,7 @@ async function submitPlanRequest(planId){
             if(!currentUser||currentUser.uid==='admin-bypass'){localStorage.setItem(PENDING_PLAN_KEY,planId);return openRegisterFromLanding();}
             const userKey=getUserKey(currentUser);
             const reqId=`${currentUser.uid}_${planId}_${Date.now()}`;
-            const payload={id:reqId,uid:currentUser.uid,userKey,email:currentUser.email||'',name:currentUser.displayName||userKey,planId:plan.id,planName:plan.name||'',planPrice:plan.price||'',planDesc:plan.desc||'',status:'pending',createdAt:Date.now(),updatedAt:Date.now()};
+            const payload={id:reqId,uid:currentUser.uid,userKey,email:currentUser.email||'',name:currentUser.displayName||userKey,planId:plan.id,planName:plan.name||'',planPrice:planDisplayPrice(plan),planDesc:plan.desc||'',planBillingCycle:plan.billingCycle||'monthly',status:'pending',createdAt:Date.now(),updatedAt:Date.now()};
             toggleLoader(true);
             try{
                 await setDoc(getPlanRequestDocRef(reqId),payload,{merge:true});
@@ -3304,6 +3325,7 @@ async function submitPlanRequest(planId){
         window.toggleMobileMenu = () => document.getElementById('mobile-menu').classList.toggle('hidden');
 
         async function saveStateToDB() {
+            if (window.__schoolhubPlanLocked && !isAdmin) { showCustomAlert('บัญชีถูกล็อก', 'แผนของคุณหมดรอบใช้งานแล้ว กรุณาต่ออายุหรือเลือกแผนใหม่ก่อนแก้ไขข้อมูล', true); return; }
             if (!currentUser || currentUser.uid === 'admin-bypass') return;
             try { await withTimeout(setDoc(doc(db, getPrivatePath(getUserKey(currentUser)), 'state'), state), 8000, 'saveState'); }
             catch (error) { showCustomAlert("ผิดพลาด", "ข้อมูลไม่ถูกบันทึกลง Cloud โปรดตรวจสอบอินเทอร์เน็ตหรือ Firestore Rules", true); }
@@ -3509,8 +3531,12 @@ async function submitPlanRequest(planId){
                         const dirSnap = await withTimeout(getDoc(doc(db, getPublicPath(), user.uid)), 6000, 'syncUserDir');
                         if(dirSnap.exists()) window.__currentUserDir = dirSnap.data() || {};
                     } catch(e) { console.warn('syncUserDir failed:', e); }
+                    await refreshCurrentUserPlanLock();
                     const planFlow = await processPendingPlanRequestAfterLogin();
-                    if(!planFlow) window.goToHome();
+                    if(!planFlow) {
+                        if(window.__schoolhubPlanLocked) await window.openUserPlanSelector();
+                        else window.goToHome();
+                    }
                 } catch (error) { showCustomAlert("ผิดพลาด", error.message, true); }
                 finally { toggleLoader(false); }
             } else {
@@ -3907,6 +3933,8 @@ ${resetUrl.toString()}
         };
 
         window.handleCourseSubmit = async (e) => {
+            if (window.__schoolhubPlanLocked && !isAdmin) return showCustomAlert('บัญชีถูกล็อก','กรุณาต่ออายุแผนก่อนเพิ่มหรือแก้ไขรายวิชา',true);
+            if (!editingCourseId && !canCreateMoreCourses()) return showCustomAlert('เกินจำนวนรายวิชาของแผน','แผนปัจจุบันเพิ่มรายวิชาได้สูงสุด ' + getCurrentCourseLimitText() + ' กรุณาอัปเกรดแผนก่อน',true);
             const selectedDays = []; document.querySelectorAll('.course-day:checked').forEach(cb => selectedDays.push(parseInt(cb.value)));
             const schedule = { days: selectedDays, startTime: document.getElementById('course-time-start').value, endTime: document.getElementById('course-time-end').value };
             const studentRooms = Array.from(document.querySelectorAll('.course-room-checkbox:checked')).map(cb => cb.value);
@@ -4645,6 +4673,168 @@ ${resetUrl.toString()}
             });
         };
 
+
+
+        /* --- Enhanced Subscription Plan Rules: single pending request, real plan settings, billing/locking --- */
+        const PLAN_LOCK_CACHE_KEY = 'schoolhub_plan_lock_state';
+        function normalizePlanId(value){ return String(value||'').trim(); }
+        function moneyText(amount){ const n=Number(amount||0); return n>0 ? `${n.toLocaleString('th-TH')} บาท` : '0 บาท'; }
+        function addMonths(ts,n){ const d=new Date(ts||Date.now()); d.setMonth(d.getMonth()+Number(n||1)); return d.getTime(); }
+        function addYears(ts,n){ const d=new Date(ts||Date.now()); d.setFullYear(d.getFullYear()+Number(n||1)); return d.getTime(); }
+        function getPlanById(planId){ return (subscriptionPlans||getDefaultPlans()).find(p=>normalizePlanId(p.id)===normalizePlanId(planId)); }
+        function planDisplayPrice(p){
+            if(!p) return '-';
+            if(p.freeForever || p.billingCycle==='forever') return 'ฟรีตลอด';
+            const monthly=Number(p.monthlyPrice||0), yearly=Number(p.yearlyPrice||0);
+            if(p.freeFirstMonth && monthly>0) return `ฟรีเดือนแรก / ต่อไป ${moneyText(monthly)} ต่อเดือน`;
+            if(monthly>0 && yearly>0) return `${moneyText(monthly)}/เดือน หรือ ${moneyText(yearly)}/ปี`;
+            if(yearly>0 && p.billingCycle==='yearly') return `${moneyText(yearly)}/ปี`;
+            if(monthly>0) return `${moneyText(monthly)}/เดือน`;
+            return p.price || '0 บาท';
+        }
+        function getSelectedPlanCycle(plan){
+            const sel=document.getElementById('payment-billing-cycle');
+            return sel && sel.value ? sel.value : (plan?.billingCycle || 'monthly');
+        }
+        function getPlanChargeAmount(plan, cycle){
+            if(!plan) return 0;
+            if(plan.freeForever || plan.billingCycle==='forever') return 0;
+            const c=cycle||plan.billingCycle||'monthly';
+            if(c==='yearly') return Number(plan.yearlyPrice||extractPlanAmount(plan.price)||0);
+            if(plan.freeFirstMonth && !window.__currentUserDir?.planId) return 0;
+            return Number(plan.monthlyPrice||extractPlanAmount(plan.price)||0);
+        }
+        function getPlanNextBillingAt(plan, startAt, cycle){
+            if(!plan || plan.freeForever || plan.billingCycle==='forever') return null;
+            const c=cycle||plan.billingCycle||'monthly';
+            return c==='yearly' ? addYears(startAt,1) : addMonths(startAt,1);
+        }
+        function getCurrentCourseLimit(){
+            const dir=window.__currentUserDir||{};
+            const plan=getPlanById(dir.planId);
+            const limit=Number((plan&&plan.courseLimit)!=null?plan.courseLimit:dir.courseLimit||0);
+            return limit; // 0 = unlimited
+        }
+        function getCurrentCourseLimitText(){ const l=getCurrentCourseLimit(); return l===0?'ไม่จำกัด':`${l} วิชา`; }
+        function canCreateMoreCourses(){ const l=getCurrentCourseLimit(); return l===0 || state.courses.length < l; }
+        async function hasPendingPlanRequestForCurrentUser(){
+            if(!currentUser || currentUser.uid==='admin-bypass') return false;
+            const dir=window.__currentUserDir||{};
+            if(dir.requestedPlanId || dir.requestedPlanName || dir.status==='pending_plan') return true;
+            try{
+                const qs=await withTimeout(getDocs(collection(db,'subscription_requests')),8000,'checkPendingPlan');
+                let found=false;
+                qs.forEach(d=>{const r=d.data()||{}; if(r.status==='pending' && (r.uid===currentUser.uid || String(r.email||'').toLowerCase()===String(currentUser.email||'').toLowerCase())) found=true;});
+                return found;
+            }catch(e){ return !!(dir.requestedPlanId || dir.status==='pending_plan'); }
+        }
+        async function refreshCurrentUserPlanLock(){
+            if(!currentUser || currentUser.uid==='admin-bypass' || isAdmin) return false;
+            try{
+                const snap=await withTimeout(getDoc(doc(db,getPublicPath(),currentUser.uid)),6000,'refreshPlanLock');
+                if(snap.exists()) window.__currentUserDir=snap.data()||{};
+            }catch(e){}
+            const dir=window.__currentUserDir||{};
+            const now=Date.now();
+            let locked=false, reason='';
+            if(!dir.planId && !dir.requestedPlanId){ locked=true; reason='ยังไม่ได้เลือกแผน กรุณาเลือกแผนก่อนเริ่มใช้งาน'; }
+            else if(dir.status==='pending_plan' || dir.requestedPlanId){ locked=true; reason='คำขอแผนของคุณอยู่ระหว่างรอแอดมินอนุมัติ'; }
+            else if(dir.planNextBillingAt && Number(dir.planNextBillingAt) <= now){ locked=true; reason='ถึงรอบเรียกเก็บเงินแล้ว หากยังไม่ชำระ ระบบจะล็อกการแก้ไข ใช้ดูข้อมูลได้เท่านั้น'; }
+            window.__schoolhubPlanLocked=locked;
+            window.__schoolhubPlanLockReason=reason;
+            localStorage.setItem(PLAN_LOCK_CACHE_KEY,JSON.stringify({locked,reason,checkedAt:now}));
+            if(locked){
+                try{ await setDoc(doc(db,getPublicPath(),currentUser.uid),{status:dir.status==='pending_plan'?'pending_plan':'plan_locked',planLockedAt:now,planLockReason:reason},{merge:true}); }catch(e){}
+                setTimeout(()=>showCustomAlert('ต้องจัดการแผนก่อน',reason+'\n\nคุณยังเข้าไปดูข้อมูลเดิมได้ แต่จะแก้ไข/เพิ่มข้อมูลไม่ได้จนกว่าจะเลือกแผนหรือชำระรอบถัดไป',true),250);
+            }
+            return locked;
+        }
+        function applyPlanToUserPayload(plan, startAt, cycle, extra){
+            const amount=getPlanChargeAmount(plan, cycle);
+            const next=getPlanNextBillingAt(plan,startAt,cycle);
+            return Object.assign({
+                status:'active', planId:plan.id, planName:plan.name||'', planPrice:planDisplayPrice(plan),
+                planAmount:amount, planBillingCycle:cycle||plan.billingCycle||'monthly', courseLimit:Number(plan.courseLimit||0),
+                planApprovedAt:startAt, planStartAt:startAt, planNextBillingAt:next, planExpiresAt:next,
+                requestedPlanId:null, requestedPlanName:null, requestedPlanAt:null, planLockedAt:null, planLockReason:null
+            }, extra||{});
+        }
+        function formatNextBilling(dir){
+            if(!dir) return '';
+            if(!dir.planNextBillingAt) return 'ไม่มีรอบเรียกเก็บถัดไป';
+            return new Date(Number(dir.planNextBillingAt)).toLocaleString('th-TH');
+        }
+        getDefaultPlans = function(){
+            const now=Date.now();
+            return [
+                {id:'standard',name:'มาตรฐาน',monthlyPrice:99,yearlyPrice:990,price:'ฟรีเดือนแรก / ต่อไป 99 บาทต่อเดือน',billingCycle:'monthly',freeFirstMonth:true,courseLimit:3,promptpay:'',desc:'เหมาะสำหรับเริ่มใช้งาน ฟรีเดือนแรก เดือนถัดไปชำระตามราคาที่ตั้ง',features:['เพิ่มรายวิชาได้ 3 วิชา','เช็คชื่อและบันทึกคะแนน','ดูภาพรวมและแชร์ผลคะแนน'],order:1,featured:true,active:true,updatedAt:now},
+                {id:'pro',name:'มืออาชีพ',monthlyPrice:199,yearlyPrice:1990,price:'199 บาทต่อเดือน / 1,990 บาทต่อปี',billingCycle:'monthly',freeFirstMonth:false,courseLimit:10,promptpay:'',desc:'เหมาะสำหรับครูที่ใช้หลายรายวิชาและต้องการความยืดหยุ่น',features:['เพิ่มรายวิชาได้ 10 วิชา','ส่งออก Excel','จัดการนักเรียนและแผนคะแนนได้มากขึ้น'],order:2,featured:false,active:true,updatedAt:now},
+                {id:'unlimited',name:'ฟรีตลอด',monthlyPrice:0,yearlyPrice:0,price:'ฟรีตลอด',billingCycle:'forever',freeForever:true,courseLimit:1,promptpay:'',desc:'ใช้ได้ตลอดโดยไม่หมดอายุ เหมาะสำหรับทดลองระยะยาว',features:['เพิ่มรายวิชาได้ 1 วิชา','ใช้งานพื้นฐานได้ตลอด','ไม่มีรอบเรียกเก็บ'],order:3,featured:false,active:true,updatedAt:now},
+                {id:'school',name:'สถานศึกษา',monthlyPrice:499,yearlyPrice:4990,price:'499 บาทต่อเดือน / 4,990 บาทต่อปี',billingCycle:'monthly',courseLimit:0,promptpay:'',desc:'เหมาะสำหรับใช้ทั้งแผนก เพิ่มผู้ใช้และรายวิชาได้มาก',features:['เพิ่มรายวิชาไม่จำกัด','เหมาะกับทีม/แผนก','ตั้งค่าสิทธิ์และประกาศครบ'],order:4,featured:false,active:false,updatedAt:now}
+            ];
+        };
+        const __oldRenderLandingPlans = renderLandingPlans;
+        renderLandingPlans = function(){
+            const box=document.getElementById('landing-plan-list'); if(!box)return;
+            const items=(subscriptionPlans||getDefaultPlans()).filter(p=>p.active!==false).sort((a,b)=>Number(a.order||0)-Number(b.order||0));
+            box.innerHTML=items.map(p=>`<div class="pricing-card ${p.featured?'featured':''} rounded-[2rem] p-6 relative overflow-hidden">${p.featured?'<div class="absolute top-4 right-4 bg-primary text-white text-xs font-black px-3 py-1 rounded-full">แนะนำ</div>':''}<h3 class="text-2xl font-black text-slate-900 mb-1">${escapeHTML(p.name||'')}</h3><p class="text-sm text-slate-500 min-h-[42px]">${escapeHTML(p.desc||'')}</p><div class="my-5"><span class="text-3xl font-black text-primary">${escapeHTML(planDisplayPrice(p))}</span></div><div class="mb-4 text-xs font-bold text-slate-500 bg-slate-50 rounded-2xl p-3"><i class="fas fa-book mr-1 text-primary"></i> เพิ่มรายวิชาได้ ${Number(p.courseLimit||0)===0?'ไม่จำกัด':Number(p.courseLimit||0)+' วิชา'}<br><i class="fas fa-calendar-check mr-1 text-primary"></i> ${p.freeForever||p.billingCycle==='forever'?'ไม่มีวันหมดอายุ':'มีรอบเรียกเก็บ/ต่ออายุ'}</div><ul class="space-y-3 mb-6">${(p.features||[]).map(f=>`<li class="flex gap-2 text-sm text-slate-600"><i class="fas fa-check text-emerald-500 mt-1"></i><span>${escapeHTML(f)}</span></li>`).join('')}</ul><button onclick="requestSubscriptionPlan('${p.id}')" class="w-full ${p.featured?'bg-primary text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200':'bg-slate-100 text-slate-700 hover:bg-slate-200'} rounded-2xl py-3 font-bold transition"><i class="fas fa-paper-plane mr-1"></i> สมัครแผนนี้</button></div>`).join('');
+        };
+        renderUserPlans = function(){
+            const box=document.getElementById('user-plan-list'); if(!box)return;
+            const items=(subscriptionPlans||getDefaultPlans()).filter(p=>p.active!==false).sort((a,b)=>Number(a.order||0)-Number(b.order||0));
+            const dirUser=window.__currentUserDir||{}; const currentPlanId=dirUser.planId||''; const pendingPlanName=dirUser.requestedPlanName||''; const hasPending=!!pendingPlanName || dirUser.status==='pending_plan';
+            const currentBox=document.getElementById('user-current-plan-box');
+            if(currentBox){
+                let statusHtml='';
+                if(hasPending) statusHtml=`<div class="bg-amber-50 border border-amber-200 text-amber-900 rounded-3xl p-5 flex justify-between gap-3"><div><div class="text-sm font-bold text-amber-500"><i class="fas fa-clock mr-1"></i>รอแอดมินอนุมัติ</div><div class="text-xl font-black">${escapeHTML(pendingPlanName||'คำขอแผน')}</div><div class="text-sm text-amber-700/80">ส่งคำขอแล้ว จึงส่งซ้ำไม่ได้จนกว่าแอดมินจะอนุมัติ/ไม่อนุมัติ</div></div><i class="fas fa-hourglass-half text-3xl text-amber-500 animate-pulse"></i></div>`;
+                else if(currentPlanId) statusHtml=`<div class="bg-indigo-50 border border-indigo-100 text-indigo-900 rounded-3xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"><div><div class="text-sm font-bold text-indigo-500">แผนปัจจุบัน</div><div class="text-xl font-black">${escapeHTML(dirUser.planName||'')}</div><div class="text-sm text-indigo-700/80">${escapeHTML(dirUser.planPrice||'')}</div><div class="text-xs font-bold text-slate-500 mt-2">เรียกเก็บครั้งต่อไป: ${escapeHTML(formatNextBilling(dirUser))}</div><div class="text-xs font-bold text-slate-500">เพิ่มรายวิชาได้: ${escapeHTML(dirUser.courseLimit?dirUser.courseLimit+' วิชา':'ไม่จำกัด')}</div></div><i class="fas fa-id-card text-3xl text-primary"></i></div>`;
+                else statusHtml=`<div class="bg-rose-50 border border-rose-100 text-rose-900 rounded-3xl p-5"><div class="text-sm font-bold text-rose-500">ยังไม่ได้เลือกแผน</div><div class="text-xl font-black">ต้องเลือกแผนก่อนใช้งาน</div><div class="text-sm text-rose-700/80">คุณดูหน้าเว็บได้ แต่ต้องเลือกแผนก่อนเพิ่มหรือแก้ไขข้อมูล</div></div>`;
+                currentBox.innerHTML=statusHtml;
+            }
+            box.innerHTML=items.map(p=>{ const active=p.id===currentPlanId&&!!currentPlanId; let btn=''; if(hasPending&&!active) btn=`<button onclick="showCustomAlert('มีคำขออยู่แล้ว','คุณมีคำขอสมัครแผนที่รอตรวจสอบอยู่ ไม่สามารถส่งซ้ำได้',true)" class="w-full bg-amber-100 text-amber-700 rounded-2xl py-3 font-bold cursor-not-allowed"><i class="fas fa-hourglass-half mr-1"></i> มีคำขอรออนุมัติอยู่แล้ว</button>`; else btn=`<button onclick="requestSubscriptionPlan('${p.id}')" class="w-full ${active?'bg-emerald-100 text-emerald-700':'bg-primary text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200'} rounded-2xl py-3 font-bold transition"><i class="fas ${active?'fa-rotate':'fa-paper-plane'} mr-1"></i> ${active?'ต่ออายุ/เปลี่ยนรอบ':'เลือกแผนนี้'}</button>`; return `<div class="pricing-card ${p.featured?'featured':''} ${active?'ring-2 ring-emerald-400':''} rounded-[2rem] p-6 relative overflow-hidden bg-white">${p.featured?'<div class="absolute top-4 right-4 bg-primary text-white text-xs font-black px-3 py-1 rounded-full">แนะนำ</div>':''}${active?'<div class="absolute top-4 left-4 bg-emerald-500 text-white text-xs font-black px-3 py-1 rounded-full">ใช้อยู่</div>':''}<h3 class="text-2xl font-black text-slate-900 mb-1 mt-6">${escapeHTML(p.name||'')}</h3><p class="text-sm text-slate-500 min-h-[42px]">${escapeHTML(p.desc||'')}</p><div class="my-5"><span class="text-3xl font-black text-primary">${escapeHTML(planDisplayPrice(p))}</span></div><div class="mb-4 text-xs font-bold text-slate-500 bg-slate-50 rounded-2xl p-3">เพิ่มรายวิชาได้ ${Number(p.courseLimit||0)===0?'ไม่จำกัด':Number(p.courseLimit||0)+' วิชา'}<br>${p.freeForever||p.billingCycle==='forever'?'ฟรีตลอด ไม่มีรอบเก็บเงิน':'รอบถัดไปจะแจ้งหลังอนุมัติ'}</div><ul class="space-y-3 mb-6">${(p.features||[]).map(f=>`<li class="flex gap-2 text-sm text-slate-600"><i class="fas fa-check text-emerald-500 mt-1"></i><span>${escapeHTML(f)}</span></li>`).join('')}</ul>${btn}</div>`; }).join('');
+        };
+        renderAdminPlans = function(){
+            const tbody=document.getElementById('admin-plan-list'); if(!tbody)return; const items=(subscriptionPlans||[]).sort((a,b)=>Number(a.order||0)-Number(b.order||0));
+            if(!items.length){tbody.innerHTML='<tr><td colspan="5" class="text-center p-8 text-slate-400">ยังไม่มีแผนการใช้งาน</td></tr>';return;}
+            tbody.innerHTML=items.map(p=>`<tr><td class="font-bold text-slate-700">${escapeHTML(p.name||'')}${p.featured?'<div class="text-xs text-primary mt-1"><i class="fas fa-star"></i> แนะนำ</div>':''}<div class="text-[11px] text-slate-400 mt-1">ID: ${escapeHTML(p.id||'')}</div></td><td class="font-black text-primary">${escapeHTML(planDisplayPrice(p))}<div class="text-xs font-normal text-slate-400">${escapeHTML(p.desc||'')}</div><div class="text-xs text-slate-500 mt-1">รอบ: ${p.billingCycle==='yearly'?'รายปี':(p.billingCycle==='forever'?'ฟรีตลอด':'รายเดือน')}</div></td><td class="text-sm text-slate-500"><div class="font-bold text-slate-700">รายวิชา: ${Number(p.courseLimit||0)===0?'ไม่จำกัด':Number(p.courseLimit||0)+' วิชา'}</div>${(p.features||[]).slice(0,5).map(f=>`<div>• ${escapeHTML(f)}</div>`).join('')}</td><td class="text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ${p.active!==false?'bg-emerald-100 text-emerald-700':'bg-slate-100 text-slate-500'}">${p.active!==false?'แสดง':'ซ่อน'}</span></td><td class="text-right whitespace-nowrap"><button onclick="editAdminPlan('${p.id}')" class="bg-amber-50 text-amber-600 border border-amber-100 px-3 py-1.5 rounded-lg text-sm font-bold"><i class="fas fa-pen"></i></button><button onclick="deleteAdminPlan('${p.id}')" class="bg-rose-50 text-rose-600 border border-rose-100 px-3 py-1.5 rounded-lg text-sm font-bold ml-1"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+        };
+        window.resetAdminPlanForm=()=>{['plan-sub-edit-id','plan-sub-name','plan-sub-price','plan-sub-promptpay','plan-sub-desc','plan-sub-features','plan-sub-monthly-price','plan-sub-yearly-price'].forEach(id=>{const el=document.getElementById(id); if(el)el.value='';}); const set=(id,v)=>{const e=document.getElementById(id); if(e)e.value=v}; set('plan-sub-order','1'); set('plan-sub-course-limit','1'); set('plan-sub-billing-cycle','monthly'); ['plan-sub-featured','plan-sub-active','plan-sub-free-first-month'].forEach(id=>{const el=document.getElementById(id); if(el)el.checked=(id==='plan-sub-active');});};
+        window.editAdminPlan=(id)=>{const p=(subscriptionPlans||[]).find(x=>x.id===id);if(!p)return; const set=(id,v)=>{const e=document.getElementById(id); if(e)e.value=v??''}; set('plan-sub-edit-id',p.id);set('plan-sub-name',p.name||'');set('plan-sub-price',p.price||planDisplayPrice(p));set('plan-sub-promptpay',p.promptpay||'');set('plan-sub-desc',p.desc||'');set('plan-sub-features',(p.features||[]).join('\n'));set('plan-sub-order',Number(p.order||1));set('plan-sub-course-limit',Number(p.courseLimit||0));set('plan-sub-monthly-price',Number(p.monthlyPrice||0));set('plan-sub-yearly-price',Number(p.yearlyPrice||0));set('plan-sub-billing-cycle',p.freeForever?'forever':(p.billingCycle||'monthly')); const chk=(id,v)=>{const e=document.getElementById(id); if(e)e.checked=!!v}; chk('plan-sub-featured',p.featured);chk('plan-sub-active',p.active!==false);chk('plan-sub-free-first-month',p.freeFirstMonth);};
+        window.saveAdminPlanForm=async()=>{if(!isAdmin)return showCustomAlert('ไม่มีสิทธิ์','เฉพาะแอดมินเท่านั้น',true); const editId=document.getElementById('plan-sub-edit-id').value; const monthly=Number(document.getElementById('plan-sub-monthly-price')?.value||0); const yearly=Number(document.getElementById('plan-sub-yearly-price')?.value||0); const cycle=document.getElementById('plan-sub-billing-cycle')?.value||'monthly'; const item={id:editId||`plan_${Date.now()}`,name:document.getElementById('plan-sub-name').value.trim(),monthlyPrice:monthly,yearlyPrice:yearly,billingCycle:cycle,freeForever:cycle==='forever',freeFirstMonth:document.getElementById('plan-sub-free-first-month')?.checked||false,courseLimit:Number(document.getElementById('plan-sub-course-limit')?.value||0),price:document.getElementById('plan-sub-price').value.trim(),promptpay:document.getElementById('plan-sub-promptpay').value.trim(),desc:document.getElementById('plan-sub-desc').value.trim(),features:document.getElementById('plan-sub-features').value.split('\n').map(x=>x.trim()).filter(Boolean),order:Number(document.getElementById('plan-sub-order').value||1),featured:document.getElementById('plan-sub-featured').checked,active:document.getElementById('plan-sub-active').checked,updatedAt:Date.now()}; if(!item.price)item.price=planDisplayPrice(item); if(!item.name)return showCustomAlert('ข้อมูลไม่ครบ','กรุณากรอกชื่อระดับ',true); subscriptionPlans=(subscriptionPlans||[]).filter(p=>p.id!==item.id); subscriptionPlans.push(item); writeLocalJSON(PLANS_CACHE_KEY,subscriptionPlans); toggleLoader(true); try{await setDoc(getPlansDocRef(),{items:subscriptionPlans,updatedAt:Date.now()},{merge:true}); resetAdminPlanForm(); renderAdminPlans(); renderLandingPlans(); showCustomAlert('บันทึกแล้ว','บันทึกแผนการใช้งานขึ้น Firebase เรียบร้อย');}catch(e){resetAdminPlanForm();renderAdminPlans();renderLandingPlans();showCustomAlert('บันทึกในเครื่องแล้ว','แต่ยังบันทึกขึ้น Firebase ไม่ได้: '+getFirebaseErrorText(e),true);} toggleLoader(false);};
+        window.seedDefaultPlans=async()=>{subscriptionPlans=getDefaultPlans();writeLocalJSON(PLANS_CACHE_KEY,subscriptionPlans);toggleLoader(true);try{await setDoc(getPlansDocRef(),{items:subscriptionPlans,updatedAt:Date.now()},{merge:true});renderAdminPlans();renderLandingPlans();showCustomAlert('สำเร็จ','สร้างแผนตัวอย่าง 4 ระดับขึ้น Firebase แล้ว');}catch(e){renderAdminPlans();renderLandingPlans();showCustomAlert('สร้างในเครื่องแล้ว','แต่ยังบันทึกขึ้น Firebase ไม่ได้: '+getFirebaseErrorText(e),true);}toggleLoader(false);};
+        openPlanPaymentModal = window.openPlanPaymentModal = async function(planId){
+            const plan=getPlanById(planId); if(!plan)return showCustomAlert('ไม่พบแผน','กรุณาเลือกแผนอีกครั้ง',true);
+            if(!currentUser||currentUser.uid==='admin-bypass'){localStorage.setItem(PENDING_PLAN_KEY,planId);return openRegisterFromLanding();}
+            if(await hasPendingPlanRequestForCurrentUser()) return showCustomAlert('มีคำขอรออนุมัติอยู่แล้ว','คุณขอแผนไปแล้ว กรุณารอแอดมินอนุมัติ ไม่สามารถขอซ้ำได้',true);
+            const promptpay=cleanPromptPayId(plan.promptpay||'');
+            document.getElementById('payment-plan-id').value=plan.id; document.getElementById('payment-plan-name').textContent=plan.name||'-'; document.getElementById('payment-plan-price').textContent=planDisplayPrice(plan); document.getElementById('payment-plan-subtitle').textContent=`กรอกข้อมูลและอัปโหลดสลิปสำหรับแผน ${plan.name||''}`;
+            let cycleBox=document.getElementById('payment-billing-cycle-wrap');
+            if(!cycleBox){ const priceEl=document.getElementById('payment-plan-price'); cycleBox=document.createElement('div'); cycleBox.id='payment-billing-cycle-wrap'; cycleBox.className='mt-3 bg-slate-50 border border-slate-200 rounded-2xl p-3 text-left'; cycleBox.innerHTML='<label class="block text-xs font-black text-slate-500 mb-1">เลือกรอบชำระ</label><select id="payment-billing-cycle" class="w-full bg-white border border-slate-200 rounded-xl p-3 font-bold text-slate-700"></select><div id="payment-next-billing-preview" class="text-xs text-slate-500 mt-2"></div>'; priceEl?.parentElement?.appendChild(cycleBox); }
+            const sel=document.getElementById('payment-billing-cycle'); const opts=[]; if(plan.monthlyPrice>0||plan.freeFirstMonth||plan.billingCycle==='monthly')opts.push(`<option value="monthly">รายเดือน ${plan.freeFirstMonth&&!window.__currentUserDir?.planId?'(ฟรีเดือนแรก)':moneyText(plan.monthlyPrice||extractPlanAmount(plan.price))}</option>`); if(plan.yearlyPrice>0||plan.billingCycle==='yearly')opts.push(`<option value="yearly">รายปี ${moneyText(plan.yearlyPrice||extractPlanAmount(plan.price))}</option>`); if(plan.freeForever||plan.billingCycle==='forever')opts.push('<option value="forever">ฟรีตลอด</option>'); sel.innerHTML=opts.join('')||'<option value="monthly">รายเดือน</option>'; sel.value=plan.billingCycle==='yearly'?'yearly':(plan.billingCycle==='forever'?'forever':'monthly'); sel.onchange=()=>{ const amount=getPlanChargeAmount(plan,sel.value); document.getElementById('payment-amount-label').textContent=amount>0?`ยอดชำระ ฿${amount.toLocaleString('th-TH')}`:'ไม่มีค่าใช้จ่ายรอบนี้'; document.getElementById('payment-next-billing-preview').textContent=(plan.freeForever||sel.value==='forever')?'ไม่มีรอบเรียกเก็บถัดไป':`เรียกเก็บครั้งต่อไป: ${new Date(getPlanNextBillingAt(plan,Date.now(),sel.value)).toLocaleDateString('th-TH')}`; }; sel.onchange();
+            const amount=getPlanChargeAmount(plan,sel.value); const canvas=document.getElementById('payment-qr-canvas'); const noqr=document.getElementById('payment-no-qr'); const label=document.getElementById('payment-promptpay-label'); const amtLabel=document.getElementById('payment-amount-label'); canvas.innerHTML=''; if(promptpay&&amount>0){try{new QRCode(canvas,{text:buildPromptPayPayload(promptpay,amount),width:200,height:200,correctLevel:QRCode.CorrectLevel.M});}catch(e){canvas.innerHTML='<p class="text-xs text-rose-500">สร้าง QR ไม่ได้</p>';} canvas.classList.remove('hidden');noqr.classList.add('hidden');label.textContent=`พร้อมเพย์: ${promptpay}`;amtLabel.classList.remove('hidden');}else{canvas.classList.add('hidden');noqr.classList.remove('hidden');label.textContent=promptpay?`พร้อมเพย์: ${promptpay}`:'ไม่มีค่าใช้จ่ายหรือยังไม่ได้ตั้งเบอร์พร้อมเพย์';amtLabel.classList.remove('hidden');}
+            document.getElementById('payment-proof-file').value='';document.getElementById('payment-slip-preview-wrap').classList.add('hidden');document.getElementById('payment-slip-preview-img').src=''; const payer=document.getElementById('payment-payer-name'); if(payer)payer.value=currentUser.displayName||''; setSlipCheckBox('idle','ระบบตรวจสลิปพร้อมทำงาน','เลือกไฟล์สลิปแล้วกดส่ง ระบบจะแสดงสถานะตรวจสอบแบบทีละขั้นตอนตรงช่องนี้',{},[{status:'idle',text:'รอเลือกไฟล์สลิป'}]); setPaymentSubmitBusy(false); setNowToPaymentTime(); document.getElementById('plan-payment-modal')?.classList.remove('hidden');
+        };
+        const __oldExtractPlanAmount = extractPlanAmount;
+        extractPlanAmount = function(priceText){ const planId=document.getElementById('payment-plan-id')?.value; const plan=getPlanById(planId); if(plan) return getPlanChargeAmount(plan,getSelectedPlanCycle(plan)); return __oldExtractPlanAmount(priceText); };
+        requestSubscriptionPlan = window.requestSubscriptionPlan = async function(planId){
+            const plan=getPlanById(planId); if(!plan)return showCustomAlert('ไม่พบแผน','กรุณาเลือกแผนอีกครั้ง',true);
+            if(!currentUser||currentUser.uid==='admin-bypass'){localStorage.setItem(PENDING_PLAN_KEY,planId);openRegisterFromLanding();return;}
+            if(await hasPendingPlanRequestForCurrentUser()) return showCustomAlert('มีคำขอรออนุมัติอยู่แล้ว','คุณส่งคำขอสมัครแผนไว้แล้ว กรุณารอแอดมินอนุมัติก่อน ไม่สามารถขอซ้ำได้',true);
+            const amount=getPlanChargeAmount(plan,plan.billingCycle);
+            if(amount===0) activateFreePlan(plan); else openPlanPaymentModal(planId);
+        };
+        activateFreePlan = async function(plan){
+            if(!currentUser)return; if(await hasPendingPlanRequestForCurrentUser())return showCustomAlert('มีคำขอรออนุมัติอยู่แล้ว','ไม่สามารถขอแผนซ้ำได้',true); toggleLoader(true);
+            try{ const userKey=getUserKey(currentUser); const now=Date.now(); const reqId=`${currentUser.uid}_${plan.id}_${now}`; const cycle=plan.billingCycle||'monthly'; const planPayload=applyPlanToUserPayload(plan,now,cycle,{uid:currentUser.uid,email:currentUser.email||'',userKey,name:currentUser.displayName||userKey,role:'user'}); await setDoc(getPlanRequestDocRef(reqId),{id:reqId,uid:currentUser.uid,userKey,email:currentUser.email||'',name:currentUser.displayName||userKey,planId:plan.id,planName:plan.name||'',planPrice:planDisplayPrice(plan),planAmount:0,planBillingCycle:cycle,status:'approved',createdAt:now,approvedAt:now,updatedAt:now,autoApproved:true},{merge:true}); await setDoc(doc(db,getPublicPath(),currentUser.uid),planPayload,{merge:true}); await setDoc(doc(db,'users_status',userKey),planPayload,{merge:true}); window.__currentUserDir=Object.assign(window.__currentUserDir||{},planPayload); window.__schoolhubPlanLocked=false; localStorage.removeItem(PENDING_PLAN_KEY); showCustomAlert('เปิดใช้งานแล้ว',`แผน ${plan.name} เปิดใช้งานแล้ว\nเรียกเก็บครั้งต่อไป: ${formatNextBilling(planPayload)}`); renderUserPlans(); }catch(e){showCustomAlert('เกิดข้อผิดพลาด',getFirebaseErrorText(e),true);} toggleLoader(false);
+        };
+        const __oldSubmitPlanPaymentForm = window.submitPlanPaymentForm;
+        // submitPlanPaymentForm เดิมยังใช้ OCR/สลิปเดิม แต่หลังบันทึกจะได้รอบชำระจากแผนที่เลือกผ่าน extractPlanAmount
+        approvePlanRequest = window.approvePlanRequest = async function(id){
+            const snap=await getDoc(getPlanRequestDocRef(id)); if(!snap.exists())return showCustomAlert('ไม่พบคำขอ','คำขอนี้อาจถูกลบไปแล้ว',true); const r=snap.data(); const plan=getPlanById(r.planId)||r; window.showCustomConfirm('อนุมัติแผน',`อนุมัติให้ ${r.name||r.email} ใช้แผน ${r.planName} หรือไม่?`,async()=>{ toggleLoader(true); const now=Date.now(); const cycle=r.planBillingCycle||plan.billingCycle||'monthly'; const planPayload=applyPlanToUserPayload(plan,now,cycle,{uid:r.uid,email:r.email||'',userKey:r.userKey||r.email||r.uid,name:r.name||r.email||'',role:'user'}); try{ await setDoc(getPlanRequestDocRef(id),{status:'approved',approvedAt:now,approvedBy:currentUser?.email||'admin',updatedAt:now,planNextBillingAt:planPayload.planNextBillingAt,planExpiresAt:planPayload.planExpiresAt,courseLimit:planPayload.courseLimit},{merge:true}); await setDoc(doc(db,getPublicPath(),r.uid),planPayload,{merge:true}); await setDoc(doc(db,'users_status',r.userKey||r.email||r.uid),planPayload,{merge:true}); sendMailViaWebApp({to:r.email||r.userKey,name:r.name||'',type:'plan_approved',subject:`อนุมัติแผน ${r.planName||''} แล้ว`,message:`สวัสดี ${r.name||r.email||''}\n\nคำขอสมัครแผน ${r.planName||''} ได้รับการอนุมัติแล้ว\nเรียกเก็บครั้งต่อไป: ${formatNextBilling(planPayload)}\n\nขอบคุณที่ใช้ SchoolHub`,extra:{planName:r.planName||'',planPrice:r.planPrice||'',requestId:id}}); await loadPlanRequests();await loadAdminData();window.closePlanRequestPopup(); showCustomAlert('อนุมัติแล้ว',`เปลี่ยนสิทธิ์ผู้ใช้เป็นแผน ${r.planName}\nเรียกเก็บครั้งต่อไป: ${formatNextBilling(planPayload)}`);}catch(e){showCustomAlert('อนุมัติไม่ได้',getFirebaseErrorText(e),true);} toggleLoader(false); });
+        };
+        const __oldOpenUserPlanSelector = window.openUserPlanSelector;
+        window.openUserPlanSelector = async function(){ await loadPublicPlans(); if(currentUser&&currentUser.uid!=='admin-bypass') await refreshCurrentUserPlanLock(); return __oldOpenUserPlanSelector(); };
+
         // Smart scrollbar: ถ้าเนื้อหาไม่เกิน ไม่ต้องให้เลื่อนเปล่า
         function applySmartScroll(el, axis){
             if(!el) return;
@@ -4723,7 +4913,7 @@ ${resetUrl.toString()}
                         planBadge = '<span class="text-xs text-slate-400">-</span>';
                     } else if (pendingRequests.length) {
                         const latest = pendingRequests[0];
-                        planBadge = `<button onclick="openPlanRequestPopup('${uid}')" class="clickable-plan-cell inline-flex items-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-1.5 rounded-full text-xs font-black border border-amber-200"><i class="fas fa-bell animate-pulse"></i> ${escapeHTML(latest.planName||'คำขอแผน')} <span class="plan-request-dot bg-amber-500 text-white">${pendingRequests.length}</span></button>`;
+                        planBadge = `<button onclick="openPlanRequestPopup('${uid}')" class="clickable-plan-cell inline-flex items-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-1.5 rounded-full text-xs font-black border border-amber-200"><i class="fas fa-bell animate-pulse"></i> ${escapeHTML(latest.planName||'คำขอแผน')}</button>`;
                     } else if (userRequests.length) {
                         const latest = userRequests[0];
                         const cls = latest.status==='approved' ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-700 border-emerald-200' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200';
