@@ -6413,7 +6413,7 @@ async function syncCurrentUserStats() {
     if (!found.state || !found.key) return null;
 
     const u = currentUser || auth.currentUser || window.currentUser || {};
-    const statKey = u.uid || u.email || found.key;
+    const statKey = (u.email || window.currentUserEmail || found.key);
     const counts = countState(found.state);
 
     const payload = {
@@ -6431,7 +6431,7 @@ async function syncCurrentUserStats() {
         updatedAt: serverTimestamp()
     };
 
-    await setDoc(doc(db, 'user_stats', String(statKey)), payload, { merge: true });
+    if(String(statKey).includes('@')) await setDoc(doc(db, 'user_stats', String(statKey).toLowerCase()), payload, { merge: true });
     return payload;
 }
 
@@ -6449,6 +6449,7 @@ async function rebuildGlobalSummaryFromUserStats() {
         const snap = await getDocs(collection(db, 'user_stats'));
 
         snap.forEach(docSnap => {
+            if(!String(docSnap.id).includes('@')) return;
             const d = docSnap.data() || {};
             if (!isActiveUser(d)) return;
 
