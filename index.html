@@ -888,7 +888,7 @@
         }
         @media (max-width: 767px) {
             #auth-view { overflow-x:hidden !important; overflow-y:auto !important; }
-            #auth-view .auth-modern-container { padding:5.5rem 1rem 1.25rem !important; min-height:100dvh; max-width:100vw; }
+            #auth-view .auth-modern-container { padding:2rem 1rem 1.25rem !important; min-height:100dvh; max-width:100vw; }
             #auth-view .auth-card { padding:1.25rem !important; border-radius:1.5rem !important; }
             #auth-view .auth-input { min-height:46px; padding-top:.78rem; padding-bottom:.78rem; padding-left:3.2rem !important; border-radius:1rem; }
             #auth-view .auth-input-wrap > i { left:1.05rem; width:1.2rem; min-width:1.2rem; }
@@ -903,7 +903,13 @@
             #auth-view .auth-card { padding:1.75rem !important; }
             #auth-view .auth-preview-card { display:none; }
         }
-        /* Desktop 100% scale */
+        
+@media (min-width:1024px){
+#auth-view .auth-modern-container{align-items:center !important;}
+#auth-view .auth-hero-panel{justify-content:center !important;}
+#auth-view .auth-form-panel{align-self:center !important;}
+}
+/* Desktop 100% scale */
         @media (min-width: 1024px) {
             #auth-view .auth-modern-container { zoom: 1.0; }
         }
@@ -1048,7 +1054,8 @@
 
 
 <style>
-[id*="admin-password"],[id*="change-admin"],[id*="floating-admin"],.admin-password-fab{
+[id*="admin-password"],[id*="change-admin"],[id*="floating-admin"],.admin-password-fab,
+#firebase-admin-credential-btn {
 display:none !important;
 }
 </style>
@@ -1062,6 +1069,465 @@ display:none !important;
 }
 #central-admin-change-modal:not(.hidden) {
     display: flex !important;
+}
+</style>
+
+
+
+<style>
+/* =========================================================
+   SchoolHub Auth real-size adjustment patch
+   - ลดขนาดจริงด้วย font/spacing/width ไม่ใช้ zoom หรือ transform scale
+   - ขยับฝั่งซ้ายขึ้นให้เห็นกล่องภาพรวมวันนี้
+   - มือถือขยับกล่องขึ้น ลดพื้นที่ว่างด้านบน
+   ========================================================= */
+@media (min-width: 1024px) {
+    #auth-view .auth-modern-container {
+        zoom: 1 !important;
+        transform: none !important;
+        max-width: 76rem !important;
+        padding-top: 3.25rem !important;
+        padding-bottom: 2rem !important;
+        align-items: center !important;
+        column-gap: 2rem !important;
+    }
+
+    #auth-view .auth-hero-panel {
+        justify-content: flex-start !important;
+        min-height: auto !important;
+        padding-top: 8.25rem !important;
+        padding-right: 1rem !important;
+    }
+
+    #auth-view .auth-hero-panel .inline-flex {
+        font-size: 0.82rem !important;
+        padding: 0.42rem 0.9rem !important;
+        margin-bottom: 1.05rem !important;
+    }
+
+    #auth-view .auth-hero-panel h1 {
+        font-size: clamp(3.05rem, 4.7vw, 5.65rem) !important;
+        line-height: 0.98 !important;
+        margin-bottom: 1rem !important;
+    }
+
+    #auth-view .auth-hero-panel p {
+        font-size: clamp(0.98rem, 1.15vw, 1.08rem) !important;
+        line-height: 1.75 !important;
+        margin-bottom: 1.1rem !important;
+        max-width: 34rem !important;
+    }
+
+    #auth-view .auth-preview-card {
+        max-width: 33.75rem !important;
+        padding: 1rem !important;
+        border-radius: 1.6rem !important;
+        display: block !important;
+    }
+
+    #auth-view .auth-preview-card > div:first-child {
+        padding: 1rem !important;
+        border-radius: 1.35rem !important;
+    }
+
+    #auth-view .auth-preview-card h3 {
+        font-size: 1.25rem !important;
+    }
+
+    #auth-view .auth-stat-card {
+        padding: 0.68rem !important;
+        border-radius: 1rem !important;
+    }
+
+    #auth-view .auth-stat-card b {
+        font-size: 1.22rem !important;
+    }
+
+    #auth-view .auth-mini-feature {
+        padding: 0.78rem !important;
+        border-radius: 1rem !important;
+        gap: 0.65rem !important;
+    }
+
+    #auth-view .auth-mini-feature b {
+        font-size: 0.82rem !important;
+    }
+
+    #auth-view .auth-mini-feature span {
+        font-size: 0.68rem !important;
+    }
+
+    #auth-view .auth-form-panel {
+        max-width: 34rem !important;
+        margin-left: auto !important;
+        transform: none !important;
+    }
+
+    #auth-view .auth-card {
+        padding: 2rem !important;
+        border-radius: 2.05rem !important;
+    }
+
+    #auth-view .auth-card .w-16.h-16,
+    #auth-view .auth-card .md\:w-20.md\:h-20 {
+        width: 4.4rem !important;
+        height: 4.4rem !important;
+        font-size: 2rem !important;
+        border-radius: 1.35rem !important;
+        margin-bottom: 0.85rem !important;
+    }
+
+    #auth-view #auth-title {
+        font-size: 1.72rem !important;
+        line-height: 1.15 !important;
+    }
+
+    #auth-view #auth-subtitle {
+        font-size: 0.9rem !important;
+        margin-top: 0.35rem !important;
+    }
+
+    #auth-view .auth-card .text-center {
+        margin-bottom: 1.25rem !important;
+    }
+
+    #auth-view #login-form,
+    #auth-view #register-form {
+        gap: 0.9rem !important;
+    }
+
+    #auth-view label {
+        font-size: 0.83rem !important;
+        margin-bottom: 0.35rem !important;
+    }
+
+    #auth-view .auth-input {
+        min-height: 49px !important;
+        padding-top: 0.82rem !important;
+        padding-bottom: 0.82rem !important;
+        padding-left: 3.05rem !important;
+        border-radius: 1rem !important;
+        font-size: 0.95rem !important;
+    }
+
+    #auth-view .auth-input-wrap > i {
+        left: 1rem !important;
+        font-size: 0.95rem !important;
+    }
+
+    #auth-view .auth-action-btn,
+    #auth-view .auth-google-btn {
+        min-height: 49px !important;
+        padding-top: 0.82rem !important;
+        padding-bottom: 0.82rem !important;
+        border-radius: 1rem !important;
+        font-size: 0.95rem !important;
+    }
+
+    #auth-view .relative.mt-8.mb-6 {
+        margin-top: 1.15rem !important;
+        margin-bottom: 0.95rem !important;
+    }
+}
+
+@media (max-width: 767px) {
+    #auth-view .auth-modern-container {
+        padding: 1rem 1rem 1.25rem !important;
+        align-items: flex-start !important;
+    }
+
+    #auth-view .auth-form-panel {
+        margin-top: 3.25rem !important;
+    }
+
+    #auth-view .auth-card {
+        padding: 1.15rem !important;
+        border-radius: 1.35rem !important;
+    }
+}
+
+@media (max-width: 767px) and (orientation: portrait) {
+    #auth-view .auth-modern-container {
+        padding-top: 0.75rem !important;
+    }
+
+    #auth-view .auth-form-panel {
+        margin-top: 3rem !important;
+    }
+}
+</style>
+
+
+
+<style>
+/* =========================================================
+   SchoolHub Auth fit-to-screen patch
+   - จัดให้อยู่กึ่งกลางและไม่ตกขอบ
+   - ลดขนาดจริงด้วย font/spacing/width ไม่ใช้ zoom/scale
+   - เน้นให้ฝั่งซ้าย + กล่องภาพรวมวันนี้แสดงครบ
+   ========================================================= */
+@media (min-width: 1024px) {
+    #auth-view .auth-modern-shell {
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        overflow: hidden !important;
+    }
+
+    #auth-view .auth-modern-container {
+        zoom: 1 !important;
+        transform: none !important;
+        min-height: 100dvh !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        max-width: 76rem !important;
+        padding-top: 1.25rem !important;
+        padding-bottom: 1.25rem !important;
+        align-items: center !important;
+        column-gap: 2.25rem !important;
+        overflow: hidden !important;
+    }
+
+    #auth-view .auth-hero-panel {
+        justify-content: center !important;
+        min-height: 0 !important;
+        height: auto !important;
+        max-height: calc(100dvh - 2.5rem) !important;
+        padding-top: 0 !important;
+        padding-right: 0.5rem !important;
+        overflow: hidden !important;
+    }
+
+    #auth-view .auth-hero-panel .inline-flex {
+        font-size: 0.78rem !important;
+        padding: 0.38rem 0.8rem !important;
+        margin-bottom: 0.75rem !important;
+    }
+
+    #auth-view .auth-hero-panel h1 {
+        font-size: clamp(2.85rem, 4.25vw, 4.9rem) !important;
+        line-height: 0.96 !important;
+        margin-bottom: 0.8rem !important;
+        letter-spacing: -0.035em !important;
+    }
+
+    #auth-view .auth-hero-panel p {
+        font-size: clamp(0.88rem, 1.02vw, 1rem) !important;
+        line-height: 1.6 !important;
+        margin-bottom: 0.85rem !important;
+        max-width: 33rem !important;
+    }
+
+    #auth-view .auth-preview-card {
+        max-width: 29.5rem !important;
+        padding: 0.78rem !important;
+        border-radius: 1.45rem !important;
+        display: block !important;
+        margin-top: 0 !important;
+    }
+
+    #auth-view .auth-preview-card > div:first-child {
+        padding: 0.85rem !important;
+        border-radius: 1.2rem !important;
+        margin-bottom: 0.6rem !important;
+    }
+
+    #auth-view .auth-preview-card .w-12.h-12 {
+        width: 2.7rem !important;
+        height: 2.7rem !important;
+        border-radius: 1rem !important;
+    }
+
+    #auth-view .auth-preview-card h3 {
+        font-size: 1.12rem !important;
+        margin-top: 0.15rem !important;
+    }
+
+    #auth-view .auth-preview-card p {
+        font-size: 0.72rem !important;
+        margin-bottom: 0 !important;
+    }
+
+    #auth-view .auth-stat-card {
+        padding: 0.55rem !important;
+        border-radius: 0.9rem !important;
+    }
+
+    #auth-view .auth-stat-card b {
+        font-size: 1.05rem !important;
+    }
+
+    #auth-view .auth-stat-card span {
+        font-size: 0.6rem !important;
+        margin-top: 0.2rem !important;
+    }
+
+    #auth-view .auth-mini-feature {
+        padding: 0.58rem !important;
+        border-radius: 0.9rem !important;
+        gap: 0.55rem !important;
+        min-height: 0 !important;
+    }
+
+    #auth-view .auth-mini-feature i {
+        font-size: 1rem !important;
+        width: 1.05rem !important;
+    }
+
+    #auth-view .auth-mini-feature b {
+        font-size: 0.72rem !important;
+        line-height: 1.15 !important;
+    }
+
+    #auth-view .auth-mini-feature span {
+        font-size: 0.58rem !important;
+        line-height: 1.15 !important;
+    }
+
+    #auth-view .auth-form-panel {
+        max-width: 32rem !important;
+        margin-left: auto !important;
+        align-self: center !important;
+        transform: none !important;
+    }
+
+    #auth-view .auth-card {
+        padding: 1.65rem !important;
+        border-radius: 1.85rem !important;
+        max-height: calc(100dvh - 2.5rem) !important;
+        overflow: hidden !important;
+    }
+
+    #auth-view .auth-card .w-16.h-16,
+    #auth-view .auth-card .md\:w-20.md\:h-20 {
+        width: 3.85rem !important;
+        height: 3.85rem !important;
+        font-size: 1.65rem !important;
+        border-radius: 1.15rem !important;
+        margin-bottom: 0.65rem !important;
+    }
+
+    #auth-view #auth-title {
+        font-size: 1.55rem !important;
+        line-height: 1.1 !important;
+    }
+
+    #auth-view #auth-subtitle {
+        font-size: 0.8rem !important;
+        margin-top: 0.25rem !important;
+    }
+
+    #auth-view .auth-card .text-center {
+        margin-bottom: 1rem !important;
+    }
+
+    #auth-view #login-form,
+    #auth-view #register-form {
+        gap: 0.72rem !important;
+    }
+
+    #auth-view label {
+        font-size: 0.75rem !important;
+        margin-bottom: 0.25rem !important;
+    }
+
+    #auth-view .auth-input {
+        min-height: 43px !important;
+        padding-top: 0.65rem !important;
+        padding-bottom: 0.65rem !important;
+        padding-left: 2.8rem !important;
+        border-radius: 0.9rem !important;
+        font-size: 0.86rem !important;
+    }
+
+    #auth-view .auth-input-wrap > i {
+        left: 0.95rem !important;
+        font-size: 0.86rem !important;
+    }
+
+    #auth-view .auth-action-btn,
+    #auth-view .auth-google-btn {
+        min-height: 43px !important;
+        padding-top: 0.65rem !important;
+        padding-bottom: 0.65rem !important;
+        border-radius: 0.9rem !important;
+        font-size: 0.86rem !important;
+    }
+
+    #auth-view .relative.mt-8.mb-6 {
+        margin-top: 0.85rem !important;
+        margin-bottom: 0.7rem !important;
+    }
+}
+
+@media (min-width: 1024px) and (max-height: 820px) {
+    #auth-view .auth-modern-container {
+        padding-top: 0.75rem !important;
+        padding-bottom: 0.75rem !important;
+        column-gap: 1.7rem !important;
+    }
+
+    #auth-view .auth-hero-panel h1 {
+        font-size: clamp(2.55rem, 3.75vw, 4.25rem) !important;
+        margin-bottom: 0.6rem !important;
+    }
+
+    #auth-view .auth-hero-panel p {
+        font-size: 0.84rem !important;
+        line-height: 1.5 !important;
+        margin-bottom: 0.65rem !important;
+        max-width: 31rem !important;
+    }
+
+    #auth-view .auth-hero-panel .inline-flex {
+        margin-bottom: 0.55rem !important;
+    }
+
+    #auth-view .auth-preview-card {
+        max-width: 27.5rem !important;
+        padding: 0.62rem !important;
+    }
+
+    #auth-view .auth-preview-card > div:first-child {
+        padding: 0.7rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    #auth-view .auth-mini-feature {
+        padding: 0.48rem !important;
+    }
+
+    #auth-view .auth-form-panel {
+        max-width: 30.5rem !important;
+    }
+
+    #auth-view .auth-card {
+        padding: 1.35rem !important;
+    }
+
+    #auth-view .auth-card .text-center {
+        margin-bottom: 0.75rem !important;
+    }
+
+    #auth-view #login-form,
+    #auth-view #register-form {
+        gap: 0.6rem !important;
+    }
+
+    #auth-view .relative.mt-8.mb-6 {
+        margin-top: 0.65rem !important;
+        margin-bottom: 0.55rem !important;
+    }
+}
+
+@media (max-width: 767px) {
+    #auth-view .auth-modern-container {
+        padding: 0.65rem 1rem 1rem !important;
+        align-items: flex-start !important;
+    }
+
+    #auth-view .auth-form-panel {
+        margin-top: 2.65rem !important;
+    }
 }
 </style>
 
@@ -1237,17 +1703,17 @@ display:none !important;
                         <div class="relative bg-slate-950 rounded-[1.7rem] p-5 text-white mb-4">
                             <div class="flex justify-between items-start mb-6"><div><p class="text-slate-400 text-sm">SchoolHub Dashboard</p><h3 class="text-2xl font-black mt-1" id="stat-landing-title">ภาพรวมวันนี้</h3></div><div class="w-11 h-11 rounded-2xl bg-white/10 flex items-center justify-center"><i class="fas fa-chart-simple text-indigo-200"></i></div></div>
                             
-<div class="grid grid-cols-3 gap-2 text-center">
-    <div class="bg-white/10 rounded-2xl p-3">
-        <div id="stat-landing-teachers" class="text-xl font-black">—</div>
+<div id="stat-landing-grid" class="grid grid-cols-3 gap-2 text-center">
+    <div id="stat-landing-teachers" class="bg-white/10 rounded-2xl p-3">
+        <div class="text-xl font-black">—</div>
         <div class="text-[11px] text-slate-300">คุณครู</div>
     </div>
-    <div class="bg-white/10 rounded-2xl p-3">
-        <div id="stat-landing-courses" class="text-xl font-black">—</div>
+    <div id="stat-landing-courses" class="bg-white/10 rounded-2xl p-3">
+        <div class="text-xl font-black">—</div>
         <div class="text-[11px] text-slate-300">วิชา</div>
     </div>
-    <div class="bg-white/10 rounded-2xl p-3">
-        <div id="stat-landing-students" class="text-xl font-black">—</div>
+    <div id="stat-landing-students" class="bg-white/10 rounded-2xl p-3">
+        <div class="text-xl font-black">—</div>
         <div class="text-[11px] text-slate-300">นักเรียน</div>
     </div>
 </div>
@@ -1310,15 +1776,15 @@ display:none !important;
                 <i class="fas fa-arrow-left"></i> <span>หน้าแรก</span>
             </button>
 
-            <div class="auth-modern-container relative z-10 min-h-screen w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-8 px-4 md:px-8 py-24 md:py-10 items-center">
-                <section class="auth-hero-panel hidden lg:flex flex-col justify-center min-h-[720px] pr-4 slide-up">
+            <div class="auth-modern-container relative z-10 min-h-screen w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-8 px-4 md:px-8 py-12 md:py-6 items-center">
+                <section class="auth-hero-panel hidden lg:flex flex-col justify-center min-h-[620px] pr-4 slide-up">
                     <div class="inline-flex items-center gap-2 w-fit bg-white/70 border border-white/80 backdrop-blur-xl text-primary px-4 py-2 rounded-full text-sm font-bold shadow-sm mb-6">
                         <i class="fas fa-wand-magic-sparkles"></i> Smart Classroom Platform
                     </div>
-                    <h1 class="text-5xl xl:text-7xl font-black text-slate-950 leading-tight tracking-tight mb-6">
+                    <h1 class="text-4xl xl:text-6xl font-black text-slate-950 leading-tight tracking-tight mb-6">
                         เข้าห้องเรียน<br><span class="text-primary">แบบมืออาชีพ</span>
                     </h1>
-                    <p class="text-lg xl:text-xl text-slate-600 leading-9 max-w-xl mb-8">
+                    <p class="text-base xl:text-lg text-slate-600 leading-9 max-w-xl mb-8">
                         จัดการรายวิชา เช็คชื่อ บันทึกคะแนน แชร์ผลให้นักเรียน และเลือกแผนการใช้งานได้ในระบบเดียว
                     </p>
 
@@ -1332,10 +1798,10 @@ display:none !important;
                                 </div>
                                 <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-indigo-200"><i class="fas fa-chart-line text-xl"></i></div>
                             </div>
-                            <div class="relative grid grid-cols-3 gap-3">
-                                <div class="auth-stat-card"><b id="stat-auth-courses">—</b><span>รายวิชา</span></div>
+                            <div id="stat-auth-grid" class="relative grid grid-cols-3 gap-3">
+                                <div class="auth-stat-card"><b id="stat-auth-teachers">—</b><span>คุณครู</span></div>
+                                <div class="auth-stat-card"><b id="stat-auth-courses">—</b><span>วิชา</span></div>
                                 <div class="auth-stat-card"><b id="stat-auth-students">—</b><span>นักเรียน</span></div>
-                                <div class="auth-stat-card"><b id="stat-auth-users">—</b><span>ผู้ใช้งาน</span></div>
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-3 mt-3">
@@ -1933,6 +2399,55 @@ display:none !important;
                             </div>
 
                             <p id="gd-updated-at" class="text-xs text-slate-400 mt-4">อัปเดตล่าสุด: —</p>
+                        </div>
+
+                        <!-- ตั้งค่า: เลือก stat ที่แสดงในการ์ด "ภาพรวมวันนี้" บน Landing Page -->
+                        <div class="p-6 border-t border-slate-100 bg-slate-50/60">
+                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                                <div>
+                                    <h4 class="font-bold text-slate-700"><i class="fas fa-sliders text-primary mr-2"></i>ตั้งค่าการ์ด "ภาพรวมวันนี้"</h4>
+                                    <p class="text-xs text-slate-500 mt-1">เลือกข้อมูลที่แสดงในการ์ดบน Landing Page และหน้า Login ได้ 1–3 รายการ หากเลือกมากกว่า 3 ระบบจะสลับอัตโนมัติ</p>
+                                </div>
+                                <button onclick="saveLandingStatConfig()" class="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-indigo-700 shadow-sm whitespace-nowrap">
+                                    <i class="fas fa-save mr-1"></i> บันทึก
+                                </button>
+                            </div>
+
+                            <!-- เลือก stat items -->
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-5" id="landing-stat-checkboxes">
+                                <label class="flex items-center gap-3 bg-white rounded-2xl border border-slate-200 px-4 py-3 cursor-pointer hover:border-primary transition has-[:checked]:border-primary has-[:checked]:bg-indigo-50">
+                                    <input type="checkbox" name="landing-stat" value="teachers" class="w-4 h-4 accent-indigo-600" checked>
+                                    <span class="text-sm font-semibold text-slate-700">👩‍🏫 ครู/ผู้ใช้งาน</span>
+                                </label>
+                                <label class="flex items-center gap-3 bg-white rounded-2xl border border-slate-200 px-4 py-3 cursor-pointer hover:border-primary transition has-[:checked]:border-primary has-[:checked]:bg-indigo-50">
+                                    <input type="checkbox" name="landing-stat" value="courses" class="w-4 h-4 accent-indigo-600" checked>
+                                    <span class="text-sm font-semibold text-slate-700">📚 รายวิชา</span>
+                                </label>
+                                <label class="flex items-center gap-3 bg-white rounded-2xl border border-slate-200 px-4 py-3 cursor-pointer hover:border-primary transition has-[:checked]:border-primary has-[:checked]:bg-indigo-50">
+                                    <input type="checkbox" name="landing-stat" value="students" class="w-4 h-4 accent-indigo-600" checked>
+                                    <span class="text-sm font-semibold text-slate-700">🎒 นักเรียน</span>
+                                </label>
+                                <label class="flex items-center gap-3 bg-white rounded-2xl border border-slate-200 px-4 py-3 cursor-pointer hover:border-primary transition has-[:checked]:border-primary has-[:checked]:bg-indigo-50">
+                                    <input type="checkbox" name="landing-stat" value="attendance" class="w-4 h-4 accent-indigo-600">
+                                    <span class="text-sm font-semibold text-slate-700">✅ เช็คชื่อ</span>
+                                </label>
+                                <label class="flex items-center gap-3 bg-white rounded-2xl border border-slate-200 px-4 py-3 cursor-pointer hover:border-primary transition has-[:checked]:border-primary has-[:checked]:bg-indigo-50">
+                                    <input type="checkbox" name="landing-stat" value="assignments" class="w-4 h-4 accent-indigo-600">
+                                    <span class="text-sm font-semibold text-slate-700">📝 งาน/การสอบ</span>
+                                </label>
+                                <label class="flex items-center gap-3 bg-white rounded-2xl border border-slate-200 px-4 py-3 cursor-pointer hover:border-primary transition has-[:checked]:border-primary has-[:checked]:bg-indigo-50">
+                                    <input type="checkbox" name="landing-stat" value="scores" class="w-4 h-4 accent-indigo-600">
+                                    <span class="text-sm font-semibold text-slate-700">🏆 รายการคะแนน</span>
+                                </label>
+                            </div>
+
+                            <!-- เวลาสลับ (ใช้เมื่อเลือกมากกว่า 3) -->
+                            <div class="flex items-center gap-3 mt-2" id="landing-stat-interval-row">
+                                <label class="text-sm font-semibold text-slate-600 whitespace-nowrap">⏱ เวลาสลับ (วินาที):</label>
+                                <input id="landing-stat-interval" type="number" min="1" max="60" value="3"
+                                    class="w-24 bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-primary focus:outline-none">
+                                <span class="text-xs text-slate-400">(ใช้เมื่อเลือกมากกว่า 3 รายการ)</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -3844,10 +4359,27 @@ async function submitPlanRequest(planId){
         }
 
         async function enterAdminMode() {
-            const adminName = localStorage.getItem('schoolhub_admin_name') || 'Administrator';
-            currentUser = { uid: 'admin-bypass', email: 'Admin', displayName: adminName }; isAdmin = true;
+            let adminName = localStorage.getItem('schoolhub_admin_name') || 'Administrator';
+            let adminEmail = 'Admin';
+            let adminUsername = 'Admin';
+            try {
+                if (typeof readAdminCredFinal === 'function') {
+                    const adminData = await readAdminCredFinal();
+                    adminName = adminData.displayName || adminData.name || adminName || 'Administrator';
+                    adminEmail = adminData.email || adminData.username || 'Admin';
+                    adminUsername = adminData.username || 'Admin';
+                }
+            } catch(e) { console.warn('read admin profile for session failed:', e); }
+            currentUser = { uid: 'admin-bypass', email: adminEmail, displayName: adminName, username: adminUsername };
+            isAdmin = true;
+            try {
+                localStorage.setItem('schoolhub_admin_active','true');
+                localStorage.setItem('schoolhub_admin_name', adminName);
+                localStorage.setItem('schoolhub_admin_email', adminEmail);
+                localStorage.setItem('schoolhub_admin_username', adminUsername);
+            } catch(e) {}
             document.getElementById('landing-view').classList.add('hidden'); document.getElementById('auth-view').classList.add('hidden'); document.getElementById('main-app').classList.remove('hidden');
-            document.getElementById('user-display-name').textContent = adminName; document.getElementById('user-display-email').textContent = 'Admin';
+            document.getElementById('user-display-name').textContent = adminName; document.getElementById('user-display-email').textContent = adminEmail || adminUsername || 'Admin';
             setAdminNavigationMode(true);
             try {
                 toggleLoader(true);
@@ -6360,7 +6892,7 @@ function renderSummary(s) {
     setText('stat-landing-courses', courses);
     setText('stat-landing-students', students);
 
-    setText('stat-auth-users', teachers);
+    setText('stat-auth-teachers', teachers);
     setText('stat-auth-courses', courses);
     setText('stat-auth-students', students);
 
@@ -6373,7 +6905,138 @@ function renderSummary(s) {
 
     const updated = document.getElementById('admin-stat-updated');
     if (updated) updated.textContent = 'อัปเดตล่าสุด: ' + new Date().toLocaleString('th-TH');
+
+    // Store latest summary values for landing stat slide
+    window._latestGlobalSummary = s;
+    applyLandingStatSlide(s);
 }
+
+// ============================================================
+// Landing Stat Selector & Auto-slide
+// ============================================================
+const LANDING_STAT_KEY = 'schoolhub_landing_stat_config';
+
+const LANDING_STAT_META = {
+    teachers:    { label: 'คุณครู',         getValue: s => num(s.totalTeachers || s.totalUsers) },
+    courses:     { label: 'วิชา',            getValue: s => num(s.totalCourses) },
+    students:    { label: 'นักเรียน',        getValue: s => num(s.totalStudents) },
+    attendance:  { label: 'เช็คชื่อ',        getValue: s => num(s.totalAttendanceRecords) },
+    assignments: { label: 'งาน/การสอบ',     getValue: s => num(s.totalAssignments) },
+    scores:      { label: 'รายการคะแนน',    getValue: s => num(s.totalScoreItems) },
+};
+
+function loadLandingStatConfig() {
+    try {
+        const raw = localStorage.getItem(LANDING_STAT_KEY);
+        if (raw) return JSON.parse(raw);
+    } catch(e) {}
+    return { selected: ['teachers','courses','students'], interval: 3 };
+}
+
+function saveLandingStatConfig() {
+    const checks = document.querySelectorAll('input[name="landing-stat"]:checked');
+    const selected = Array.from(checks).map(c => c.value);
+    if (selected.length === 0) return showCustomAlert('กรุณาเลือกอย่างน้อย 1 รายการ', 'ต้องเลือกข้อมูลที่จะแสดงอย่างน้อย 1 รายการ', true);
+    const interval = Math.max(1, parseInt(document.getElementById('landing-stat-interval')?.value) || 3);
+    const cfg = { selected, interval };
+    try { localStorage.setItem(LANDING_STAT_KEY, JSON.stringify(cfg)); } catch(e) {}
+    applyLandingStatSlide(window._latestGlobalSummary || null);
+    showCustomAlert('บันทึกสำเร็จ', 'อัปเดตการ์ดภาพรวมบน Landing Page และหน้า Login แล้ว');
+}
+window.saveLandingStatConfig = saveLandingStatConfig;
+
+// ---- rendering logic ----
+let _landingSlideTimer = null;
+let _landingSlideGroups = [];
+let _landingSlideIdx = 0;
+
+function _chunkArray(arr, size) {
+    const out = [];
+    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+    return out;
+}
+
+function _renderLandingSlot(slots) {
+    // slots: array of {label, value} up to 3
+    const landingGrid = document.getElementById('stat-landing-grid');
+    const authGrid = document.getElementById('stat-auth-grid');
+
+    const landingHtml = slots.map(slot => `
+            <div class="bg-white/10 rounded-2xl p-3">
+                <div class="text-xl font-black">${slot.value}</div>
+                <div class="text-[11px] text-slate-300">${slot.label}</div>
+            </div>
+        `).join('');
+
+    const authHtml = slots.map(slot => `
+            <div class="auth-stat-card">
+                <b>${slot.value}</b>
+                <span>${slot.label}</span>
+            </div>
+        `).join('');
+
+    function swapGrid(grid, html) {
+        if (!grid) return;
+        grid.style.opacity = '0';
+        grid.style.transition = 'opacity 0.35s ease';
+        setTimeout(() => {
+            grid.innerHTML = html;
+            grid.style.opacity = '1';
+        }, 180);
+    }
+
+    // ใช้ชุดข้อมูลเดียวกันทั้ง Landing Page และหน้าล็อกอิน เพื่อให้ "ภาพรวมวันนี้" แสดงเหมือนหน้าหลัก
+    swapGrid(landingGrid, landingHtml);
+    swapGrid(authGrid, authHtml);
+}
+
+function applyLandingStatSlide(s) {
+    const cfg = loadLandingStatConfig();
+    const selected = cfg.selected || ['teachers','courses','students'];
+    const intervalMs = Math.max(1, cfg.interval || 3) * 1000;
+
+    // Build slot data
+    const allSlots = selected.map(key => {
+        const meta = LANDING_STAT_META[key];
+        if (!meta) return null;
+        return { label: meta.label, value: s ? String(meta.getValue(s)) : '—' };
+    }).filter(Boolean);
+
+    if (allSlots.length === 0) return;
+
+    // If ≤ 3: show all at once, no timer
+    if (allSlots.length <= 3) {
+        if (_landingSlideTimer) { clearInterval(_landingSlideTimer); _landingSlideTimer = null; }
+        _landingSlideGroups = [allSlots];
+        _landingSlideIdx = 0;
+        _renderLandingSlot(allSlots);
+        return;
+    }
+
+    // > 3: split into groups of 3 and cycle
+    _landingSlideGroups = _chunkArray(allSlots, 3);
+    _landingSlideIdx = 0;
+    _renderLandingSlot(_landingSlideGroups[0]);
+
+    if (_landingSlideTimer) clearInterval(_landingSlideTimer);
+    _landingSlideTimer = setInterval(() => {
+        _landingSlideIdx = (_landingSlideIdx + 1) % _landingSlideGroups.length;
+        _renderLandingSlot(_landingSlideGroups[_landingSlideIdx]);
+    }, intervalMs);
+}
+
+// Init UI checkboxes from saved config on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
+    const cfg = loadLandingStatConfig();
+    // Apply checkboxes
+    document.querySelectorAll('input[name="landing-stat"]').forEach(cb => {
+        cb.checked = cfg.selected.includes(cb.value);
+    });
+    const intervalInput = document.getElementById('landing-stat-interval');
+    if (intervalInput) intervalInput.value = cfg.interval || 3;
+    // Apply slide with no data yet (shows "—")
+    applyLandingStatSlide(null);
+});
 
 async function loadGlobalSummary() {
     try {
@@ -6918,30 +7581,12 @@ document.addEventListener('submit', async function (event) {
     }
 }, true);
 
-// ปุ่มเปลี่ยนรหัสแบบลอย เฉพาะตอนอยู่หน้าแอดมิน/มีสิทธิ์ admin
-function injectAdminCredentialButton() {
-    if (document.getElementById('firebase-admin-credential-btn')) return;
-
-    const adminView = document.getElementById('view-admin') || document.querySelector('[id*="admin"]');
-    if (!adminView) return;
-
-    const btn = document.createElement('button');
-    btn.id = 'firebase-admin-credential-btn';
-    btn.type = 'button';
-    btn.className = 'fixed bottom-5 right-5 z-[999999] bg-slate-900 hover:bg-slate-950 text-white px-4 py-3 rounded-2xl shadow-2xl font-bold text-sm';
-    btn.innerHTML = '<i class="fas fa-key mr-2"></i>เปลี่ยนรหัสแอดมิน';
-    btn.onclick = window.openChangeAdminCredentialsPrompt;
-    document.body.appendChild(btn);
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     ensureAdminCredentials().catch(console.error);
     hookKnownAdminLoginFunctions();
     setTimeout(hookKnownAdminLoginFunctions, 1200);
     setTimeout(hookKnownAdminLoginFunctions, 3000);
     setInterval(hookKnownAdminLoginFunctions, 5000);
-    setTimeout(injectAdminCredentialButton, 2500);
-    setInterval(injectAdminCredentialButton, 5000);
 });
 </script>
 
@@ -9904,7 +10549,7 @@ window.saveAdminFirstSetup = async function(){
         await saveAdminCredFinal({username, email, password, displayName, requirePasswordChange:false});
         if(typeof currentUser !== 'undefined' && currentUser) {
             currentUser.displayName = displayName;
-            currentUser.email = username;
+            currentUser.email = email || username;
         }
         if($('user-display-name')) $('user-display-name').textContent = displayName;
         if($('user-display-email')) $('user-display-email').textContent = email || username;
@@ -9944,14 +10589,26 @@ window.saveUserProfileChanges = async function(){
 
     ensureProfileAdminFields();
 
-    const username = $('profile-admin-username-input')?.value || 'Admin';
+    let username = $('profile-admin-username-input')?.value || 'Admin';
     const displayName = $('profile-display-name-input')?.value || 'Administrator';
-    const email = $('profile-email-input')?.value || '';
+    let email = $('profile-email-input')?.value || '';
     const newPassword = $('admin-profile-password-input')?.value || '';
+
+    username = norm(username);
+    email = normEmail(email);
+
+    // กันกรอกสลับช่อง: ถ้าช่องชื่อผู้ใช้เป็นอีเมล และช่องอีเมลเป็นคำว่า Admin/ไม่ใช่อีเมล ให้สลับกลับให้อัตโนมัติ
+    if(isEmail(username) && username.includes('@') && email && !isEmail(email)){
+        const swappedUsername = email;
+        email = username;
+        username = swappedUsername;
+        if($('profile-admin-username-input')) $('profile-admin-username-input').value = username;
+        if($('profile-email-input')) $('profile-email-input').value = email;
+    }
 
     if(!norm(username)) return showCustomAlert('กรุณากรอกชื่อผู้ใช้ Admin', 'ช่องชื่อผู้ใช้ Admin ห้ามว่าง', true);
     if(!norm(displayName)) return showCustomAlert('กรุณากรอกชื่อ', 'ชื่อที่แสดงห้ามว่าง', true);
-    if(!isEmail(email)) return showCustomAlert('อีเมลไม่ถูกต้อง', 'กรุณากรอกอีเมลให้ถูกต้อง หรือเว้นว่างไว้', true);
+    if(email && !isEmail(email)) return showCustomAlert('อีเมลไม่ถูกต้อง', 'กรุณากรอกอีเมลให้ถูกต้อง หรือเว้นว่างไว้', true);
 
     if(typeof toggleLoader === 'function') toggleLoader(true);
     try{
@@ -9962,7 +10619,7 @@ window.saveUserProfileChanges = async function(){
         await saveAdminCredFinal({username, email, password, displayName, requirePasswordChange:false});
 
         currentUser.displayName = displayName;
-        currentUser.email = username;
+        currentUser.email = email || username;
         if($('user-display-name')) $('user-display-name').textContent = displayName;
         if($('user-display-email')) $('user-display-email').textContent = email || username;
         if($('user-avatar-initial')) $('user-avatar-initial').textContent = displayName.charAt(0).toUpperCase();
@@ -9982,6 +10639,385 @@ document.addEventListener('DOMContentLoaded', ()=>{
     ensureProfileAdminFields();
     clearOldAdminLocalFinal();
 });
+
+/* =========================================================
+   FINAL PATCH: Admin profile saves directly to Firebase
+   - fixes swapped username/email
+   - fixes currentUser.email showing Admin
+   - writes to admin_settings/credentials every time
+   ========================================================= */
+window.saveUserProfileChanges = async function(){
+    if(typeof currentUser === 'undefined' || currentUser?.uid !== 'admin-bypass'){
+        if(typeof oldSaveUserProfileChangesFinal === 'function') return oldSaveUserProfileChangesFinal();
+        return;
+    }
+
+    ensureProfileAdminFields();
+
+    let username = norm($('profile-admin-username-input')?.value || 'Admin');
+    const displayName = norm($('profile-display-name-input')?.value || 'Administrator') || 'Administrator';
+    let email = normEmail($('profile-email-input')?.value || '');
+    const newPassword = norm($('admin-profile-password-input')?.value || '');
+
+    // ถ้ากรอกสลับช่อง เช่น ชื่อผู้ใช้เป็นอีเมล และอีเมลเป็น Admin ให้สลับกลับก่อนบันทึก
+    if(username.includes('@') && (!email || !email.includes('@'))){
+        const maybeUsername = email && !email.includes('@') ? email : 'Admin';
+        email = normEmail(username);
+        username = maybeUsername || 'Admin';
+        if($('profile-admin-username-input')) $('profile-admin-username-input').value = username;
+        if($('profile-email-input')) $('profile-email-input').value = email;
+    }
+
+    if(!username) return showCustomAlert('กรุณากรอกชื่อผู้ใช้ Admin', 'ช่องชื่อผู้ใช้ Admin ห้ามว่าง', true);
+    if(email && !isEmail(email)) return showCustomAlert('อีเมลไม่ถูกต้อง', 'กรุณากรอกอีเมลให้ถูกต้อง หรือเว้นว่างไว้', true);
+    if(newPassword && newPassword.length < 6) return showCustomAlert('รหัสผ่านสั้นเกินไป', 'รหัสผ่าน Admin ต้องมีอย่างน้อย 6 ตัวอักษร', true);
+
+    if(typeof toggleLoader === 'function') toggleLoader(true);
+    try{
+        const old = await readAdminCredFinal();
+        const password = newPassword || old.password || 'Admin123';
+
+        await setDoc(adminCredRef, {
+            username: username,
+            email: email,
+            password: password,
+            displayName: displayName,
+            updatedAt: serverTimestamp(),
+            updatedBy: 'admin'
+        }, { merge: true });
+
+        await setDoc(adminSecRef, {
+            requirePasswordChange: false,
+            lastPasswordChange: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+
+        clearOldAdminLocalFinal();
+
+        currentUser.displayName = displayName;
+        currentUser.email = email || username;
+
+        if($('user-display-name')) $('user-display-name').textContent = displayName;
+        if($('user-display-email')) $('user-display-email').textContent = email || username;
+        if($('user-avatar-initial')) $('user-avatar-initial').textContent = displayName.charAt(0).toUpperCase();
+        if($('admin-profile-password-input')) $('admin-profile-password-input').value = '';
+
+        if(typeof closeModal === 'function') closeModal('user-profile-modal');
+        else $('user-profile-modal')?.classList.add('hidden');
+
+        showCustomAlert('บันทึกสำเร็จ', 'บันทึกชื่อผู้ใช้ อีเมล และรหัสผ่าน Admin ลง Firebase แล้ว');
+    }catch(err){
+        showCustomAlert('บันทึก Admin ไม่สำเร็จ', (typeof getFirebaseErrorText === 'function' ? getFirebaseErrorText(err) : (err.message || String(err))), true);
+    }finally{
+        if(typeof toggleLoader === 'function') toggleLoader(false);
+    }
+};
+
+window.openUserProfileSettings = async function(){
+    if(typeof currentUser === 'undefined' || !currentUser) return showCustomAlert('ยังไม่ได้เข้าสู่ระบบ', 'กรุณาเข้าสู่ระบบก่อนใช้งานโปรไฟล์', true);
+
+    ensureProfileAdminFields();
+
+    const isAdminBypass = currentUser?.uid === 'admin-bypass';
+    if(isAdminBypass){
+        try{
+            const d = await readAdminCredFinal();
+            if($('profile-display-name-input')) $('profile-display-name-input').value = d.displayName || d.name || currentUser.displayName || 'Administrator';
+            if($('profile-admin-username-input')) $('profile-admin-username-input').value = d.username || 'Admin';
+            if($('profile-email-input')) $('profile-email-input').value = d.email || '';
+            if($('admin-profile-password-input')) $('admin-profile-password-input').value = '';
+            if($('admin-profile-password-wrap')) $('admin-profile-password-wrap').classList.remove('hidden');
+            const resetBtn = document.querySelector('#user-profile-modal button[onclick="requestOwnPasswordReset()"]');
+            if(resetBtn) resetBtn.classList.add('hidden');
+        }catch(e){}
+    }else{
+        if($('profile-display-name-input')) $('profile-display-name-input').value = currentUser.displayName || '';
+        if($('profile-email-input')) $('profile-email-input').value = currentUser.email || '';
+        if($('admin-profile-password-wrap')) $('admin-profile-password-wrap').classList.add('hidden');
+    }
+
+    if(typeof openModal === 'function') openModal('user-profile-modal');
+    else $('user-profile-modal')?.classList.remove('hidden');
+};
+
+
+/* =========================================================
+   FINAL HOTFIX: เปิดโปรไฟล์ Admin ได้แม้ currentUser หลุด
+   - ใช้ isAdmin / localStorage / หน้าหลักที่กำลังแสดงอยู่เป็นหลักฐานว่าเข้า Admin แล้ว
+   - ไม่ขึ้น "ยังไม่ได้เข้าสู่ระบบ" หลังล็อกอิน Admin
+   ========================================================= */
+function restoreAdminSessionForProfileFinal(){
+    const mainAppVisible = !$('main-app')?.classList.contains('hidden');
+    const adminActive = isAdmin === true || localStorage.getItem('schoolhub_admin_active') === 'true';
+    if((!currentUser || currentUser.uid !== 'admin-bypass') && (adminActive || mainAppVisible)){
+        const name = localStorage.getItem('schoolhub_admin_name') || 'Administrator';
+        const email = localStorage.getItem('schoolhub_admin_email') || localStorage.getItem('schoolhub_admin_username') || 'Admin';
+        const username = localStorage.getItem('schoolhub_admin_username') || 'Admin';
+        currentUser = { uid:'admin-bypass', email, displayName:name, username };
+        isAdmin = true;
+    }
+    return currentUser && currentUser.uid === 'admin-bypass';
+}
+
+window.openUserProfileSettings = async function(){
+    restoreAdminSessionForProfileFinal();
+
+    if(!currentUser){
+        return showCustomAlert('ยังไม่ได้เข้าสู่ระบบ', 'กรุณาเข้าสู่ระบบก่อนใช้งานโปรไฟล์', true);
+    }
+
+    ensureProfileAdminFields();
+
+    const isAdminBypass = currentUser?.uid === 'admin-bypass' || isAdmin === true;
+    if(isAdminBypass){
+        try{
+            const d = await readAdminCredFinal();
+            const displayName = d.displayName || d.name || currentUser.displayName || localStorage.getItem('schoolhub_admin_name') || 'Administrator';
+            const username = d.username || currentUser.username || localStorage.getItem('schoolhub_admin_username') || 'Admin';
+            const email = d.email || currentUser.email || localStorage.getItem('schoolhub_admin_email') || '';
+
+            currentUser = { uid:'admin-bypass', email: email || username, displayName, username };
+            isAdmin = true;
+            localStorage.setItem('schoolhub_admin_active','true');
+            localStorage.setItem('schoolhub_admin_name', displayName);
+            localStorage.setItem('schoolhub_admin_username', username);
+            localStorage.setItem('schoolhub_admin_email', email || username);
+
+            if($('profile-display-name-input')) $('profile-display-name-input').value = displayName;
+            if($('profile-admin-username-input')) $('profile-admin-username-input').value = username;
+            if($('profile-email-input')) $('profile-email-input').value = email || '';
+            if($('admin-profile-password-input')) $('admin-profile-password-input').value = '';
+            if($('admin-profile-password-wrap')) $('admin-profile-password-wrap').classList.remove('hidden');
+            if($('user-display-name')) $('user-display-name').textContent = displayName;
+            if($('user-display-email')) $('user-display-email').textContent = email || username;
+            if($('user-avatar-initial')) $('user-avatar-initial').textContent = displayName.charAt(0).toUpperCase();
+
+            const resetBtn = document.querySelector('#user-profile-modal button[onclick="requestOwnPasswordReset()"]');
+            if(resetBtn) resetBtn.classList.add('hidden');
+        }catch(e){
+            console.warn('load admin profile failed:', e);
+            if($('profile-display-name-input')) $('profile-display-name-input').value = currentUser.displayName || 'Administrator';
+            if($('profile-admin-username-input')) $('profile-admin-username-input').value = currentUser.username || 'Admin';
+            if($('profile-email-input')) $('profile-email-input').value = currentUser.email === 'Admin' ? '' : (currentUser.email || '');
+            if($('admin-profile-password-input')) $('admin-profile-password-input').value = '';
+            if($('admin-profile-password-wrap')) $('admin-profile-password-wrap').classList.remove('hidden');
+        }
+    }else{
+        if($('profile-display-name-input')) $('profile-display-name-input').value = currentUser.displayName || '';
+        if($('profile-email-input')) $('profile-email-input').value = currentUser.email || '';
+        if($('admin-profile-password-wrap')) $('admin-profile-password-wrap').classList.add('hidden');
+    }
+
+    if(typeof openModal === 'function') openModal('user-profile-modal');
+    else $('user-profile-modal')?.classList.remove('hidden');
+};
+
+</script>
+
+
+
+<script type="module">
+/* =========================================================
+   FINAL FIX: Profile button works for every logged-in account
+   - ไม่อ้าง currentUser ที่เป็นตัวแปรใน module อื่น
+   - Admin bypass ใช้สถานะจาก localStorage/หน้าหลัก + อ่าน Firestore โดยตรง
+   - ผู้ใช้ปกติใช้ Firebase Auth currentUser
+   ========================================================= */
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, updateProfile, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const profileFixConfig = {
+    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
+    authDomain: "schoolhub-5677d.firebaseapp.com",
+    projectId: "schoolhub-5677d",
+    storageBucket: "schoolhub-5677d.firebasestorage.app",
+    messagingSenderId: "803574136389",
+    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
+    measurementId: "G-ME7E38XNX6"
+};
+
+const profileFixApp = getApps().length ? getApp() : initializeApp(profileFixConfig);
+const profileFixDb = getFirestore(profileFixApp);
+const profileFixAuth = getAuth(profileFixApp);
+const $pf = (id) => document.getElementById(id);
+
+function pfAlert(title, message, isError=false){
+    if (typeof window.showCustomAlert === 'function') return window.showCustomAlert(title, message, isError);
+    alert((title || '') + (message ? '\n' + message : ''));
+}
+function pfOpenModal(id){
+    if (typeof window.openModal === 'function') return window.openModal(id);
+    $pf(id)?.classList.remove('hidden');
+}
+function pfCloseModal(id){
+    if (typeof window.closeModal === 'function') return window.closeModal(id);
+    $pf(id)?.classList.add('hidden');
+}
+function pfLoader(show){
+    if (typeof window.toggleLoader === 'function') window.toggleLoader(!!show);
+}
+function pfEnsureAdminFields(){
+    const emailInput = $pf('profile-email-input');
+    const passWrap = $pf('admin-profile-password-wrap');
+    if (emailInput) {
+        emailInput.removeAttribute('readonly');
+        emailInput.classList.remove('bg-slate-100','text-slate-500');
+        emailInput.classList.add('bg-slate-50');
+    }
+    if (!$pf('profile-admin-username-input') && emailInput) {
+        const wrap = document.createElement('div');
+        wrap.id = 'profile-admin-username-wrap';
+        wrap.innerHTML = `
+            <label class="block text-sm font-bold text-slate-700 mb-1.5">ชื่อผู้ใช้ Admin</label>
+            <input id="profile-admin-username-input" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-primary" placeholder="เช่น Admin">
+        `;
+        emailInput.closest('div')?.insertAdjacentElement('beforebegin', wrap);
+    }
+    if (passWrap) {
+        const note = passWrap.querySelector('p');
+        if (note) note.textContent = 'แก้ชื่อผู้ใช้ อีเมล และรหัสผ่าน Admin ได้จากโปรไฟล์นี้ โดยบันทึกลง Firebase โดยตรง';
+    }
+}
+function pfIsMainVisible(){
+    const main = $pf('main-app');
+    return !!main && !main.classList.contains('hidden');
+}
+function pfIsAdminSession(){
+    const nameText = ($pf('user-display-name')?.textContent || '').trim().toLowerCase();
+    const emailText = ($pf('user-display-email')?.textContent || '').trim().toLowerCase();
+    return localStorage.getItem('schoolhub_admin_active') === 'true'
+        || localStorage.getItem('schoolhub_admin_logged_in') === 'true'
+        || localStorage.getItem('schoolhub_is_admin') === 'true'
+        || nameText.includes('admin')
+        || emailText === 'admin'
+        || emailText.includes('ptp.vertex')
+        || (pfIsMainVisible() && document.body.innerText.includes('จัดการระบบ'));
+}
+async function pfReadAdmin(){
+    const ref = doc(profileFixDb, 'admin_settings', 'credentials');
+    const snap = await getDoc(ref);
+    return snap.exists() ? snap.data() : {};
+}
+async function pfWriteAdmin(data){
+    const ref = doc(profileFixDb, 'admin_settings', 'credentials');
+    const sec = doc(profileFixDb, 'admin_settings', 'security');
+    await setDoc(ref, data, { merge:true });
+    await setDoc(sec, { requirePasswordChange:false, updatedAt:serverTimestamp(), lastPasswordChange:serverTimestamp() }, { merge:true });
+}
+function pfSetHeader(name, email){
+    if ($pf('user-display-name')) $pf('user-display-name').textContent = name || 'Administrator';
+    if ($pf('user-display-email')) $pf('user-display-email').textContent = email || 'Admin';
+    if ($pf('user-avatar-initial')) $pf('user-avatar-initial').textContent = (name || 'A').trim().charAt(0).toUpperCase();
+}
+
+window.openUserProfileSettings = async function(){
+    const authUser = profileFixAuth.currentUser;
+    const isAdmin = pfIsAdminSession();
+
+    if (!authUser && !isAdmin && !pfIsMainVisible()) {
+        return pfAlert('ยังไม่ได้เข้าสู่ระบบ', 'กรุณาเข้าสู่ระบบก่อนใช้งานโปรไฟล์', true);
+    }
+
+    pfEnsureAdminFields();
+
+    if (isAdmin) {
+        try {
+            const d = await pfReadAdmin();
+            const username = (d.username || localStorage.getItem('schoolhub_admin_username') || 'Admin').trim();
+            const displayName = (d.displayName || d.name || localStorage.getItem('schoolhub_admin_name') || 'Administrator').trim();
+            const email = (d.email || localStorage.getItem('schoolhub_admin_email') || '').trim();
+
+            if ($pf('profile-display-name-input')) $pf('profile-display-name-input').value = displayName;
+            if ($pf('profile-admin-username-input')) $pf('profile-admin-username-input').value = username;
+            if ($pf('profile-email-input')) $pf('profile-email-input').value = email;
+            if ($pf('admin-profile-password-input')) $pf('admin-profile-password-input').value = '';
+            if ($pf('admin-profile-password-wrap')) $pf('admin-profile-password-wrap').classList.remove('hidden');
+            const resetBtn = document.querySelector('#user-profile-modal button[onclick="requestOwnPasswordReset()"]');
+            if (resetBtn) resetBtn.classList.add('hidden');
+
+            localStorage.setItem('schoolhub_admin_active', 'true');
+            localStorage.setItem('schoolhub_admin_username', username);
+            localStorage.setItem('schoolhub_admin_name', displayName);
+            localStorage.setItem('schoolhub_admin_email', email || username);
+            pfSetHeader(displayName, email || username);
+        } catch (e) {
+            console.warn('Admin profile load failed:', e);
+            if ($pf('profile-display-name-input')) $pf('profile-display-name-input').value = localStorage.getItem('schoolhub_admin_name') || 'Administrator';
+            if ($pf('profile-admin-username-input')) $pf('profile-admin-username-input').value = localStorage.getItem('schoolhub_admin_username') || 'Admin';
+            if ($pf('profile-email-input')) $pf('profile-email-input').value = localStorage.getItem('schoolhub_admin_email') || '';
+            if ($pf('admin-profile-password-wrap')) $pf('admin-profile-password-wrap').classList.remove('hidden');
+        }
+    } else {
+        const wrap = $pf('profile-admin-username-wrap');
+        if (wrap) wrap.classList.add('hidden');
+        if ($pf('profile-display-name-input')) $pf('profile-display-name-input').value = authUser?.displayName || ($pf('user-display-name')?.textContent || '').trim();
+        if ($pf('profile-email-input')) $pf('profile-email-input').value = authUser?.email || ($pf('user-display-email')?.textContent || '').trim();
+        if ($pf('admin-profile-password-wrap')) $pf('admin-profile-password-wrap').classList.add('hidden');
+        const resetBtn = document.querySelector('#user-profile-modal button[onclick="requestOwnPasswordReset()"]');
+        if (resetBtn) resetBtn.classList.remove('hidden');
+    }
+
+    pfOpenModal('user-profile-modal');
+};
+
+window.saveUserProfileChanges = async function(){
+    const isAdmin = pfIsAdminSession();
+    const authUser = profileFixAuth.currentUser;
+    const displayName = ($pf('profile-display-name-input')?.value || '').trim();
+    if (!displayName) return pfAlert('กรอกข้อมูลไม่ครบ', 'กรุณากรอกชื่อที่แสดง', true);
+
+    pfLoader(true);
+    try {
+        if (isAdmin) {
+            let username = ($pf('profile-admin-username-input')?.value || 'Admin').trim() || 'Admin';
+            let email = ($pf('profile-email-input')?.value || '').trim();
+            const newPass = ($pf('admin-profile-password-input')?.value || '').trim();
+            const old = await pfReadAdmin();
+            const password = newPass || old.password || 'Admin123';
+            if (password.length < 6) throw new Error('รหัสผ่าน Admin ต้องมีอย่างน้อย 6 ตัวอักษร');
+            await pfWriteAdmin({
+                username,
+                email,
+                displayName,
+                password,
+                updatedAt: serverTimestamp(),
+                updatedBy: 'admin'
+            });
+            localStorage.setItem('schoolhub_admin_active', 'true');
+            localStorage.setItem('schoolhub_admin_username', username);
+            localStorage.setItem('schoolhub_admin_name', displayName);
+            localStorage.setItem('schoolhub_admin_email', email || username);
+            pfSetHeader(displayName, email || username);
+            if ($pf('admin-profile-password-input')) $pf('admin-profile-password-input').value = '';
+            pfCloseModal('user-profile-modal');
+            pfAlert('บันทึกสำเร็จ', 'บันทึกโปรไฟล์ Admin ลง Firebase แล้ว');
+        } else {
+            if (!authUser) throw new Error('ไม่พบข้อมูลผู้ใช้ที่เข้าสู่ระบบ');
+            await updateProfile(authUser, { displayName });
+            if ($pf('user-display-name')) $pf('user-display-name').textContent = displayName;
+            if ($pf('user-avatar-initial')) $pf('user-avatar-initial').textContent = displayName.charAt(0).toUpperCase();
+            pfCloseModal('user-profile-modal');
+            pfAlert('บันทึกสำเร็จ', 'แก้ไขชื่อที่แสดงเรียบร้อยแล้ว');
+        }
+    } catch (e) {
+        pfAlert('บันทึกไม่สำเร็จ', e?.message || String(e), true);
+    } finally {
+        pfLoader(false);
+    }
+};
+
+window.requestOwnPasswordReset = async function(){
+    const authUser = profileFixAuth.currentUser;
+    const email = authUser?.email || ($pf('profile-email-input')?.value || '').trim();
+    if (!email) return pfAlert('ไม่พบอีเมล', 'ไม่พบอีเมลสำหรับส่งลิงก์รีเซ็ตรหัสผ่าน', true);
+    try {
+        await sendPasswordResetEmail(profileFixAuth, email);
+        pfAlert('ส่งอีเมลแล้ว', 'ระบบส่งลิงก์รีเซ็ตรหัสผ่านไปที่อีเมลของคุณแล้ว');
+    } catch(e) {
+        pfAlert('ส่งอีเมลไม่สำเร็จ', e?.message || String(e), true);
+    }
+};
 </script>
 
 </body>
