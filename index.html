@@ -6164,7 +6164,7 @@ ${resetUrl.toString()}
             <h3 class="text-2xl font-black text-slate-900"><i class="fas fa-chart-pie text-primary mr-2"></i>สถิติรวมทั้งระบบ</h3>
             <p class="text-sm text-slate-500 mt-1">ดึงจากเอกสารกลาง global_stats/summary และรวบรวมจาก user_stats ของแต่ละบัญชี</p>
         </div>
-        <button onclick="window.__schoolhubRebuildGlobalSummary && window.__schoolhubRebuildGlobalSummary()" class="bg-primary hover:bg-indigo-700 text-white font-bold px-5 py-3 rounded-2xl shadow-lg shadow-indigo-100">
+        <button onclick="window.__schoolhubSyncAndRebuildStats && window.__schoolhubSyncAndRebuildStats()" class="bg-primary hover:bg-indigo-700 text-white font-bold px-5 py-3 rounded-2xl shadow-lg shadow-indigo-100">
             <i class="fas fa-rotate mr-2"></i>อัปเดตสถิติ
         </button>
     </div>
@@ -6184,17 +6184,19 @@ ${resetUrl.toString()}
 
 
 
+
+
 <script type="module">
 /* ============================================================
-   SchoolHub Live State Stats Sync
-   แก้ปัญหาเพิ่มนักเรียนแล้วตัวเลขไม่เพิ่ม
-   วิธีทำงาน:
-   1) ฟังข้อมูลจริงแบบ realtime ที่ users/{userKey}/school_data/state
-   2) เมื่อ state เปลี่ยน จะนับใหม่แล้วเขียน user_stats/{userKey}
-   3) รวมยอดจาก user_stats ทั้งหมด แล้วเขียน global_stats/summary
+   SchoolHub Stats Restore Render
+   แก้ตัวเลขขึ้น — ทั้งหมด
+   - ใช้ Firebase 11.6.1 ตามไฟล์เดิม
+   - ไม่ใช้ onSnapshot
+   - โหลด global_stats/summary ก่อนเสมอ
+   - sync user_stats จาก users/{userKey}/school_data/state แบบหน่วงเวลา
    ============================================================ */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, collection, getDocs, doc, getDoc, setDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const cfg = {
@@ -6212,31 +6214,38 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 let currentUser = null;
-let unsubState = null;
-let rebuildTimer = null;
-let lastKnownUserKey = "";
+let syncTimer = null;
+let isSyncing = false;
 
-const num = v => Number.isFinite(Number(v)) ? Number(v) : 0;
+const num = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
+
+function displayValue(v) {
+    return String(num(v));
+}
 
 function setText(id, value) {
     const el = document.getElementById(id);
-    if (el) el.textContent = String(num(value));
+    if (el) el.textContent = displayValue(value);
 }
 
 function renderSummary(s) {
     if (!s) return;
 
-    setText('stat-landing-teachers', s.totalTeachers || s.totalUsers);
-    setText('stat-landing-courses', s.totalCourses);
-    setText('stat-landing-students', s.totalStudents);
+    const teachers = num(s.totalTeachers || s.totalUsers);
+    const courses = num(s.totalCourses);
+    const students = num(s.totalStudents);
 
-    setText('stat-auth-users', s.totalTeachers || s.totalUsers);
-    setText('stat-auth-courses', s.totalCourses);
-    setText('stat-auth-students', s.totalStudents);
+    setText('stat-landing-teachers', teachers);
+    setText('stat-landing-courses', courses);
+    setText('stat-landing-students', students);
 
-    setText('admin-stat-teachers', s.totalTeachers || s.totalUsers);
-    setText('admin-stat-courses', s.totalCourses);
-    setText('admin-stat-students', s.totalStudents);
+    setText('stat-auth-users', teachers);
+    setText('stat-auth-courses', courses);
+    setText('stat-auth-students', students);
+
+    setText('admin-stat-teachers', teachers);
+    setText('admin-stat-courses', courses);
+    setText('admin-stat-students', students);
     setText('admin-stat-attendance', s.totalAttendanceRecords);
     setText('admin-stat-assignments', s.totalAssignments);
     setText('admin-stat-scores', s.totalScoreItems);
@@ -6245,14 +6254,19 @@ function renderSummary(s) {
     if (updated) updated.textContent = 'อัปเดตล่าสุด: ' + new Date().toLocaleString('th-TH');
 }
 
-function isActiveUser(data) {
-    const status = String(data?.status || '').toLowerCase();
-    return status !== 'blocked' && status !== 'deleted' && data?.blocked !== true;
-}
-
-function isAdminUser(data) {
-    const role = String(data?.role || '').toLowerCase();
-    return role === 'admin' || data?.isAdmin === true;
+async function loadGlobalSummary() {
+    try {
+        const snap = await getDoc(doc(db, 'global_stats', 'summary'));
+        if (snap.exists()) {
+            const summary = snap.data() || {};
+            renderSummary(summary);
+            return summary;
+        }
+        console.warn('ยังไม่พบ global_stats/summary');
+    } catch (error) {
+        console.error('อ่าน global_stats/summary ไม่สำเร็จ:', error);
+    }
+    return null;
 }
 
 function countAny(v) {
@@ -6276,17 +6290,9 @@ function countState(state) {
     let assignments = 0;
     let scoreItems = 0;
 
-    for (const key of ['attendanceRecords','attendances','attendance','checkIns','checkins']) {
-        attendanceRecords += countAny(state?.[key]);
-    }
-
-    for (const key of ['assignments','works','tasks','scoreItems']) {
-        assignments += countAny(state?.[key]);
-    }
-
-    for (const key of ['scores','scoreRecords','scoreList','studentScores']) {
-        scoreItems += countAny(state?.[key]);
-    }
+    for (const key of ['attendanceRecords','attendances','attendance','checkIns','checkins']) attendanceRecords += countAny(state?.[key]);
+    for (const key of ['assignments','works','tasks','scoreItems']) assignments += countAny(state?.[key]);
+    for (const key of ['scores','scoreRecords','scoreList','studentScores']) scoreItems += countAny(state?.[key]);
 
     for (const c of courses) {
         for (const key of ['assignments','works','tasks','scoreItems']) assignments += countAny(c?.[key]);
@@ -6309,26 +6315,13 @@ function countState(state) {
     };
 }
 
-function getCurrentUserKey() {
-    const u = currentUser || auth.currentUser || window.currentUser || {};
-    return String(
-        window.currentUserEmail ||
-        window.userEmail ||
-        u.email ||
-        u.uid ||
-        lastKnownUserKey ||
-        ''
-    );
-}
-
-function candidateKeysFromUser() {
+function getCandidateKeys() {
     const u = currentUser || auth.currentUser || window.currentUser || {};
     return Array.from(new Set([
         window.currentUserEmail,
         window.userEmail,
         u.email,
-        u.uid,
-        lastKnownUserKey
+        u.uid
     ].filter(Boolean).map(String)));
 }
 
@@ -6343,31 +6336,39 @@ async function readStateByKey(key) {
     }
 }
 
-async function findCurrentStateAndKey() {
-    for (const key of candidateKeysFromUser()) {
+async function findCurrentState() {
+    for (const key of getCandidateKeys()) {
         const state = await readStateByKey(key);
         if (state) return { key, state };
     }
-    return { key: getCurrentUserKey(), state: null };
+    return { key: getCandidateKeys()[0] || '', state: null };
 }
 
-async function writeCurrentUserStatsFromState(state, stateKey) {
+function isActiveUser(data) {
+    const status = String(data?.status || '').toLowerCase();
+    return status !== 'blocked' && status !== 'deleted' && data?.blocked !== true;
+}
+
+function isAdminUser(data) {
+    const role = String(data?.role || '').toLowerCase();
+    return role === 'admin' || data?.isAdmin === true;
+}
+
+async function syncCurrentUserStats() {
+    const found = await findCurrentState();
+    if (!found.state || !found.key) return null;
+
     const u = currentUser || auth.currentUser || window.currentUser || {};
-    const key = stateKey || getCurrentUserKey();
-    if (!key || !state) return null;
-
-    lastKnownUserKey = key;
-    const counts = countState(state);
-
-    const statKey = u.uid || u.email || key;
+    const statKey = u.uid || u.email || found.key;
+    const counts = countState(found.state);
 
     const payload = {
         uid: u.uid || '',
-        email: u.email || window.currentUserEmail || (String(key).includes('@') ? String(key) : ''),
+        email: u.email || window.currentUserEmail || (String(found.key).includes('@') ? found.key : ''),
         displayName: u.displayName || window.currentUserName || '',
         role: window.currentUserRole || window.userRole || 'teacher',
         status: window.currentUserStatus || 'active',
-        stateUserKey: key,
+        stateUserKey: found.key,
         courses: counts.courses,
         students: counts.students,
         attendanceRecords: counts.attendanceRecords,
@@ -6376,71 +6377,8 @@ async function writeCurrentUserStatsFromState(state, stateKey) {
         updatedAt: serverTimestamp()
     };
 
-    try {
-        await setDoc(doc(db, 'user_stats', String(statKey)), payload, { merge: true });
-        console.log('อัปเดต user_stats สำเร็จ:', statKey, payload);
-    } catch (error) {
-        console.error('เขียน user_stats ไม่สำเร็จ:', statKey, error);
-        return null;
-    }
-
-    scheduleGlobalRebuild();
+    await setDoc(doc(db, 'user_stats', String(statKey)), payload, { merge: true });
     return payload;
-}
-
-async function syncCurrentUserStatsOnce() {
-    const found = await findCurrentStateAndKey();
-    if (!found.state) {
-        console.warn('ยังไม่พบ users/{userKey}/school_data/state ของผู้ใช้ปัจจุบัน:', candidateKeysFromUser());
-        return null;
-    }
-    return writeCurrentUserStatsFromState(found.state, found.key);
-}
-
-function startRealtimeStateWatch() {
-    if (unsubState) {
-        try { unsubState(); } catch (e) {}
-        unsubState = null;
-    }
-
-    const keys = candidateKeysFromUser();
-    if (!keys.length) return;
-
-    // หา key ที่มี state อยู่จริงก่อน
-    findCurrentStateAndKey().then(found => {
-        if (!found.key || !found.state) return;
-
-        lastKnownUserKey = found.key;
-        writeCurrentUserStatsFromState(found.state, found.key);
-
-        try {
-            unsubState = onSnapshot(
-                doc(db, 'users', String(found.key), 'school_data', 'state'),
-                snap => {
-                    if (!snap.exists()) return;
-                    writeCurrentUserStatsFromState(snap.data() || {}, found.key);
-                },
-                error => console.warn('onSnapshot state error:', error)
-            );
-            console.log('เริ่มฟัง state แบบ realtime:', found.key);
-        } catch (error) {
-            console.warn('เริ่ม onSnapshot ไม่สำเร็จ:', error);
-        }
-    });
-}
-
-async function loadGlobalSummaryOnly() {
-    try {
-        const snap = await getDoc(doc(db, 'global_stats', 'summary'));
-        if (snap.exists()) {
-            const summary = snap.data() || {};
-            renderSummary(summary);
-            return summary;
-        }
-    } catch (error) {
-        console.warn('อ่าน global_stats/summary ไม่สำเร็จ:', error);
-    }
-    return null;
 }
 
 async function rebuildGlobalSummaryFromUserStats() {
@@ -6472,12 +6410,12 @@ async function rebuildGlobalSummaryFromUserStats() {
         });
     } catch (error) {
         console.error('อ่าน user_stats เพื่อรวมยอดไม่สำเร็จ:', error);
-        return loadGlobalSummaryOnly();
+        return loadGlobalSummary();
     }
 
     if (!countedDocs) {
-        console.warn('ยังไม่มี user_stats ให้รวมยอด จึงไม่เขียน global_stats/summary');
-        return loadGlobalSummaryOnly();
+        console.warn('ยังไม่มี user_stats ให้รวมยอด');
+        return loadGlobalSummary();
     }
 
     const summary = {
@@ -6495,42 +6433,393 @@ async function rebuildGlobalSummaryFromUserStats() {
     try {
         await setDoc(doc(db, 'global_stats', 'summary'), summary, { merge: true });
         renderSummary(summary);
-        console.log('อัปเดต global_stats/summary สำเร็จ:', summary);
         return summary;
     } catch (error) {
         console.error('เขียน global_stats/summary ไม่สำเร็จ:', error);
-        return null;
+        return loadGlobalSummary();
     }
 }
 
-function scheduleGlobalRebuild() {
-    clearTimeout(rebuildTimer);
-    rebuildTimer = setTimeout(() => {
-        rebuildGlobalSummaryFromUserStats();
-    }, 900);
+async function syncAndRebuildStats() {
+    if (isSyncing) return;
+    isSyncing = true;
+    try {
+        await syncCurrentUserStats();
+        await rebuildGlobalSummaryFromUserStats();
+    } catch (error) {
+        console.error('syncAndRebuildStats error:', error);
+        await loadGlobalSummary();
+    } finally {
+        isSyncing = false;
+    }
 }
 
-window.loadGlobalSiteStats = loadGlobalSummaryOnly;
-window.__schoolhubCentralStatsRefresh = loadGlobalSummaryOnly;
-window.__schoolhubCentralStatsRebuild = rebuildGlobalSummaryFromUserStats;
-window.__schoolhubRebuildGlobalSummary = rebuildGlobalSummaryFromUserStats;
-window.__schoolhubCentralStatsSyncMine = syncCurrentUserStatsOnce;
-window.__schoolhubStartStateStatsWatch = startRealtimeStateWatch;
+function scheduleStatsSync(delay = 1200) {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(syncAndRebuildStats, delay);
+}
+
+function hookAfterFunction(name) {
+    const original = window[name];
+    if (typeof original !== 'function' || original.__statsHooked) return;
+
+    const wrapped = async function(...args) {
+        const result = original.apply(this, args);
+        try {
+            if (result && typeof result.then === 'function') {
+                const awaited = await result;
+                scheduleStatsSync();
+                return awaited;
+            }
+            scheduleStatsSync();
+            return result;
+        } catch (error) {
+            scheduleStatsSync();
+            throw error;
+        }
+    };
+
+    wrapped.__statsHooked = true;
+    window[name] = wrapped;
+}
+
+function hookSaveFunctions() {
+    [
+        'saveState',
+        'saveData',
+        'saveAppState',
+        'saveStudent',
+        'saveStudentData',
+        'addStudent',
+        'addStudentToMaster',
+        'saveCourse',
+        'saveCourseData',
+        'addCourse',
+        'deleteStudent',
+        'deleteCourse',
+        'saveAttendance',
+        'saveScores',
+        'saveScore',
+        'saveAssignment'
+    ].forEach(hookAfterFunction);
+}
+
+window.loadGlobalSiteStats = loadGlobalSummary;
+window.__schoolhubCentralStatsRefresh = loadGlobalSummary;
+window.__schoolhubCentralStatsRebuild = syncAndRebuildStats;
+window.__schoolhubRebuildGlobalSummary = syncAndRebuildStats;
+window.__schoolhubSyncAndRebuildStats = syncAndRebuildStats;
+window.__schoolhubCentralStatsSyncMine = syncCurrentUserStats;
+window.__schoolhubScheduleStatsSync = scheduleStatsSync;
+
+document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!target) return;
+    const text = (target.innerText || target.textContent || '').toString();
+    if (/บันทึก|เพิ่ม|ลบ|เช็คชื่อ|คะแนน|นักเรียน|วิชา|งาน|ตกลง|ยืนยัน/.test(text)) {
+        scheduleStatsSync(1600);
+    }
+}, true);
+
+document.addEventListener('submit', () => scheduleStatsSync(1600), true);
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadGlobalSummaryOnly();
-    setTimeout(loadGlobalSummaryOnly, 1000);
-    setTimeout(syncCurrentUserStatsOnce, 1800);
-    setTimeout(startRealtimeStateWatch, 2600);
+    loadGlobalSummary();
+    setTimeout(loadGlobalSummary, 700);
+    setTimeout(hookSaveFunctions, 1500);
+    setTimeout(syncAndRebuildStats, 2800);
+    setInterval(hookSaveFunctions, 5000);
 });
 
 onAuthStateChanged(auth, user => {
     currentUser = user;
-    loadGlobalSummaryOnly();
+    loadGlobalSummary();
     if (user) {
-        setTimeout(syncCurrentUserStatsOnce, 800);
-        setTimeout(startRealtimeStateWatch, 1400);
+        setTimeout(hookSaveFunctions, 800);
+        setTimeout(syncAndRebuildStats, 1800);
     }
+});
+</script>
+
+
+<script type="module">
+/* ============================================================
+   SchoolHub Firebase Admin Login System
+   ระบบรหัสแอดมินกลางใน Firebase
+   ค่าเริ่มต้นครั้งแรก:
+   username: Admin
+   password: Admin123
+
+   หลังจากเปลี่ยนแล้ว ทุกเครื่องจะใช้ค่าจาก Firebase เท่านั้น
+   เก็บที่: system_settings/admin_credentials
+   ============================================================ */
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const adminLoginFirebaseConfig = {
+    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
+    authDomain: "schoolhub-5677d.firebaseapp.com",
+    projectId: "schoolhub-5677d",
+    storageBucket: "schoolhub-5677d.firebasestorage.app",
+    messagingSenderId: "803574136389",
+    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
+    measurementId: "G-ME7E38XNX6"
+};
+
+const adminLoginApp = getApps().length ? getApp() : initializeApp(adminLoginFirebaseConfig);
+const adminLoginDb = getFirestore(adminLoginApp);
+
+const ADMIN_CREDENTIAL_DOC = doc(adminLoginDb, 'system_settings', 'admin_credentials');
+
+async function sha256Text(text) {
+    const encoded = new TextEncoder().encode(String(text));
+    const buffer = await crypto.subtle.digest('SHA-256', encoded);
+    return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function ensureAdminCredentials() {
+    const snap = await getDoc(ADMIN_CREDENTIAL_DOC);
+
+    if (!snap.exists()) {
+        const passwordHash = await sha256Text('Admin123');
+        await setDoc(ADMIN_CREDENTIAL_DOC, {
+            username: 'Admin',
+            passwordHash,
+            mustUseFirebase: true,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+
+        return {
+            username: 'Admin',
+            passwordHash,
+            mustUseFirebase: true
+        };
+    }
+
+    const data = snap.data() || {};
+
+    // ถ้าเอกสารมี username แต่ยังไม่มี hash ให้เติมค่าเริ่มต้นครั้งเดียว
+    if (!data.passwordHash) {
+        const passwordHash = await sha256Text('Admin123');
+        await setDoc(ADMIN_CREDENTIAL_DOC, {
+            username: data.username || 'Admin',
+            passwordHash,
+            mustUseFirebase: true,
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+
+        return {
+            ...data,
+            username: data.username || 'Admin',
+            passwordHash,
+            mustUseFirebase: true
+        };
+    }
+
+    return data;
+}
+
+async function verifyFirebaseAdminLogin(username, password) {
+    const data = await ensureAdminCredentials();
+    const inputHash = await sha256Text(password);
+
+    return String(username || '').trim() === String(data.username || '').trim()
+        && inputHash === data.passwordHash;
+}
+
+async function updateFirebaseAdminCredentials(newUsername, newPassword) {
+    const username = String(newUsername || '').trim();
+    const password = String(newPassword || '').trim();
+
+    if (!username) throw new Error('กรุณากรอกชื่อผู้ใช้แอดมินใหม่');
+    if (!password || password.length < 6) throw new Error('รหัสผ่านแอดมินต้องมีอย่างน้อย 6 ตัวอักษร');
+
+    const passwordHash = await sha256Text(password);
+
+    await setDoc(ADMIN_CREDENTIAL_DOC, {
+        username,
+        passwordHash,
+        mustUseFirebase: true,
+        updatedAt: serverTimestamp()
+    }, { merge: true });
+
+    return true;
+}
+
+function getInputValueByCandidates(ids) {
+    for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el) return el.value || '';
+    }
+    return '';
+}
+
+function setInputValueByCandidates(ids, value) {
+    for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el) el.value = value;
+    }
+}
+
+function tryFindAdminLoginValues() {
+    const username = getInputValueByCandidates([
+        'admin-username',
+        'admin-user',
+        'admin-login-username',
+        'admin-email',
+        'admin-id',
+        'login-admin-username'
+    ]);
+
+    const password = getInputValueByCandidates([
+        'admin-password',
+        'admin-pass',
+        'admin-login-password',
+        'login-admin-password'
+    ]);
+
+    return { username, password };
+}
+
+// เปิดให้โค้ดเดิมเรียกใช้ได้
+window.ensureAdminCredentials = ensureAdminCredentials;
+window.verifyFirebaseAdminLogin = verifyFirebaseAdminLogin;
+window.updateFirebaseAdminCredentials = updateFirebaseAdminCredentials;
+window.changeFirebaseAdminCredentials = updateFirebaseAdminCredentials;
+
+// ฟังก์ชันสำหรับปุ่มเปลี่ยนรหัสแอดมิน ถ้าหน้าเว็บมีปุ่มเรียกใช้
+window.openChangeAdminCredentialsPrompt = async function () {
+    try {
+        const current = await ensureAdminCredentials();
+
+        const newUsername = prompt('ชื่อผู้ใช้แอดมินใหม่', current.username || 'Admin');
+        if (newUsername === null) return;
+
+        const newPassword = prompt('รหัสผ่านแอดมินใหม่ (อย่างน้อย 6 ตัวอักษร)');
+        if (newPassword === null) return;
+
+        await updateFirebaseAdminCredentials(newUsername, newPassword);
+        alert('เปลี่ยนรหัสแอดมินเรียบร้อยแล้ว ทุกเครื่องจะใช้รหัสใหม่นี้ทันที');
+    } catch (error) {
+        alert(error.message || 'เปลี่ยนรหัสแอดมินไม่สำเร็จ');
+        console.error(error);
+    }
+};
+
+// ดักฟังก์ชัน login แอดมินเดิม ถ้ามี
+function hookAdminLoginFunction(name) {
+    const original = window[name];
+    if (typeof original !== 'function' || original.__firebaseAdminHooked) return;
+
+    const wrapped = async function (...args) {
+        try {
+            let username = '';
+            let password = '';
+
+            // รองรับกรณีฟังก์ชันเดิมส่งค่ามาเป็น argument
+            if (typeof args[0] === 'string') username = args[0];
+            if (typeof args[1] === 'string') password = args[1];
+
+            // รองรับกรณีส่ง event/form
+            if (!username || !password) {
+                const found = tryFindAdminLoginValues();
+                username = username || found.username;
+                password = password || found.password;
+            }
+
+            if (username || password) {
+                const ok = await verifyFirebaseAdminLogin(username, password);
+                if (!ok) {
+                    if (typeof showCustomAlert === 'function') {
+                        showCustomAlert('error', 'เข้าสู่ระบบแอดมินไม่สำเร็จ', 'ชื่อผู้ใช้หรือรหัสผ่านแอดมินไม่ถูกต้อง');
+                    } else {
+                        alert('ชื่อผู้ใช้หรือรหัสผ่านแอดมินไม่ถูกต้อง');
+                    }
+                    return false;
+                }
+            }
+
+            return original.apply(this, args);
+        } catch (error) {
+            console.error('Firebase admin login hook error:', error);
+            if (typeof showCustomAlert === 'function') {
+                showCustomAlert('error', 'เกิดข้อผิดพลาด', error.message || 'ไม่สามารถตรวจสอบรหัสแอดมินจาก Firebase ได้');
+            } else {
+                alert(error.message || 'ไม่สามารถตรวจสอบรหัสแอดมินจาก Firebase ได้');
+            }
+            return false;
+        }
+    };
+
+    wrapped.__firebaseAdminHooked = true;
+    window[name] = wrapped;
+}
+
+function hookKnownAdminLoginFunctions() {
+    [
+        'handleAdminLogin',
+        'adminLogin',
+        'loginAdmin',
+        'handleAdminAuth',
+        'handleAdminBypass',
+        'adminBypassLogin',
+        'checkAdminLogin',
+        'verifyAdminLogin'
+    ].forEach(hookAdminLoginFunction);
+}
+
+// ดัก submit form ที่น่าจะเป็นฟอร์มแอดมิน
+document.addEventListener('submit', async function (event) {
+    const form = event.target;
+    if (!form || !(form instanceof HTMLFormElement)) return;
+
+    const formText = (form.id + ' ' + form.className + ' ' + form.innerText).toLowerCase();
+    const isAdminForm = formText.includes('admin') || formText.includes('แอดมิน') || formText.includes('ผู้ดูแล');
+
+    if (!isAdminForm) return;
+
+    const { username, password } = tryFindAdminLoginValues();
+
+    if (!username && !password) return;
+
+    const ok = await verifyFirebaseAdminLogin(username, password);
+    if (!ok) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        if (typeof showCustomAlert === 'function') {
+            showCustomAlert('error', 'เข้าสู่ระบบแอดมินไม่สำเร็จ', 'ชื่อผู้ใช้หรือรหัสผ่านแอดมินไม่ถูกต้อง');
+        } else {
+            alert('ชื่อผู้ใช้หรือรหัสผ่านแอดมินไม่ถูกต้อง');
+        }
+    }
+}, true);
+
+// ปุ่มเปลี่ยนรหัสแบบลอย เฉพาะตอนอยู่หน้าแอดมิน/มีสิทธิ์ admin
+function injectAdminCredentialButton() {
+    if (document.getElementById('firebase-admin-credential-btn')) return;
+
+    const adminView = document.getElementById('view-admin') || document.querySelector('[id*="admin"]');
+    if (!adminView) return;
+
+    const btn = document.createElement('button');
+    btn.id = 'firebase-admin-credential-btn';
+    btn.type = 'button';
+    btn.className = 'fixed bottom-5 right-5 z-[999999] bg-slate-900 hover:bg-slate-950 text-white px-4 py-3 rounded-2xl shadow-2xl font-bold text-sm';
+    btn.innerHTML = '<i class="fas fa-key mr-2"></i>เปลี่ยนรหัสแอดมิน';
+    btn.onclick = window.openChangeAdminCredentialsPrompt;
+    document.body.appendChild(btn);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    ensureAdminCredentials().catch(console.error);
+    hookKnownAdminLoginFunctions();
+    setTimeout(hookKnownAdminLoginFunctions, 1200);
+    setTimeout(hookKnownAdminLoginFunctions, 3000);
+    setInterval(hookKnownAdminLoginFunctions, 5000);
+    setTimeout(injectAdminCredentialButton, 2500);
+    setInterval(injectAdminCredentialButton, 5000);
 });
 </script>
 
