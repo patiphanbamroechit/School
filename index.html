@@ -6164,7 +6164,7 @@ ${resetUrl.toString()}
             <h3 class="text-2xl font-black text-slate-900"><i class="fas fa-chart-pie text-primary mr-2"></i>สถิติรวมทั้งระบบ</h3>
             <p class="text-sm text-slate-500 mt-1">ดึงจากเอกสารกลาง global_stats/summary และรวบรวมจาก user_stats ของแต่ละบัญชี</p>
         </div>
-        <button onclick="window.__schoolhubCentralStatsRebuild && window.__schoolhubCentralStatsRebuild()" class="bg-primary hover:bg-indigo-700 text-white font-bold px-5 py-3 rounded-2xl shadow-lg shadow-indigo-100">
+        <button onclick="window.__schoolhubRebuildGlobalSummary && window.__schoolhubRebuildGlobalSummary()" class="bg-primary hover:bg-indigo-700 text-white font-bold px-5 py-3 rounded-2xl shadow-lg shadow-indigo-100">
             <i class="fas fa-rotate mr-2"></i>อัปเดตสถิติ
         </button>
     </div>
@@ -6182,18 +6182,17 @@ ${resetUrl.toString()}
 
 
 
+
 <script type="module">
 /* ============================================================
-   SchoolHub Users State Global Stats System - No Zero Overwrite
-   อ่านค่าจาก global_stats/summary เป็นหลัก
-   กดปุ่มแอดมินเท่านั้นถึง rebuild
-   ถ้าอ่าน users/{userKey}/school_data/state ไม่เจอ จะไม่เขียน 0 ทับ
+   SchoolHub Global Summary Update Fix
+   รวมยอดจาก user_stats -> เขียน global_stats/summary
+   updatedAt จะเปลี่ยนทุกครั้งที่เขียน summary สำเร็จ
    ============================================================ */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, collection, getDocs, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-const cfg = {
+const firebaseConfig = {
     apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
     authDomain: "schoolhub-5677d.firebaseapp.com",
     projectId: "schoolhub-5677d",
@@ -6203,180 +6202,63 @@ const cfg = {
     measurementId: "G-ME7E38XNX6"
 };
 
-const app = getApps().length ? getApp() : initializeApp(cfg);
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const auth = getAuth(app);
 
-let currentUser = null;
-let lastGoodSummary = null;
+const toNumber = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
 
-const num = v => Number.isFinite(Number(v)) ? Number(v) : 0;
-
-function setText(id, v) {
+function setText(id, value) {
     const el = document.getElementById(id);
-    if (el) el.textContent = String(num(v));
+    if (el) el.textContent = String(toNumber(value));
 }
 
-function render(s) {
-    if (!s) return;
-    setText('stat-landing-teachers', s.totalTeachers || s.totalUsers);
-    setText('stat-landing-courses', s.totalCourses);
-    setText('stat-landing-students', s.totalStudents);
+function renderGlobalSummary(summary) {
+    if (!summary) return;
 
-    setText('stat-auth-users', s.totalTeachers || s.totalUsers);
-    setText('stat-auth-courses', s.totalCourses);
-    setText('stat-auth-students', s.totalStudents);
+    setText('stat-landing-teachers', summary.totalTeachers || summary.totalUsers);
+    setText('stat-landing-courses', summary.totalCourses);
+    setText('stat-landing-students', summary.totalStudents);
 
-    setText('admin-stat-teachers', s.totalTeachers || s.totalUsers);
-    setText('admin-stat-courses', s.totalCourses);
-    setText('admin-stat-students', s.totalStudents);
-    setText('admin-stat-attendance', s.totalAttendanceRecords);
-    setText('admin-stat-assignments', s.totalAssignments);
-    setText('admin-stat-scores', s.totalScoreItems);
+    setText('stat-auth-users', summary.totalTeachers || summary.totalUsers);
+    setText('stat-auth-courses', summary.totalCourses);
+    setText('stat-auth-students', summary.totalStudents);
+
+    setText('admin-stat-teachers', summary.totalTeachers || summary.totalUsers);
+    setText('admin-stat-courses', summary.totalCourses);
+    setText('admin-stat-students', summary.totalStudents);
+    setText('admin-stat-attendance', summary.totalAttendanceRecords);
+    setText('admin-stat-assignments', summary.totalAssignments);
+    setText('admin-stat-scores', summary.totalScoreItems);
 
     const updated = document.getElementById('admin-stat-updated');
     if (updated) updated.textContent = 'อัปเดตล่าสุด: ' + new Date().toLocaleString('th-TH');
 }
 
-function isZeroMain(s) {
-    return !num(s?.totalCourses) && !num(s?.totalStudents) && !num(s?.totalAttendanceRecords) && !num(s?.totalAssignments) && !num(s?.totalScoreItems);
+function isActiveUser(data) {
+    const status = String(data?.status || '').toLowerCase();
+    return status !== 'blocked' && status !== 'deleted' && data?.blocked !== true;
 }
 
-async function loadStatsSummary() {
+function isAdminUser(data) {
+    const role = String(data?.role || '').toLowerCase();
+    return role === 'admin' || data?.isAdmin === true;
+}
+
+async function loadGlobalSummaryOnly() {
     try {
         const snap = await getDoc(doc(db, 'global_stats', 'summary'));
         if (snap.exists()) {
-            const s = snap.data() || {};
-            lastGoodSummary = s;
-            render(s);
-            return s;
+            const summary = snap.data() || {};
+            renderGlobalSummary(summary);
+            return summary;
         }
-    } catch (e) {
-        console.warn('อ่าน global_stats/summary ไม่สำเร็จ:', e);
+    } catch (error) {
+        console.warn('อ่าน global_stats/summary ไม่สำเร็จ:', error);
     }
-
-    const empty = {
-        totalTeachers: 0,
-        totalUsers: 0,
-        totalCourses: 0,
-        totalStudents: 0,
-        totalAttendanceRecords: 0,
-        totalAssignments: 0,
-        totalScoreItems: 0
-    };
-    render(empty);
-    return empty;
+    return null;
 }
 
-function countAny(v) {
-    if (!v) return 0;
-    if (Array.isArray(v)) return v.length;
-    if (typeof v === 'object') return Object.keys(v).length;
-    return 0;
-}
-
-function values(v) {
-    if (Array.isArray(v)) return v;
-    if (v && typeof v === 'object') return Object.values(v);
-    return [];
-}
-
-function countState(state) {
-    const courses = values(state?.courses || state?.courseList || state?.coursesMap);
-    const students = values(state?.students || state?.studentList || state?.masterStudents || state?.studentsMap);
-
-    let attendanceRecords = 0;
-    let assignments = 0;
-    let scoreItems = 0;
-
-    for (const key of ['attendanceRecords','attendances','attendance','checkIns','checkins']) attendanceRecords += countAny(state?.[key]);
-    for (const key of ['assignments','works','tasks','scoreItems']) assignments += countAny(state?.[key]);
-    for (const key of ['scores','scoreRecords','scoreList','studentScores']) scoreItems += countAny(state?.[key]);
-
-    for (const c of courses) {
-        for (const key of ['assignments','works','tasks','scoreItems']) assignments += countAny(c?.[key]);
-        for (const key of ['scores','scoreRecords','scoreList','studentScores']) scoreItems += countAny(c?.[key]);
-        for (const key of ['attendanceRecords','attendances','attendance','checkIns','checkins']) attendanceRecords += countAny(c?.[key]);
-
-        for (const w of values(c?.weeks)) {
-            for (const key of ['assignments','works','tasks']) assignments += countAny(w?.[key]);
-            for (const key of ['scores','scoreRecords','scoreList']) scoreItems += countAny(w?.[key]);
-            for (const key of ['attendanceRecords','attendances','attendance','checkIns','checkins']) attendanceRecords += countAny(w?.[key]);
-        }
-    }
-
-    return {
-        courses: courses.length,
-        students: students.length,
-        attendanceRecords,
-        assignments,
-        scoreItems
-    };
-}
-
-function blocked(d) {
-    const st = String(d?.status || '').toLowerCase();
-    return st === 'blocked' || st === 'deleted' || d?.blocked === true;
-}
-
-function admin(d) {
-    const role = String(d?.role || '').toLowerCase();
-    return role === 'admin' || d?.isAdmin === true;
-}
-
-async function readState(userKey) {
-    if (!userKey) return null;
-    try {
-        const snap = await getDoc(doc(db, 'users', String(userKey), 'school_data', 'state'));
-        return snap.exists() ? (snap.data() || {}) : null;
-    } catch (e) {
-        console.warn('อ่าน state ไม่สำเร็จ:', userKey, e);
-        return null;
-    }
-}
-
-function candidateKeys(id, d) {
-    return Array.from(new Set([id, d?.email, d?.uid, d?.userKey, d?.id].filter(Boolean).map(String)));
-}
-
-async function readStateFromKeys(keys) {
-    for (const k of keys) {
-        const s = await readState(k);
-        if (s) return { key: k, state: s };
-    }
-    return { key: keys[0] || '', state: null };
-}
-
-async function getUsersList() {
-    const list = [];
-    try {
-        const snap = await getDocs(collection(db, 'public_users_directory'));
-        snap.forEach(docu => {
-            const d = docu.data() || {};
-            if (!blocked(d)) list.push({ id: docu.id, data: d, source: 'public_users_directory' });
-        });
-    } catch (e) {
-        console.warn('อ่าน public_users_directory ไม่สำเร็จ:', e);
-    }
-
-    if (!list.length) {
-        try {
-            const snap = await getDocs(collection(db, 'users_status'));
-            snap.forEach(docu => {
-                const d = docu.data() || {};
-                if (!blocked(d)) list.push({ id: docu.id, data: d, source: 'users_status' });
-            });
-        } catch (e) {
-            console.warn('อ่าน users_status ไม่สำเร็จ:', e);
-        }
-    }
-    return list;
-}
-
-async function rebuildStatsFromUsersState() {
-    const oldSummary = lastGoodSummary || await loadStatsSummary();
-    const users = await getUsersList();
-
+async function rebuildGlobalSummaryFromUserStats() {
     let totalTeachers = 0;
     let totalUsers = 0;
     let totalCourses = 0;
@@ -6384,48 +6266,33 @@ async function rebuildStatsFromUsersState() {
     let totalAttendanceRecords = 0;
     let totalAssignments = 0;
     let totalScoreItems = 0;
-    let foundStateCount = 0;
+    let countedDocs = 0;
 
-    for (const u of users) {
-        const d = u.data || {};
-        totalUsers++;
-        if (!admin(d)) totalTeachers++;
+    try {
+        const snap = await getDocs(collection(db, 'user_stats'));
 
-        const found = await readStateFromKeys(candidateKeys(u.id, d));
-        if (!found.state) {
-            console.warn('ไม่พบ users/{userKey}/school_data/state:', u.id, candidateKeys(u.id, d));
-            continue;
-        }
+        snap.forEach((docSnap) => {
+            const data = docSnap.data() || {};
+            if (!isActiveUser(data)) return;
 
-        foundStateCount++;
-        const c = countState(found.state);
+            countedDocs += 1;
+            totalUsers += 1;
+            if (!isAdminUser(data)) totalTeachers += 1;
 
-        totalCourses += c.courses;
-        totalStudents += c.students;
-        totalAttendanceRecords += c.attendanceRecords;
-        totalAssignments += c.assignments;
-        totalScoreItems += c.scoreItems;
+            totalCourses += toNumber(data.courses ?? data.courseCount ?? data.totalCourses);
+            totalStudents += toNumber(data.students ?? data.studentCount ?? data.totalStudents);
+            totalAttendanceRecords += toNumber(data.attendanceRecords ?? data.attendanceCount ?? data.totalAttendanceRecords);
+            totalAssignments += toNumber(data.assignments ?? data.assignmentCount ?? data.totalAssignments);
+            totalScoreItems += toNumber(data.scoreItems ?? data.scoreCount ?? data.totalScoreItems);
+        });
+    } catch (error) {
+        console.error('อ่าน user_stats เพื่อรวมยอดไม่สำเร็จ:', error);
+        return loadGlobalSummaryOnly();
+    }
 
-        const statKey = d.uid || d.email || found.key || u.id;
-        try {
-            await setDoc(doc(db, 'user_stats', String(statKey)), {
-                uid: d.uid || '',
-                email: d.email || (String(statKey).includes('@') ? String(statKey) : ''),
-                displayName: d.displayName || d.name || d.fullName || '',
-                role: admin(d) ? 'admin' : (d.role || 'teacher'),
-                status: d.status || 'active',
-                sourceDirectory: u.source,
-                stateUserKey: found.key || '',
-                courses: c.courses,
-                students: c.students,
-                attendanceRecords: c.attendanceRecords,
-                assignments: c.assignments,
-                scoreItems: c.scoreItems,
-                updatedAt: serverTimestamp()
-            }, { merge: true });
-        } catch (e) {
-            console.warn('เขียน user_stats ไม่สำเร็จ:', statKey, e);
-        }
+    if (!countedDocs) {
+        console.warn('ยังไม่มีเอกสาร user_stats ให้รวมยอด จึงไม่เขียน global_stats/summary');
+        return loadGlobalSummaryOnly();
     }
 
     const summary = {
@@ -6436,73 +6303,29 @@ async function rebuildStatsFromUsersState() {
         totalAttendanceRecords,
         totalAssignments,
         totalScoreItems,
-        foundStateCount,
+        countedUserStats: countedDocs,
         updatedAt: serverTimestamp()
     };
 
-    if (!foundStateCount || (isZeroMain(summary) && oldSummary && !isZeroMain(oldSummary))) {
-        console.warn('ยกเลิกการเขียน 0 ทับ global_stats/summary', { foundStateCount, summary, oldSummary });
-        render(oldSummary);
-        return oldSummary;
-    }
-
     try {
         await setDoc(doc(db, 'global_stats', 'summary'), summary, { merge: true });
-    } catch (e) {
-        console.error('เขียน global_stats/summary ไม่สำเร็จ:', e);
+        renderGlobalSummary(summary);
+        console.log('เขียน global_stats/summary สำเร็จ:', summary);
+        return summary;
+    } catch (error) {
+        console.error('เขียน global_stats/summary ไม่สำเร็จ:', error);
+        return null;
     }
-
-    lastGoodSummary = summary;
-    render(summary);
-    return summary;
 }
 
-async function syncCurrentUserStatsOnly() {
-    const u = currentUser || auth.currentUser || window.currentUser || {};
-    const keys = [u.uid, u.email, window.currentUserEmail, window.userEmail].filter(Boolean).map(String);
-    if (!keys.length) return null;
-
-    const found = await readStateFromKeys(keys);
-    if (!found.state) return null;
-
-    const c = countState(found.state);
-    const statKey = u.uid || u.email || found.key || keys[0];
-
-    try {
-        await setDoc(doc(db, 'user_stats', String(statKey)), {
-            uid: u.uid || '',
-            email: u.email || window.currentUserEmail || '',
-            displayName: u.displayName || window.currentUserName || '',
-            role: window.currentUserRole || window.userRole || 'teacher',
-            status: window.currentUserStatus || 'active',
-            stateUserKey: found.key || '',
-            courses: c.courses,
-            students: c.students,
-            attendanceRecords: c.attendanceRecords,
-            assignments: c.assignments,
-            scoreItems: c.scoreItems,
-            updatedAt: serverTimestamp()
-        }, { merge: true });
-    } catch (e) {
-        console.warn('syncCurrentUserStatsOnly ไม่สำเร็จ:', e);
-    }
-    return c;
-}
-
-window.loadGlobalSiteStats = loadStatsSummary;
-window.__schoolhubCentralStatsRefresh = loadStatsSummary;
-window.__schoolhubCentralStatsRebuild = rebuildStatsFromUsersState;
-window.__schoolhubCentralStatsSyncMine = syncCurrentUserStatsOnly;
+window.loadGlobalSiteStats = loadGlobalSummaryOnly;
+window.__schoolhubCentralStatsRefresh = loadGlobalSummaryOnly;
+window.__schoolhubCentralStatsRebuild = rebuildGlobalSummaryFromUserStats;
+window.__schoolhubRebuildGlobalSummary = rebuildGlobalSummaryFromUserStats;
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadStatsSummary();
-    setTimeout(loadStatsSummary, 1200);
-});
-
-onAuthStateChanged(auth, user => {
-    currentUser = user;
-    loadStatsSummary();
-    if (user) setTimeout(syncCurrentUserStatsOnly, 1200);
+    loadGlobalSummaryOnly();
+    setTimeout(loadGlobalSummaryOnly, 1200);
 });
 </script>
 
