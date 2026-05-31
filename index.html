@@ -6181,20 +6181,19 @@ ${resetUrl.toString()}
 
 
 
+
 <script type="module">
 /* ============================================================
-   SchoolHub Users State Global Stats System
-   อ่านข้อมูลจริงจาก:
-   users/{อีเมลหรือ uid}/school_data/state
-   แล้วเขียนรวมลง:
-   user_stats/{userKey}
-   global_stats/summary
+   SchoolHub Users State Global Stats System - No Zero Overwrite
+   อ่านค่าจาก global_stats/summary เป็นหลัก
+   กดปุ่มแอดมินเท่านั้นถึง rebuild
+   ถ้าอ่าน users/{userKey}/school_data/state ไม่เจอ จะไม่เขียน 0 ทับ
    ============================================================ */
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, collection, getDocs, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-const schoolhubStatsConfig = {
+const cfg = {
     apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
     authDomain: "schoolhub-5677d.firebaseapp.com",
     projectId: "schoolhub-5677d",
@@ -6204,215 +6203,179 @@ const schoolhubStatsConfig = {
     measurementId: "G-ME7E38XNX6"
 };
 
-const statsApp = getApps().length ? getApp() : initializeApp(schoolhubStatsConfig);
-const statsDb = getFirestore(statsApp);
-const statsAuth = getAuth(statsApp);
+const app = getApps().length ? getApp() : initializeApp(cfg);
+const db = getFirestore(app);
+const auth = getAuth(app);
 
-let statsCurrentUser = null;
+let currentUser = null;
+let lastGoodSummary = null;
 
-function toNumber(v) {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
-}
+const num = v => Number.isFinite(Number(v)) ? Number(v) : 0;
 
-function setStatText(id, value) {
+function setText(id, v) {
     const el = document.getElementById(id);
-    if (el) el.textContent = String(toNumber(value));
+    if (el) el.textContent = String(num(v));
 }
 
-function isBlockedOrDeleted(data) {
-    const status = String(data?.status || '').toLowerCase();
-    return status === 'blocked' || status === 'deleted' || data?.blocked === true;
+function render(s) {
+    if (!s) return;
+    setText('stat-landing-teachers', s.totalTeachers || s.totalUsers);
+    setText('stat-landing-courses', s.totalCourses);
+    setText('stat-landing-students', s.totalStudents);
+
+    setText('stat-auth-users', s.totalTeachers || s.totalUsers);
+    setText('stat-auth-courses', s.totalCourses);
+    setText('stat-auth-students', s.totalStudents);
+
+    setText('admin-stat-teachers', s.totalTeachers || s.totalUsers);
+    setText('admin-stat-courses', s.totalCourses);
+    setText('admin-stat-students', s.totalStudents);
+    setText('admin-stat-attendance', s.totalAttendanceRecords);
+    setText('admin-stat-assignments', s.totalAssignments);
+    setText('admin-stat-scores', s.totalScoreItems);
+
+    const updated = document.getElementById('admin-stat-updated');
+    if (updated) updated.textContent = 'อัปเดตล่าสุด: ' + new Date().toLocaleString('th-TH');
 }
 
-function isAdmin(data) {
-    const role = String(data?.role || '').toLowerCase();
-    return role === 'admin' || data?.isAdmin === true;
+function isZeroMain(s) {
+    return !num(s?.totalCourses) && !num(s?.totalStudents) && !num(s?.totalAttendanceRecords) && !num(s?.totalAssignments) && !num(s?.totalScoreItems);
 }
 
-function countArray(v) {
-    return Array.isArray(v) ? v.length : 0;
+async function loadStatsSummary() {
+    try {
+        const snap = await getDoc(doc(db, 'global_stats', 'summary'));
+        if (snap.exists()) {
+            const s = snap.data() || {};
+            lastGoodSummary = s;
+            render(s);
+            return s;
+        }
+    } catch (e) {
+        console.warn('อ่าน global_stats/summary ไม่สำเร็จ:', e);
+    }
+
+    const empty = {
+        totalTeachers: 0,
+        totalUsers: 0,
+        totalCourses: 0,
+        totalStudents: 0,
+        totalAttendanceRecords: 0,
+        totalAssignments: 0,
+        totalScoreItems: 0
+    };
+    render(empty);
+    return empty;
 }
 
-function countObject(v) {
-    return v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v).length : 0;
-}
-
-function countMaybeCollection(v) {
-    return countArray(v) || countObject(v);
-}
-
-function addCountsFromAny(value) {
-    if (!value) return 0;
-    if (Array.isArray(value)) return value.length;
-    if (typeof value === 'object') return Object.keys(value).length;
+function countAny(v) {
+    if (!v) return 0;
+    if (Array.isArray(v)) return v.length;
+    if (typeof v === 'object') return Object.keys(v).length;
     return 0;
 }
 
-function getCoursesArray(state) {
-    if (Array.isArray(state?.courses)) return state.courses;
-    if (state?.courses && typeof state.courses === 'object') return Object.values(state.courses);
-    if (Array.isArray(state?.courseList)) return state.courseList;
-    if (state?.coursesMap && typeof state.coursesMap === 'object') return Object.values(state.coursesMap);
+function values(v) {
+    if (Array.isArray(v)) return v;
+    if (v && typeof v === 'object') return Object.values(v);
     return [];
 }
 
-function getStudentsArray(state) {
-    if (Array.isArray(state?.students)) return state.students;
-    if (state?.students && typeof state.students === 'object') return Object.values(state.students);
-    if (Array.isArray(state?.studentList)) return state.studentList;
-    if (Array.isArray(state?.masterStudents)) return state.masterStudents;
-    if (state?.studentsMap && typeof state.studentsMap === 'object') return Object.values(state.studentsMap);
-    return [];
-}
+function countState(state) {
+    const courses = values(state?.courses || state?.courseList || state?.coursesMap);
+    const students = values(state?.students || state?.studentList || state?.masterStudents || state?.studentsMap);
 
-function countStateData(state) {
-    const coursesArr = getCoursesArray(state);
-    const studentsArr = getStudentsArray(state);
-
-    let courses = coursesArr.length;
-    let students = studentsArr.length;
     let attendanceRecords = 0;
     let assignments = 0;
     let scoreItems = 0;
 
-    // นับจาก root ของ state
-    attendanceRecords += addCountsFromAny(state?.attendanceRecords);
-    attendanceRecords += addCountsFromAny(state?.attendances);
-    attendanceRecords += addCountsFromAny(state?.attendance);
-    attendanceRecords += addCountsFromAny(state?.checkIns);
-    attendanceRecords += addCountsFromAny(state?.checkins);
+    for (const key of ['attendanceRecords','attendances','attendance','checkIns','checkins']) attendanceRecords += countAny(state?.[key]);
+    for (const key of ['assignments','works','tasks','scoreItems']) assignments += countAny(state?.[key]);
+    for (const key of ['scores','scoreRecords','scoreList','studentScores']) scoreItems += countAny(state?.[key]);
 
-    assignments += addCountsFromAny(state?.assignments);
-    assignments += addCountsFromAny(state?.works);
-    assignments += addCountsFromAny(state?.tasks);
-    assignments += addCountsFromAny(state?.scoreItems);
+    for (const c of courses) {
+        for (const key of ['assignments','works','tasks','scoreItems']) assignments += countAny(c?.[key]);
+        for (const key of ['scores','scoreRecords','scoreList','studentScores']) scoreItems += countAny(c?.[key]);
+        for (const key of ['attendanceRecords','attendances','attendance','checkIns','checkins']) attendanceRecords += countAny(c?.[key]);
 
-    scoreItems += addCountsFromAny(state?.scores);
-    scoreItems += addCountsFromAny(state?.scoreRecords);
-    scoreItems += addCountsFromAny(state?.scoreList);
-    scoreItems += addCountsFromAny(state?.studentScores);
-
-    // นับจากในรายวิชา
-    for (const course of coursesArr) {
-        assignments += addCountsFromAny(course?.assignments);
-        assignments += addCountsFromAny(course?.works);
-        assignments += addCountsFromAny(course?.tasks);
-        assignments += addCountsFromAny(course?.scoreItems);
-
-        scoreItems += addCountsFromAny(course?.scores);
-        scoreItems += addCountsFromAny(course?.scoreRecords);
-        scoreItems += addCountsFromAny(course?.scoreList);
-        scoreItems += addCountsFromAny(course?.studentScores);
-
-        attendanceRecords += addCountsFromAny(course?.attendanceRecords);
-        attendanceRecords += addCountsFromAny(course?.attendances);
-        attendanceRecords += addCountsFromAny(course?.attendance);
-        attendanceRecords += addCountsFromAny(course?.checkIns);
-        attendanceRecords += addCountsFromAny(course?.checkins);
-
-        if (Array.isArray(course?.weeks)) {
-            for (const week of course.weeks) {
-                assignments += addCountsFromAny(week?.assignments);
-                assignments += addCountsFromAny(week?.works);
-                assignments += addCountsFromAny(week?.tasks);
-
-                scoreItems += addCountsFromAny(week?.scores);
-                scoreItems += addCountsFromAny(week?.scoreRecords);
-                scoreItems += addCountsFromAny(week?.scoreList);
-
-                attendanceRecords += addCountsFromAny(week?.attendanceRecords);
-                attendanceRecords += addCountsFromAny(week?.attendances);
-                attendanceRecords += addCountsFromAny(week?.attendance);
-                attendanceRecords += addCountsFromAny(week?.checkIns);
-                attendanceRecords += addCountsFromAny(week?.checkins);
-            }
+        for (const w of values(c?.weeks)) {
+            for (const key of ['assignments','works','tasks']) assignments += countAny(w?.[key]);
+            for (const key of ['scores','scoreRecords','scoreList']) scoreItems += countAny(w?.[key]);
+            for (const key of ['attendanceRecords','attendances','attendance','checkIns','checkins']) attendanceRecords += countAny(w?.[key]);
         }
     }
 
     return {
-        courses,
-        students,
+        courses: courses.length,
+        students: students.length,
         attendanceRecords,
         assignments,
         scoreItems
     };
 }
 
-async function readUserStateByKey(userKey) {
+function blocked(d) {
+    const st = String(d?.status || '').toLowerCase();
+    return st === 'blocked' || st === 'deleted' || d?.blocked === true;
+}
+
+function admin(d) {
+    const role = String(d?.role || '').toLowerCase();
+    return role === 'admin' || d?.isAdmin === true;
+}
+
+async function readState(userKey) {
     if (!userKey) return null;
     try {
-        const snap = await getDoc(doc(statsDb, 'users', String(userKey), 'school_data', 'state'));
-        if (snap.exists()) return snap.data() || {};
-    } catch (error) {
-        console.warn('อ่าน state ไม่สำเร็จ:', userKey, error);
+        const snap = await getDoc(doc(db, 'users', String(userKey), 'school_data', 'state'));
+        return snap.exists() ? (snap.data() || {}) : null;
+    } catch (e) {
+        console.warn('อ่าน state ไม่สำเร็จ:', userKey, e);
+        return null;
     }
-    return null;
 }
 
-function makeCandidateUserKeys(directoryId, userData) {
-    const keys = [
-        directoryId,
-        userData?.uid,
-        userData?.email,
-        userData?.userKey,
-        userData?.id
-    ].filter(Boolean).map(v => String(v));
-
-    return Array.from(new Set(keys));
+function candidateKeys(id, d) {
+    return Array.from(new Set([id, d?.email, d?.uid, d?.userKey, d?.id].filter(Boolean).map(String)));
 }
 
-async function readStateFromCandidates(keys) {
-    for (const key of keys) {
-        const state = await readUserStateByKey(key);
-        if (state) return { key, state };
+async function readStateFromKeys(keys) {
+    for (const k of keys) {
+        const s = await readState(k);
+        if (s) return { key: k, state: s };
     }
     return { key: keys[0] || '', state: null };
 }
 
-async function getUserDirectoryList() {
+async function getUsersList() {
     const list = [];
-
     try {
-        const publicSnap = await getDocs(collection(statsDb, 'public_users_directory'));
-        publicSnap.forEach(d => {
-            const data = d.data() || {};
-            if (!isBlockedOrDeleted(data)) {
-                list.push({
-                    id: d.id,
-                    data,
-                    source: 'public_users_directory'
-                });
-            }
+        const snap = await getDocs(collection(db, 'public_users_directory'));
+        snap.forEach(docu => {
+            const d = docu.data() || {};
+            if (!blocked(d)) list.push({ id: docu.id, data: d, source: 'public_users_directory' });
         });
-    } catch (error) {
-        console.warn('อ่าน public_users_directory ไม่สำเร็จ:', error);
+    } catch (e) {
+        console.warn('อ่าน public_users_directory ไม่สำเร็จ:', e);
     }
 
-    // fallback ถ้า public directory ไม่มี ให้ใช้ users_status
     if (!list.length) {
         try {
-            const statusSnap = await getDocs(collection(statsDb, 'users_status'));
-            statusSnap.forEach(d => {
-                const data = d.data() || {};
-                if (!isBlockedOrDeleted(data)) {
-                    list.push({
-                        id: d.id,
-                        data,
-                        source: 'users_status'
-                    });
-                }
+            const snap = await getDocs(collection(db, 'users_status'));
+            snap.forEach(docu => {
+                const d = docu.data() || {};
+                if (!blocked(d)) list.push({ id: docu.id, data: d, source: 'users_status' });
             });
-        } catch (error) {
-            console.warn('อ่าน users_status ไม่สำเร็จ:', error);
+        } catch (e) {
+            console.warn('อ่าน users_status ไม่สำเร็จ:', e);
         }
     }
-
     return list;
 }
 
 async function rebuildStatsFromUsersState() {
-    const users = await getUserDirectoryList();
+    const oldSummary = lastGoodSummary || await loadStatsSummary();
+    const users = await getUsersList();
 
     let totalTeachers = 0;
     let totalUsers = 0;
@@ -6421,42 +6384,47 @@ async function rebuildStatsFromUsersState() {
     let totalAttendanceRecords = 0;
     let totalAssignments = 0;
     let totalScoreItems = 0;
+    let foundStateCount = 0;
 
-    for (const item of users) {
-        const data = item.data || {};
-        totalUsers += 1;
-        if (!isAdmin(data)) totalTeachers += 1;
+    for (const u of users) {
+        const d = u.data || {};
+        totalUsers++;
+        if (!admin(d)) totalTeachers++;
 
-        const candidates = makeCandidateUserKeys(item.id, data);
-        const found = await readStateFromCandidates(candidates);
-        const state = found.state || {};
-        const counts = countStateData(state);
+        const found = await readStateFromKeys(candidateKeys(u.id, d));
+        if (!found.state) {
+            console.warn('ไม่พบ users/{userKey}/school_data/state:', u.id, candidateKeys(u.id, d));
+            continue;
+        }
 
-        totalCourses += counts.courses;
-        totalStudents += counts.students;
-        totalAttendanceRecords += counts.attendanceRecords;
-        totalAssignments += counts.assignments;
-        totalScoreItems += counts.scoreItems;
+        foundStateCount++;
+        const c = countState(found.state);
 
-        const statDocKey = data.uid || data.email || found.key || item.id;
+        totalCourses += c.courses;
+        totalStudents += c.students;
+        totalAttendanceRecords += c.attendanceRecords;
+        totalAssignments += c.assignments;
+        totalScoreItems += c.scoreItems;
+
+        const statKey = d.uid || d.email || found.key || u.id;
         try {
-            await setDoc(doc(statsDb, 'user_stats', String(statDocKey)), {
-                uid: data.uid || '',
-                email: data.email || (String(statDocKey).includes('@') ? String(statDocKey) : ''),
-                displayName: data.displayName || data.name || data.fullName || '',
-                role: isAdmin(data) ? 'admin' : (data.role || 'teacher'),
-                status: data.status || 'active',
-                sourceDirectory: item.source,
+            await setDoc(doc(db, 'user_stats', String(statKey)), {
+                uid: d.uid || '',
+                email: d.email || (String(statKey).includes('@') ? String(statKey) : ''),
+                displayName: d.displayName || d.name || d.fullName || '',
+                role: admin(d) ? 'admin' : (d.role || 'teacher'),
+                status: d.status || 'active',
+                sourceDirectory: u.source,
                 stateUserKey: found.key || '',
-                courses: counts.courses,
-                students: counts.students,
-                attendanceRecords: counts.attendanceRecords,
-                assignments: counts.assignments,
-                scoreItems: counts.scoreItems,
+                courses: c.courses,
+                students: c.students,
+                attendanceRecords: c.attendanceRecords,
+                assignments: c.assignments,
+                scoreItems: c.scoreItems,
                 updatedAt: serverTimestamp()
             }, { merge: true });
-        } catch (error) {
-            console.warn('เขียน user_stats ไม่สำเร็จ:', statDocKey, error);
+        } catch (e) {
+            console.warn('เขียน user_stats ไม่สำเร็จ:', statKey, e);
         }
     }
 
@@ -6468,88 +6436,57 @@ async function rebuildStatsFromUsersState() {
         totalAttendanceRecords,
         totalAssignments,
         totalScoreItems,
+        foundStateCount,
         updatedAt: serverTimestamp()
     };
 
-    try {
-        await setDoc(doc(statsDb, 'global_stats', 'summary'), summary, { merge: true });
-    } catch (error) {
-        console.error('เขียน global_stats/summary ไม่สำเร็จ:', error);
+    if (!foundStateCount || (isZeroMain(summary) && oldSummary && !isZeroMain(oldSummary))) {
+        console.warn('ยกเลิกการเขียน 0 ทับ global_stats/summary', { foundStateCount, summary, oldSummary });
+        render(oldSummary);
+        return oldSummary;
     }
 
-    renderStats(summary);
-    console.log('SchoolHub global_stats rebuilt from users/{userKey}/school_data/state:', summary);
+    try {
+        await setDoc(doc(db, 'global_stats', 'summary'), summary, { merge: true });
+    } catch (e) {
+        console.error('เขียน global_stats/summary ไม่สำเร็จ:', e);
+    }
+
+    lastGoodSummary = summary;
+    render(summary);
     return summary;
 }
 
-async function loadStatsSummary() {
-    try {
-        const snap = await getDoc(doc(statsDb, 'global_stats', 'summary'));
-        if (snap.exists()) {
-            renderStats(snap.data() || {});
-            return snap.data() || {};
-        }
-    } catch (error) {
-        console.warn('อ่าน global_stats/summary ไม่สำเร็จ:', error);
-    }
-    return rebuildStatsFromUsersState();
-}
-
-function renderStats(summary) {
-    setStatText('stat-landing-teachers', summary.totalTeachers || summary.totalUsers);
-    setStatText('stat-landing-courses', summary.totalCourses);
-    setStatText('stat-landing-students', summary.totalStudents);
-
-    setStatText('stat-auth-users', summary.totalTeachers || summary.totalUsers);
-    setStatText('stat-auth-courses', summary.totalCourses);
-    setStatText('stat-auth-students', summary.totalStudents);
-
-    setStatText('admin-stat-teachers', summary.totalTeachers || summary.totalUsers);
-    setStatText('admin-stat-courses', summary.totalCourses);
-    setStatText('admin-stat-students', summary.totalStudents);
-    setStatText('admin-stat-attendance', summary.totalAttendanceRecords);
-    setStatText('admin-stat-assignments', summary.totalAssignments);
-    setStatText('admin-stat-scores', summary.totalScoreItems);
-
-    const updated = document.getElementById('admin-stat-updated');
-    if (updated) updated.textContent = 'อัปเดตล่าสุด: ' + new Date().toLocaleString('th-TH');
-}
-
 async function syncCurrentUserStatsOnly() {
-    const user = statsCurrentUser || statsAuth.currentUser || window.currentUser || null;
-    const candidateKeys = [
-        user?.uid,
-        user?.email,
-        window.currentUserEmail,
-        window.userEmail
-    ].filter(Boolean).map(v => String(v));
+    const u = currentUser || auth.currentUser || window.currentUser || {};
+    const keys = [u.uid, u.email, window.currentUserEmail, window.userEmail].filter(Boolean).map(String);
+    if (!keys.length) return null;
 
-    if (!candidateKeys.length) return null;
+    const found = await readStateFromKeys(keys);
+    if (!found.state) return null;
 
-    const found = await readStateFromCandidates(candidateKeys);
-    const counts = countStateData(found.state || {});
-    const statDocKey = user?.uid || user?.email || found.key || candidateKeys[0];
+    const c = countState(found.state);
+    const statKey = u.uid || u.email || found.key || keys[0];
 
     try {
-        await setDoc(doc(statsDb, 'user_stats', String(statDocKey)), {
-            uid: user?.uid || '',
-            email: user?.email || window.currentUserEmail || '',
-            displayName: user?.displayName || window.currentUserName || '',
+        await setDoc(doc(db, 'user_stats', String(statKey)), {
+            uid: u.uid || '',
+            email: u.email || window.currentUserEmail || '',
+            displayName: u.displayName || window.currentUserName || '',
             role: window.currentUserRole || window.userRole || 'teacher',
             status: window.currentUserStatus || 'active',
             stateUserKey: found.key || '',
-            courses: counts.courses,
-            students: counts.students,
-            attendanceRecords: counts.attendanceRecords,
-            assignments: counts.assignments,
-            scoreItems: counts.scoreItems,
+            courses: c.courses,
+            students: c.students,
+            attendanceRecords: c.attendanceRecords,
+            assignments: c.assignments,
+            scoreItems: c.scoreItems,
             updatedAt: serverTimestamp()
         }, { merge: true });
-    } catch (error) {
-        console.warn('syncCurrentUserStatsOnly ไม่สำเร็จ:', error);
+    } catch (e) {
+        console.warn('syncCurrentUserStatsOnly ไม่สำเร็จ:', e);
     }
-
-    return counts;
+    return c;
 }
 
 window.loadGlobalSiteStats = loadStatsSummary;
@@ -6560,17 +6497,12 @@ window.__schoolhubCentralStatsSyncMine = syncCurrentUserStatsOnly;
 document.addEventListener('DOMContentLoaded', () => {
     loadStatsSummary();
     setTimeout(loadStatsSummary, 1200);
-    setTimeout(rebuildStatsFromUsersState, 3000);
 });
 
-onAuthStateChanged(statsAuth, user => {
-    statsCurrentUser = user;
-    if (user) {
-        setTimeout(syncCurrentUserStatsOnly, 800);
-        setTimeout(rebuildStatsFromUsersState, 2200);
-    } else {
-        loadStatsSummary();
-    }
+onAuthStateChanged(auth, user => {
+    currentUser = user;
+    loadStatsSummary();
+    if (user) setTimeout(syncCurrentUserStatsOnly, 1200);
 });
 </script>
 
