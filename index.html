@@ -1318,6 +1318,7 @@
                         <i class="fas fa-bullhorn w-5 text-center"></i> ประกาศ
                     </button>
                     <button id="nav-admin-plans" onclick="switchView('admin-plans')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-emerald-600 hover:bg-emerald-50 mt-2" data-target="admin-plans"><i class="fas fa-layer-group w-5 text-center"></i> แผนการใช้งาน</button>
+                    <button id="nav-admin-blocked-users" onclick="switchView('admin-blocked-users'); renderBlockedUsersList();" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all text-rose-600 hover:bg-rose-50 mt-2" data-target="admin-blocked-users"><i class="fas fa-user-lock w-5 text-center"></i> ผู้ใช้ที่ถูกบล็อก <span id="blocked-users-badge" class="hidden ml-auto bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">0</span></button>
                 </div>
             </nav>
 
@@ -1352,6 +1353,7 @@
                         <button onclick="switchView('admin-permissions'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-rose-600 bg-rose-50 font-medium"><i class="fas fa-user-shield"></i> จัดการสิทธิ์</button>
                         <button onclick="switchView('admin-announcements'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-indigo-600 bg-indigo-50 font-medium"><i class="fas fa-bullhorn"></i> ประกาศ</button>
                         <button onclick="switchView('admin-plans'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-emerald-600 bg-emerald-50 font-medium"><i class="fas fa-layer-group"></i> แผนการใช้งาน</button>
+                        <button onclick="switchView('admin-blocked-users'); renderBlockedUsersList(); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-rose-600 bg-rose-50 font-medium"><i class="fas fa-user-lock"></i> ผู้ใช้ที่ถูกบล็อก</button>
                     </div>
                     <button onclick="doLogout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-rose-600 font-medium mt-8 bg-rose-50"><i class="fas fa-sign-out-alt"></i> ออกจากระบบ</button>
                 </div>
@@ -1475,7 +1477,7 @@
                         <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50">
                             <div>
                                 <h3 class="text-lg font-bold text-slate-800">รายชื่อนักเรียนส่วนกลาง</h3>
-                                <p class="text-sm text-slate-500">นักเรียนในระบบจะสามารถเช็คชื่อและให้คะแนนได้ในทุกรายวิชา</p>
+                                <p class="text-sm text-slate-500">เพิ่มนักเรียนแยกเป็นห้อง/ชั้น รายวิชาจะแสดงเฉพาะห้องที่เลือกไว้เท่านั้น</p>
                             </div>
                             <div class="flex gap-2 w-full sm:w-auto">
                                 <button onclick="exportStudentsToExcel()" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-4 py-2.5 rounded-xl font-semibold flex items-center gap-2 transition flex-1 sm:flex-none justify-center">
@@ -1539,8 +1541,11 @@
                     <div id="course-tab-overview" class="course-subview">
                         <div class="table-container bg-white">
                             <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                                <h3 class="text-lg font-bold text-slate-800"><i class="fas fa-chart-line text-primary mr-2"></i> สรุปภาพรวมรายวิชา</h3>
-                                <div class="flex gap-2">
+                                <div>
+                                    <h3 class="text-lg font-bold text-slate-800"><i class="fas fa-chart-line text-primary mr-2"></i> สรุปภาพรวมรายวิชา</h3>
+                                    <div id="overview-room-filter" class="mt-3 hidden"></div>
+                                </div>
+                                <div class="flex gap-2 flex-wrap justify-end">
                                     <button onclick="openGradeCriteriaModalForCurrentCourse()" class="bg-indigo-50 text-primary hover:bg-indigo-100 px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition border border-indigo-200">
                                         <i class="fas fa-medal"></i> ตั้งค่าเกณฑ์เกรด
                                     </button>
@@ -1723,6 +1728,24 @@
                     </div>
                 </div>
 
+
+                <!-- Admin View: Blocked Users -->
+                <div id="view-admin-blocked-users" class="view-section hidden fade-in">
+                    <div class="table-container bg-white">
+                        <div class="p-6 border-b border-slate-100 flex flex-col md:flex-row md:justify-between md:items-center gap-4 bg-rose-50/40">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-800"><i class="fas fa-user-lock text-rose-500 mr-2"></i>ผู้ใช้ที่ถูกบล็อก</h3>
+                                <p class="text-sm text-slate-500">แสดงรายชื่อผู้ใช้ที่ถูกบล็อกทั้งหมด ข้อมูลเดิมยังไม่ถูกลบ สามารถปลดบล็อกได้ทันที</p>
+                            </div>
+                            <button onclick="renderBlockedUsersList(); loadAdminData && loadAdminData();" class="bg-white border text-slate-700 px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-50"><i class="fas fa-sync-alt"></i> รีเฟรช</button>
+                        </div>
+                        <div class="p-4 bg-white border-b border-slate-100 text-xs text-slate-500">
+                            <i class="fas fa-circle-info text-rose-500 mr-1"></i> การบล็อกเป็นเพียงการปิดสิทธิ์เข้าใช้งาน ไม่ลบรายวิชา คะแนน รายชื่อนักเรียน หรือประวัติของผู้ใช้
+                        </div>
+                        <div id="blocked-users-card-list" class="p-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+                    </div>
+                </div>
+
                 <!-- Admin View: Announcements -->
                 <div id="view-admin-announcements" class="view-section hidden fade-in">
                     <div class="table-container bg-white">
@@ -1800,10 +1823,12 @@
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div><label class="block text-sm font-semibold text-slate-600 mb-1">จำนวนสัปดาห์ใช้งาน</label><input id="plan-sub-week-limit" type="number" min="1" value="20" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="เช่น 20"></div>
                                         <div><label class="block text-sm font-semibold text-slate-600 mb-1">จำนวนนักเรียนสูงสุด</label><input id="plan-sub-student-limit" type="number" min="0" value="0" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="0 = ไม่จำกัด"></div>
+                                        <div><label class="block text-sm font-semibold text-slate-600 mb-1">จำนวนสมาชิกทีมที่ใช้ร่วมกันได้</label><input id="plan-sub-team-limit" type="number" min="1" value="1" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="เช่น 5 = ใช้ร่วมกัน 5 คน"></div>
                                     </div>
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <label class="flex items-center gap-2 bg-white px-4 py-3 rounded-xl border text-sm font-semibold text-slate-600"><input id="plan-sub-allow-attendance" type="checkbox" checked class="w-4 h-4 text-primary rounded"> ใช้งานเช็คชื่อได้</label>
                                         <label class="flex items-center gap-2 bg-white px-4 py-3 rounded-xl border text-sm font-semibold text-slate-600"><input id="plan-sub-allow-export" type="checkbox" checked class="w-4 h-4 text-primary rounded"> Export ไฟล์ได้</label>
+                                        <label class="flex items-center gap-2 bg-white px-4 py-3 rounded-xl border text-sm font-semibold text-slate-600"><input id="plan-sub-allow-team" type="checkbox" class="w-4 h-4 text-primary rounded"> ใช้งานแบบทีมได้</label>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -3430,8 +3455,8 @@ async function submitPlanRequest(planId){
             toggleLoader(true);
             try {
                 const statusSnap = await withTimeout(getDoc(doc(db, `users_status`, email)), 8000, 'checkUserStatus');
-                if (statusSnap.exists() && statusSnap.data().status === 'deleted') {
-                    toggleLoader(false); showCustomAlert("บัญชีถูกระงับ", "บัญชีนี้เคยถูกลบออกจากระบบ กรุณาใช้ฟอร์ม 'สมัครสมาชิกใหม่' เพื่อกู้คืน", true); return;
+                if (statusSnap.exists() && ['deleted','blocked'].includes(statusSnap.data().status)) {
+                    toggleLoader(false); showCustomAlert("บัญชีถูกบล็อก", "บัญชีนี้ถูกบล็อกโดยผู้ดูแลระบบ กรุณาติดต่อ Admin เพื่อปลดบล็อก", true); return;
                 }
             } catch (e) {}
 
@@ -3484,8 +3509,8 @@ async function submitPlanRequest(planId){
             try {
                 const statusRef = doc(db, `users_status`, email);
                 const statusSnap = await getDoc(statusRef);
-                if (statusSnap.exists() && statusSnap.data().status === 'deleted') {
-                    toggleLoader(false); showCustomAlert("พบประวัติการใช้งาน", "กรุณาติดต่อ Admin เนื่องจากโค้ดจำกัดพื้นที่"); return;
+                if (statusSnap.exists() && ['deleted','blocked'].includes(statusSnap.data().status)) {
+                    toggleLoader(false); showCustomAlert("พบประวัติการใช้งาน", "บัญชีนี้ถูกบล็อกโดยผู้ดูแลระบบ กรุณาติดต่อ Admin เพื่อปลดบล็อก"); return;
                 }
             } catch(e){}
 
@@ -3828,13 +3853,48 @@ ${resetUrl.toString()}
 
         window.getStudentClassName = (student) => (student?.room || student?.classroom || student?.grade || '-').toString().trim() || '-';
 
-        window.getCourseStudents = (courseId = currentActiveCourseId) => {
+        window.getCourseSelectedRooms = (courseId = currentActiveCourseId) => {
             const course = state.courses.find(c => c.id === courseId);
-            if (!course) return state.students || [];
-            const rooms = Array.isArray(course.studentRooms) ? course.studentRooms : (Array.isArray(course.studentGrades) ? course.studentGrades : []);
+            if (!course) return [];
+            return Array.isArray(course.studentRooms) ? course.studentRooms : (Array.isArray(course.studentGrades) ? course.studentGrades : []);
+        };
+
+        window.getCourseStudents = (courseId = currentActiveCourseId, options = {}) => {
+            const course = state.courses.find(c => c.id === courseId);
+            if (!course) return [];
+            const rooms = window.getCourseSelectedRooms(courseId);
             const extraIds = Array.isArray(course.extraStudentIds) ? course.extraStudentIds : [];
-            if ((!rooms || rooms.length === 0) && (!extraIds || extraIds.length === 0)) return state.students || [];
-            return (state.students || []).filter(st => rooms.includes(window.getStudentClassName(st)) || extraIds.includes(st.id));
+            // ถ้ารายวิชาไม่ได้เลือกห้องและไม่ได้เพิ่มรายบุคคล จะไม่ขึ้นรายชื่อเลย
+            if (rooms.length === 0 && extraIds.length === 0) return [];
+
+            const actionFilter = options.ignoreActionFilter ? '' : (window.activeCourseRoomFilter?.[courseId] || '');
+            let list = (state.students || []).filter(st => {
+                const room = window.getStudentClassName(st);
+                const inRoom = rooms.includes(room);
+                const isExtra = extraIds.includes(st.id);
+                if (!inRoom && !isExtra) return false;
+                if (rooms.length > 1 && actionFilter) return room === actionFilter;
+                return true;
+            });
+            return list.sort((a,b)=> String(window.getStudentClassName(a)).localeCompare(String(window.getStudentClassName(b)), 'th') || String(a.code||'').localeCompare(String(b.code||''), 'th', {numeric:true}) || String(a.name||'').localeCompare(String(b.name||''), 'th'));
+        };
+
+        window.ensureCourseRoomActionFilter = (target, courseId = currentActiveCourseId) => {
+            const area = document.getElementById(target);
+            if (!area || !courseId) return;
+            const rooms = window.getCourseSelectedRooms(courseId);
+            let box = document.getElementById(`${target}-room-filter`);
+            if (!box) {
+                box = document.createElement('div');
+                box.id = `${target}-room-filter`;
+                box.className = 'mb-4 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4';
+                area.parentNode.insertBefore(box, area);
+            }
+            if (rooms.length <= 1) { box.classList.add('hidden'); window.activeCourseRoomFilter = window.activeCourseRoomFilter || {}; delete window.activeCourseRoomFilter[courseId]; return; }
+            window.activeCourseRoomFilter = window.activeCourseRoomFilter || {};
+            if (!window.activeCourseRoomFilter[courseId] || !rooms.includes(window.activeCourseRoomFilter[courseId])) window.activeCourseRoomFilter[courseId] = rooms[0];
+            box.classList.remove('hidden');
+            box.innerHTML = `<label class="block text-sm font-black text-slate-800 mb-2"><i class="fas fa-door-open text-primary mr-1"></i> เลือกห้อง/ชั้นสำหรับรายการนี้</label><select class="w-full bg-white border border-indigo-100 rounded-xl p-3 font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none" onchange="window.activeCourseRoomFilter=window.activeCourseRoomFilter||{}; window.activeCourseRoomFilter['${courseId}']=this.value; if('${target}'==='attendance-area') renderAttendanceList(); else renderScoreList();">${rooms.map(r=>`<option value="${escapeHTML(r)}" ${window.activeCourseRoomFilter[courseId]===r?'selected':''}>${escapeHTML(r)}</option>`).join('')}</select><p class="text-xs text-slate-500 mt-2">รายวิชานี้เลือกไว้หลายห้อง จึงต้องเลือกห้องก่อนเช็คชื่อหรือบันทึกคะแนน</p>`;
         };
 
         window.getAllStudentRooms = () => {
@@ -3982,23 +4042,42 @@ ${resetUrl.toString()}
 
         // Students Master Management
         window.renderStudentsMaster = () => {
-            const tbody = document.getElementById('student-list-master'); tbody.innerHTML = '';
-            if (state.students.length === 0) document.getElementById('empty-student-master').classList.remove('hidden');
-            else {
-                document.getElementById('empty-student-master').classList.add('hidden');
-                state.students.slice().sort((a,b)=> window.getStudentClassName(a).localeCompare(window.getStudentClassName(b), 'th') || String(a.code).localeCompare(String(b.code), 'th')).forEach(s => {
+            const tbody = document.getElementById('student-list-master');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            const students = state.students || [];
+            if (students.length === 0) {
+                document.getElementById('empty-student-master').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('empty-student-master').classList.add('hidden');
+            const rooms = {};
+            students.forEach(st => {
+                const room = window.getStudentClassName(st);
+                if (!rooms[room]) rooms[room] = [];
+                rooms[room].push(st);
+            });
+            Object.keys(rooms).sort((a,b)=>a.localeCompare(b,'th')).forEach((room, idx) => {
+                const groupId = 'student-room-group-' + idx;
+                const list = rooms[room].sort((a,b)=>String(a.code||'').localeCompare(String(b.code||''),'th',{numeric:true}) || String(a.name||'').localeCompare(String(b.name||''),'th'));
+                tbody.innerHTML += `<tr class="bg-indigo-50/80 border-y border-indigo-100 cursor-pointer" onclick="toggleStudentRoomGroup('${groupId}')"><td colspan="4" class="p-4"><div class="flex items-center justify-between"><div class="font-black text-primary"><i class="fas fa-door-open mr-2"></i>${escapeHTML(room)}</div><div class="text-xs font-bold text-indigo-500 bg-white px-3 py-1 rounded-full">${list.length} คน</div></div></td></tr>`;
+                list.forEach(s => {
                     tbody.innerHTML += `
-                        <tr>
-                            <td class="font-mono font-medium text-slate-500">${s.code}</td>
-                            <td class="font-bold text-slate-700">${s.name}</td>
+                        <tr class="${groupId}">
+                            <td class="font-mono font-medium text-slate-500">${escapeHTML(s.code)}</td>
+                            <td class="font-bold text-slate-700">${escapeHTML(s.name)}</td>
                             <td><span class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-lg text-xs font-bold">${escapeHTML(window.getStudentClassName(s))}</span></td>
                             <td class="text-right">
-                                <button onclick="editStudent('${s.id}')" class="text-blue-500 bg-blue-50 w-8 h-8 rounded-lg hover:bg-blue-100"><i class="fas fa-edit"></i></button>
-                                <button onclick="deleteStudent('${s.id}')" class="text-rose-500 bg-rose-50 w-8 h-8 rounded-lg hover:bg-rose-100 ml-1"><i class="fas fa-trash"></i></button>
+                                <button onclick="event.stopPropagation(); editStudent('${s.id}')" class="text-blue-500 bg-blue-50 w-8 h-8 rounded-lg hover:bg-blue-100"><i class="fas fa-edit"></i></button>
+                                <button onclick="event.stopPropagation(); deleteStudent('${s.id}')" class="text-rose-500 bg-rose-50 w-8 h-8 rounded-lg hover:bg-rose-100 ml-1"><i class="fas fa-trash"></i></button>
                             </td>
                         </tr>`;
                 });
-            }
+            });
+        };
+
+        window.toggleStudentRoomGroup = (groupId) => {
+            document.querySelectorAll('.' + groupId).forEach(row => row.classList.toggle('hidden'));
         };
 
         window.openMultiStudentModal = () => {
@@ -4307,7 +4386,9 @@ ${resetUrl.toString()}
 
         window.renderAttendanceList = () => {
             const cid = currentActiveCourseId; const date = document.getElementById('att-date').value; const tbody = document.getElementById('attendance-list');
-            const courseStudents = window.getCourseStudents(cid); if(!cid || !date || courseStudents.length===0) return; tbody.innerHTML = '';
+            window.ensureCourseRoomActionFilter('attendance-area', cid);
+            const courseStudents = window.getCourseStudents(cid); if(!cid || !date) return; tbody.innerHTML = '';
+            if(courseStudents.length===0) { tbody.innerHTML = '<tr><td colspan="3" class="p-8 text-center text-slate-400 font-semibold">ยังไม่ได้เลือกห้องนักเรียนสำหรับรายวิชานี้ หรือไม่มีนักเรียนในห้องที่เลือก</td></tr>'; return; }
             if(!state.attendance[cid]) state.attendance[cid] = {};
             const existing = state.attendance[cid][date] || { records: {}, updatedAt: null };
             const hasData = !!state.attendance[cid][date];
@@ -4319,7 +4400,7 @@ ${resetUrl.toString()}
             }
 
             document.getElementById('att-last-saved').innerHTML = existing.updatedAt ? `<i class="fas fa-history text-emerald-500"></i> ล่าสุด: ${new Date(existing.updatedAt).toLocaleString('th-TH')}` : `<i class="fas fa-asterisk text-amber-500"></i> ยังไม่ได้บันทึก`;
-            state.students.forEach(s => {
+            courseStudents.forEach(s => {
                 const st = existing.records[s.id] || 'present';
                 tbody.innerHTML += `
                     <tr>
@@ -4429,7 +4510,9 @@ ${resetUrl.toString()}
 
         window.renderScoreList = () => {
             const cid = currentActiveCourseId; const week = document.getElementById('score-week').value; const title = window.getScoreTitle(); const area = document.getElementById('score-area'); const tbody = document.getElementById('score-list'); const max = document.getElementById('score-max').value;
-            const courseStudents = window.getCourseStudents(cid); if(!cid || courseStudents.length===0 || !week || (!title || title === '__custom__')) { area.classList.add('hidden'); window.updateScoreSavedStatus(null, week, title); return; }
+            window.ensureCourseRoomActionFilter('score-area', cid);
+            const courseStudents = window.getCourseStudents(cid); if(!cid || !week || (!title || title === '__custom__')) { area.classList.add('hidden'); window.updateScoreSavedStatus(null, week, title); return; }
+            if(courseStudents.length===0) { area.classList.remove('hidden'); document.getElementById('score-placeholder').classList.add('hidden'); tbody.innerHTML = '<tr><td colspan="3" class="p-8 text-center text-slate-400 font-semibold">ยังไม่ได้เลือกห้องนักเรียนสำหรับรายวิชานี้ หรือไม่มีนักเรียนในห้องที่เลือก</td></tr>'; window.updateScoreSavedStatus(null, week, title); return; }
             area.classList.remove('hidden'); document.getElementById('score-placeholder').classList.add('hidden'); tbody.innerHTML = '';
             const existing = state.scores.find(s => s.courseId === cid && s.week === week && s.title === title); const saved = existing ? existing.records : {};
             window.updateScoreSavedStatus(existing, week, title);
@@ -4464,7 +4547,7 @@ ${resetUrl.toString()}
             } else {
                 document.querySelectorAll('.score-input').forEach((inp, idx) => {
                     // หากไม่กรอก จะเก็บเป็น '' (ว่าง) ไม่ใช่ 0
-                    records[window.getCourseStudents(cid)[idx].id] = inp.value !== '' ? parseFloat(inp.value) : '';
+                    records[window.getCourseStudents(cId)[idx].id] = inp.value !== '' ? parseFloat(inp.value) : '';
                 });
             }
 
@@ -4794,7 +4877,7 @@ ${resetUrl.toString()}
                 {id:'standard',name:'มาตรฐาน',monthlyPrice:99,yearlyPrice:990,price:'ฟรีเดือนแรก / ต่อไป 99 บาทต่อเดือน',billingCycle:'monthly',freeFirstMonth:true,courseLimit:3,promptpay:'',desc:'เหมาะสำหรับเริ่มใช้งาน ฟรีเดือนแรก เดือนถัดไปชำระตามราคาที่ตั้ง',features:['เพิ่มรายวิชาได้ 3 วิชา','เช็คชื่อและบันทึกคะแนน','ดูภาพรวมและแชร์ผลคะแนน'],order:1,featured:true,active:true,updatedAt:now},
                 {id:'pro',name:'มืออาชีพ',monthlyPrice:199,yearlyPrice:1990,price:'199 บาทต่อเดือน / 1,990 บาทต่อปี',billingCycle:'monthly',freeFirstMonth:false,courseLimit:10,promptpay:'',desc:'เหมาะสำหรับครูที่ใช้หลายรายวิชาและต้องการความยืดหยุ่น',features:['เพิ่มรายวิชาได้ 10 วิชา','ส่งออก Excel','จัดการนักเรียนและแผนคะแนนได้มากขึ้น'],order:2,featured:false,active:true,updatedAt:now},
                 {id:'unlimited',name:'ฟรีตลอด',monthlyPrice:0,yearlyPrice:0,price:'ฟรีตลอด',billingCycle:'forever',freeForever:true,courseLimit:1,promptpay:'',desc:'ใช้ได้ตลอดโดยไม่หมดอายุ เหมาะสำหรับทดลองระยะยาว',features:['เพิ่มรายวิชาได้ 1 วิชา','ใช้งานพื้นฐานได้ตลอด','ไม่มีรอบเรียกเก็บ'],order:3,featured:false,active:true,updatedAt:now},
-                {id:'school',name:'สถานศึกษา',monthlyPrice:499,yearlyPrice:4990,price:'499 บาทต่อเดือน / 4,990 บาทต่อปี',billingCycle:'monthly',courseLimit:0,promptpay:'',desc:'เหมาะสำหรับใช้ทั้งแผนก เพิ่มผู้ใช้และรายวิชาได้มาก',features:['เพิ่มรายวิชาไม่จำกัด','เหมาะกับทีม/แผนก','ตั้งค่าสิทธิ์และประกาศครบ'],order:4,featured:false,active:false,updatedAt:now}
+                {id:'school',name:'สถานศึกษา',monthlyPrice:499,yearlyPrice:4990,price:'499 บาทต่อเดือน / 4,990 บาทต่อปี',billingCycle:'monthly',courseLimit:0,promptpay:'',desc:'เหมาะสำหรับใช้ทั้งแผนก เพิ่มผู้ใช้และรายวิชาได้มาก',features:['เพิ่มรายวิชาไม่จำกัด','เหมาะกับทีม/แผนก','ตั้งค่าสิทธิ์และประกาศครบ'],allowTeam:true,teamMemberLimit:20,order:4,featured:false,active:false,updatedAt:now}
             ];
         };
         const __oldRenderLandingPlans = renderLandingPlans;
@@ -5017,7 +5100,7 @@ ${resetUrl.toString()}
                     const safeKey = String(displayKey).replace(/'/g, "\\'");
                     const userRequests = getRequestsForUser(u, uid);
                     const pendingRequests = userRequests.filter(r=>r.status==='pending');
-                    const roleBadge = u.role === 'admin' ? '<span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-bold">Admin</span>' : (isDel ? '<span class="bg-slate-100 text-slate-800 px-3 py-1 rounded-full text-xs">ระงับ</span>' : (pendingRequests.length?'<span class="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs font-bold">มีคำขอแผน</span>':'<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs">User</span>'));
+                    const roleBadge = u.role === 'admin' ? '<span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-bold">Admin</span>' : (isDel ? '<span class="bg-slate-100 text-slate-800 px-3 py-1 rounded-full text-xs">บล็อก</span>' : (pendingRequests.length?'<span class="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs font-bold">มีคำขอแผน</span>':'<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs">User</span>'));
                     let planBadge = '';
                     if (u.role === 'admin') {
                         planBadge = '<span class="text-xs text-slate-400">-</span>';
@@ -5035,7 +5118,7 @@ ${resetUrl.toString()}
                     } else {
                         planBadge = '<span class="text-xs text-slate-400">ยังไม่กำหนด</span>';
                     }
-                    const actionBtn = u.role === 'admin' ? '' : `<button onclick="updateUserStatus('${uid}', '${safeKey}', '${isDel?'active':'deleted'}')" class="${isDel?'text-emerald-500 bg-emerald-50':'text-rose-500 bg-rose-50'} px-3 py-1 rounded-lg text-sm font-bold border"><i class="fas ${isDel?'fa-check':'fa-ban'}"></i> ${isDel?'ปลดบล็อก':'ระงับสิทธิ์'}</button>`;
+                    const actionBtn = u.role === 'admin' ? '' : `<button onclick="updateUserStatus('${uid}', '${safeKey}', '${isDel?'active':'deleted'}')" class="${isDel?'text-emerald-500 bg-emerald-50':'text-rose-500 bg-rose-50'} px-3 py-1 rounded-lg text-sm font-bold border"><i class="fas ${isDel?'fa-check':'fa-ban'}"></i> ${isDel?'ปลดบล็อก':'บล็อก'}</button>`;
                     rows += `<tr><td class="font-bold text-slate-700">${escapeHTML(u.name || 'ไม่มีชื่อ')}<br><span class="text-xs font-normal text-slate-400 font-mono">${escapeHTML(displayKey)}</span></td><td class="text-center">${planBadge}</td><td class="text-center">${roleBadge}</td><td class="text-right">${actionBtn}</td></tr>`;
                 });
                 tbody.innerHTML = rows || '<tr><td colspan="4" class="text-center p-8 text-slate-400">ยังไม่มีข้อมูลผู้ใช้ใน public_users_directory<br><span class="text-xs">หากมีผู้ใช้แล้ว ให้ตรวจสอบฟังก์ชัน addUserToDirectory หรือ Firestore Rules</span></td></tr>';
@@ -5047,7 +5130,7 @@ ${resetUrl.toString()}
             }
         };
 
-        window.updateUserStatus = (uid, userKey, status) => { if (status === 'deleted') window.showCustomConfirm("ระงับผู้ใช้", "แน่ใจหรือไม่?", async () => { executeUserStatusUpdate(uid, userKey, status); }); else executeUserStatusUpdate(uid, userKey, status); };
+        window.updateUserStatus = (uid, userKey, status) => { if (status === 'deleted') window.showCustomConfirm("บล็อกผู้ใช้", "แน่ใจหรือไม่?", async () => { executeUserStatusUpdate(uid, userKey, status); }); else executeUserStatusUpdate(uid, userKey, status); };
         window.executeUserStatusUpdate = async (uid, userKey, status) => { try { if (status === 'deleted') { await deleteDoc(doc(db, getPublicPath(), uid)); await setDoc(doc(db, `users_status`, userKey), { status: 'deleted', deletedAt: Date.now() }, { merge: true }); } else { const payload = { status: status, deletedAt: null }; await setDoc(doc(db, getPublicPath(), uid), payload, { merge: true }); await setDoc(doc(db, `users_status`, userKey), payload, { merge: true }); } loadAdminData(); } catch(e) {} };
         window.clearEntireSystem = () => { window.showCustomConfirm("ล้างระบบทั้งหมด!", "ลบข้อมูลผู้ใช้ทุกคน (ยกเว้นแอดมิน)?", async () => { toggleLoader(true); try { const qs = await getDocs(collection(db, getPublicPath())); const toDel = []; qs.forEach(d => { const u = d.data(); if(u.role !== 'admin') toDel.push(u); }); for(let u of toDel) { const key = u.userKey || u.email; await deleteDoc(doc(db, getPublicPath(), u.uid)); await deleteDoc(doc(db, `users_status`, key)); await deleteDoc(doc(db, getPrivatePath(key), 'state')); } loadAdminData(); } catch (e) {} toggleLoader(false); }); };
     </script>
@@ -5132,7 +5215,8 @@ ${resetUrl.toString()}
             const students = Number(p.studentLimit||0)===0 ? 'นักเรียนไม่จำกัด' : `นักเรียน ${Number(p.studentLimit||0)} คน`;
             const att = p.allowAttendance===false ? 'ไม่รวมเช็คชื่อ' : 'เช็คชื่อได้';
             const exp = p.allowExport===false ? 'Export ไม่ได้' : 'Export ได้';
-            return `${course} • ${weeks} • ${students} • ${att} • ${exp}`;
+            const team = p.allowTeam ? `ทีม ${Math.max(1, Number(p.teamMemberLimit||p.maxTeamMembers||1))} คน` : 'ใช้คนเดียว';
+            return `${course} • ${weeks} • ${students} • ${att} • ${exp} • ${team}`;
         }
         const __schoolhubOldInitStaticDropdowns = window.initStaticDropdowns;
         window.initStaticDropdowns = () => {
@@ -5175,18 +5259,18 @@ ${resetUrl.toString()}
         window.resetAdminPlanForm=function(){
             ['plan-sub-edit-id','plan-sub-name','plan-sub-price','plan-sub-promptpay','plan-sub-desc','plan-sub-features','plan-sub-monthly-price','plan-sub-yearly-price'].forEach(id=>{const el=document.getElementById(id); if(el)el.value='';});
             const set=(id,v)=>{const e=document.getElementById(id); if(e)e.value=v};
-            set('plan-sub-order','1'); set('plan-sub-course-limit','1'); set('plan-sub-week-limit','20'); set('plan-sub-student-limit','0'); set('plan-sub-billing-cycle','monthly');
-            ['plan-sub-featured','plan-sub-active','plan-sub-free-first-month','plan-sub-allow-attendance','plan-sub-allow-export'].forEach(id=>{const el=document.getElementById(id); if(el)el.checked=!['plan-sub-featured','plan-sub-free-first-month'].includes(id);});
+            set('plan-sub-order','1'); set('plan-sub-course-limit','1'); set('plan-sub-week-limit','20'); set('plan-sub-student-limit','0'); set('plan-sub-team-limit','1'); set('plan-sub-billing-cycle','monthly');
+            ['plan-sub-featured','plan-sub-active','plan-sub-free-first-month','plan-sub-allow-attendance','plan-sub-allow-export','plan-sub-allow-team'].forEach(id=>{const el=document.getElementById(id); if(el)el.checked=!['plan-sub-featured','plan-sub-free-first-month','plan-sub-allow-team'].includes(id);});
         };
         window.editAdminPlan=function(id){
             const p=(subscriptionPlans||[]).find(x=>x.id===id);if(!p)return; const set=(id,v)=>{const e=document.getElementById(id); if(e)e.value=v??''};
-            set('plan-sub-edit-id',p.id);set('plan-sub-name',p.name||'');set('plan-sub-price',p.price||planDisplayPrice(p));set('plan-sub-promptpay',p.promptpay||'');set('plan-sub-desc',p.desc||'');set('plan-sub-features',(p.features||[]).join('\n'));set('plan-sub-order',Number(p.order||1));set('plan-sub-course-limit',Number(p.courseLimit||0));set('plan-sub-week-limit',Number(p.weekLimit||p.maxWeeks||20));set('plan-sub-student-limit',Number(p.studentLimit||0));set('plan-sub-monthly-price',Number(p.monthlyPrice||0));set('plan-sub-yearly-price',Number(p.yearlyPrice||0));set('plan-sub-billing-cycle',p.freeForever?'forever':(p.billingCycle||'monthly'));
-            const chk=(id,v)=>{const e=document.getElementById(id); if(e)e.checked=!!v}; chk('plan-sub-featured',p.featured);chk('plan-sub-active',p.active!==false);chk('plan-sub-free-first-month',p.freeFirstMonth);chk('plan-sub-allow-attendance',p.allowAttendance!==false);chk('plan-sub-allow-export',p.allowExport!==false);
+            set('plan-sub-edit-id',p.id);set('plan-sub-name',p.name||'');set('plan-sub-price',p.price||planDisplayPrice(p));set('plan-sub-promptpay',p.promptpay||'');set('plan-sub-desc',p.desc||'');set('plan-sub-features',(p.features||[]).join('\n'));set('plan-sub-order',Number(p.order||1));set('plan-sub-course-limit',Number(p.courseLimit||0));set('plan-sub-week-limit',Number(p.weekLimit||p.maxWeeks||20));set('plan-sub-student-limit',Number(p.studentLimit||0));set('plan-sub-team-limit',Math.max(1,Number(p.teamMemberLimit||p.maxTeamMembers||1)));set('plan-sub-monthly-price',Number(p.monthlyPrice||0));set('plan-sub-yearly-price',Number(p.yearlyPrice||0));set('plan-sub-billing-cycle',p.freeForever?'forever':(p.billingCycle||'monthly'));
+            const chk=(id,v)=>{const e=document.getElementById(id); if(e)e.checked=!!v}; chk('plan-sub-featured',p.featured);chk('plan-sub-active',p.active!==false);chk('plan-sub-free-first-month',p.freeFirstMonth);chk('plan-sub-allow-attendance',p.allowAttendance!==false);chk('plan-sub-allow-export',p.allowExport!==false);chk('plan-sub-allow-team',!!p.allowTeam);
         };
         window.saveAdminPlanForm=async()=>{
             if(!isAdmin)return showCustomAlert('ไม่มีสิทธิ์','เฉพาะแอดมินเท่านั้น',true);
             const editId=document.getElementById('plan-sub-edit-id').value; const monthly=Number(document.getElementById('plan-sub-monthly-price')?.value||0); const yearly=Number(document.getElementById('plan-sub-yearly-price')?.value||0); const cycle=document.getElementById('plan-sub-billing-cycle')?.value||'monthly';
-            const item={id:editId||`plan_${Date.now()}`,name:document.getElementById('plan-sub-name').value.trim(),monthlyPrice:monthly,yearlyPrice:yearly,billingCycle:cycle,freeForever:cycle==='forever',freeFirstMonth:document.getElementById('plan-sub-free-first-month')?.checked||false,courseLimit:Number(document.getElementById('plan-sub-course-limit')?.value||0),weekLimit:Math.max(1,Number(document.getElementById('plan-sub-week-limit')?.value||20)),studentLimit:Number(document.getElementById('plan-sub-student-limit')?.value||0),allowAttendance:document.getElementById('plan-sub-allow-attendance')?.checked!==false,allowExport:document.getElementById('plan-sub-allow-export')?.checked!==false,price:document.getElementById('plan-sub-price').value.trim(),promptpay:document.getElementById('plan-sub-promptpay').value.trim(),desc:document.getElementById('plan-sub-desc').value.trim(),features:document.getElementById('plan-sub-features').value.split('\n').map(x=>x.trim()).filter(Boolean),order:Number(document.getElementById('plan-sub-order').value||1),featured:document.getElementById('plan-sub-featured').checked,active:document.getElementById('plan-sub-active').checked,updatedAt:Date.now()};
+            const item={id:editId||`plan_${Date.now()}`,name:document.getElementById('plan-sub-name').value.trim(),monthlyPrice:monthly,yearlyPrice:yearly,billingCycle:cycle,freeForever:cycle==='forever',freeFirstMonth:document.getElementById('plan-sub-free-first-month')?.checked||false,courseLimit:Number(document.getElementById('plan-sub-course-limit')?.value||0),weekLimit:Math.max(1,Number(document.getElementById('plan-sub-week-limit')?.value||20)),studentLimit:Number(document.getElementById('plan-sub-student-limit')?.value||0),allowTeam:document.getElementById('plan-sub-allow-team')?.checked||false,teamMemberLimit:Math.max(1,Number(document.getElementById('plan-sub-team-limit')?.value||1)),allowAttendance:document.getElementById('plan-sub-allow-attendance')?.checked!==false,allowExport:document.getElementById('plan-sub-allow-export')?.checked!==false,price:document.getElementById('plan-sub-price').value.trim(),promptpay:document.getElementById('plan-sub-promptpay').value.trim(),desc:document.getElementById('plan-sub-desc').value.trim(),features:document.getElementById('plan-sub-features').value.split('\n').map(x=>x.trim()).filter(Boolean),order:Number(document.getElementById('plan-sub-order').value||1),featured:document.getElementById('plan-sub-featured').checked,active:document.getElementById('plan-sub-active').checked,updatedAt:Date.now()};
             if(!item.price)item.price=planDisplayPrice(item); if(!item.name)return showCustomAlert('ข้อมูลไม่ครบ','กรุณากรอกชื่อระดับ',true);
             subscriptionPlans=(subscriptionPlans||[]).filter(p=>p.id!==item.id); subscriptionPlans.push(item); writeLocalJSON(PLANS_CACHE_KEY,subscriptionPlans); toggleLoader(true);
             try{await setDoc(getPlansDocRef(),{items:subscriptionPlans,updatedAt:Date.now()},{merge:true}); resetAdminPlanForm(); renderAdminPlans(); renderLandingPlans(); showCustomAlert('บันทึกแล้ว','บันทึกแผนการใช้งานขึ้น Firebase เรียบร้อย');}catch(e){resetAdminPlanForm();renderAdminPlans();renderLandingPlans();showCustomAlert('บันทึกในเครื่องแล้ว','แต่ยังบันทึกขึ้น Firebase ไม่ได้: '+getFirebaseErrorText(e),true);} toggleLoader(false);
@@ -5210,226 +5294,446 @@ ${resetUrl.toString()}
             }
         };
         try{ window.initStaticDropdowns(); }catch(e){}
-
-
-        /* =========================================================
-           Patch 2026-05-31: Team plan invite + verified-before-plan + mobile room/card UI
-           - ทีมใช้แผนร่วมกัน แต่ข้อมูลรายวิชา/นักเรียนยังแยกตามบัญชีเดิม
-           - สมัครใหม่ต้องยืนยันอีเมลก่อนถึงเลือกแผนได้
-           - มือถือ: ตารางไม่ล้น, เช็คชื่อ/รายชื่อนักเรียนเป็นการ์ด/ห้อง
-        ========================================================= */
-        (function(){
-            const TEAM_INVITE_COLLECTION = 'team_invites';
-            const TEAM_MEMBER_COLLECTION = 'team_memberships';
-            const TEAM_NOTICE_FLAG = 'schoolhub_team_notice_seen_';
-
-            function emailKey_(email){ return encodeURIComponent(String(email||'').trim().toLowerCase()); }
-            function teamId_(ownerUid, memberUid){ return `${ownerUid || 'owner'}_${memberUid || 'member'}`.replace(/[^a-zA-Z0-9_\-]/g,'_'); }
-            function mainAppUrl_(){ try{ const u=new URL(window.location.href); u.search=''; u.hash=''; return u.toString().replace(/reset-password\.html$/,'index.html'); }catch(e){ return window.location.href; } }
-            function escape_(v){ try{return escapeHTML(String(v||''));}catch(e){return String(v||'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));} }
-            async function getUserDirectoryByUid_(uid){
-                try{ const sp=await getDoc(doc(db, getPublicPath(), uid)); return sp.exists()?sp.data():null; }catch(e){ return null; }
-            }
-            async function isSchoolHubVerified_(){
-                if(!currentUser || currentUser.uid==='admin-bypass') return true;
-                if(currentUser.emailVerified) return true;
-                try{
-                    const email = String(currentUser.email||'').toLowerCase();
-                    const snap = await getDoc(doc(db,'users_status',email));
-                    return snap.exists() && snap.data().emailVerified === true;
-                }catch(e){ return false; }
-            }
-            async function requireVerifiedBeforePlan_(){
-                const ok = await isSchoolHubVerified_();
-                if(ok) return true;
-                showCustomAlert('ต้องยืนยันอีเมลก่อน','กรุณากดลิงก์ยืนยันอีเมลในกล่องจดหมายก่อนเลือกหรือสมัครแผนการใช้งาน',true);
-                return false;
-            }
-            async function sendTeamInviteEmail_(email, inviterName){
-                const link = buildSchoolHubLink({ schoolhubTeamInvite:'1', invitedEmail: email, invitedBy: currentUser?.uid || '' });
-                return sendMailViaWebApp({
-                    to: email,
-                    type: 'team_invite',
-                    name: email,
-                    subject: 'SchoolHub - คำเชิญเข้าร่วมทีม',
-                    message: `สวัสดี\n\n${inviterName || 'ผู้ใช้งาน SchoolHub'} เชิญคุณเข้าร่วมทีมใน SchoolHub\n\nกดลิงก์นี้เพื่อเข้าสู่ระบบและตอบรับคำเชิญ:\n${link}\n\nหมายเหตุ: ใช้แผนร่วมกัน แต่ข้อมูลรายวิชา/นักเรียนจะไม่ถูกแชร์กัน\n\n— SchoolHub`,
-                    htmlBody: `<div style="font-family:Arial,sans-serif;line-height:1.7;color:#222"><h2>คำเชิญเข้าร่วมทีม SchoolHub</h2><p><b>${escape_(inviterName||'ผู้ใช้งาน SchoolHub')}</b> เชิญคุณเข้าร่วมทีม</p><p>ใช้แผนร่วมกัน แต่ข้อมูลรายวิชา/นักเรียนจะไม่ถูกแชร์กัน</p><p><a href="${escape_(link)}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:bold">เปิด SchoolHub เพื่อตอบรับ</a></p><p style="word-break:break-all;background:#f3f4f6;padding:12px;border-radius:8px">${escape_(link)}</p><p>— SchoolHub</p></div>`,
-                    extra: { link }
-                });
-            }
-            window.openTeamInvitePanel = function(){
-                if(!currentUser || currentUser.uid==='admin-bypass') return showCustomAlert('ต้องเข้าสู่ระบบ','กรุณาเข้าสู่ระบบด้วยบัญชีผู้ใช้ก่อนเชิญทีม',true);
-                const html = `<div class="space-y-3 text-left">
-                    <p class="text-sm text-slate-500">เพิ่มอีเมลเพื่อนร่วมทีมเพื่อใช้แผนร่วมกัน โดยข้อมูลรายวิชา นักเรียน คะแนน และเช็คชื่อของแต่ละบัญชีจะยังแยกกัน ไม่เห็นข้อมูลของกันและกัน</p>
-                    <input id="team-invite-email-input" type="email" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3" placeholder="อีเมลที่ต้องการเชิญ">
-                    <div class="bg-indigo-50 text-indigo-700 rounded-xl p-3 text-xs font-bold"><i class="fas fa-shield-alt mr-1"></i>ทีมแชร์เฉพาะสิทธิ์แผน ไม่แชร์ข้อมูลห้องเรียน</div>
-                </div>`;
-                showCustomConfirm('เชิญเข้าร่วมทีม', html, async()=>{
-                    const email = document.getElementById('team-invite-email-input')?.value?.trim().toLowerCase();
-                    if(!email || !email.includes('@')) return showCustomAlert('อีเมลไม่ถูกต้อง','กรุณากรอกอีเมลให้ถูกต้อง',true);
-                    if(email === String(currentUser.email||'').toLowerCase()) return showCustomAlert('เชิญตัวเองไม่ได้','กรุณากรอกอีเมลของสมาชิกทีม',true);
-                    toggleLoader(true);
-                    try{
-                        const inviterName = currentUser.displayName || currentUser.email || 'ผู้ใช้งาน SchoolHub';
-                        const ownerDir = window.__currentUserDir || await getUserDirectoryByUid_(currentUser.uid) || {};
-                        const payload = {
-                            id: emailKey_(email), email, ownerUid: currentUser.uid, ownerEmail: currentUser.email || '', ownerName: inviterName,
-                            ownerPlanId: ownerDir.planId || '', ownerPlanName: ownerDir.planName || '', status:'pending', createdAt:Date.now(), updatedAt:Date.now()
-                        };
-                        await setDoc(doc(db, TEAM_INVITE_COLLECTION, payload.id), payload, {merge:true});
-                        await sendTeamInviteEmail_(email, inviterName);
-                        showCustomAlert('ส่งคำเชิญแล้ว',`ส่งอีเมลเชิญไปที่ ${email} แล้ว`);
-                    }catch(e){ showCustomAlert('ส่งคำเชิญไม่ได้',getFirebaseErrorText(e),true); }
-                    toggleLoader(false);
-                });
-            };
-            window.renderTeamBox = async function(){
-                const planView = document.getElementById('view-user-plans');
-                if(!planView || isAdmin) return;
-                let box = document.getElementById('team-share-box');
-                if(!box){
-                    box=document.createElement('div');
-                    box.id='team-share-box';
-                    box.className='bg-white rounded-3xl border border-slate-100 shadow-sm p-5 mb-5';
-                    const anchor=document.getElementById('user-current-plan-box') || planView.firstElementChild;
-                    if(anchor && anchor.parentNode) anchor.parentNode.insertBefore(box, anchor.nextSibling); else planView.prepend(box);
-                }
-                box.innerHTML = `<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div><h3 class="text-lg font-black text-slate-800"><i class="fas fa-users text-primary mr-2"></i>ใช้งานแบบทีม</h3><p class="text-sm text-slate-500 mt-1">เชิญเพื่อนร่วมทีมให้ใช้แผนร่วมกัน แต่ข้อมูลรายวิชา/นักเรียนยังแยกกัน</p></div>
-                    <button onclick="openTeamInvitePanel()" class="bg-primary text-white px-5 py-3 rounded-2xl font-bold shadow-lg shadow-indigo-100"><i class="fas fa-user-plus mr-1"></i> เชิญสมาชิกทีม</button>
-                </div><div id="team-status-list" class="mt-4 text-sm text-slate-500">กำลังโหลดสถานะทีม...</div>`;
-                try{
-                    const dir = window.__currentUserDir || {};
-                    const team = window.__teamMembership || null;
-                    const status = document.getElementById('team-status-list');
-                    if(team){ status.innerHTML = `<div class="bg-emerald-50 text-emerald-700 rounded-2xl p-3 font-bold"><i class="fas fa-check-circle mr-1"></i>คุณใช้แผนร่วมกับทีมของ ${escape_(team.ownerName||team.ownerEmail||'ผู้เชิญ')}</div>`; }
-                    else if(dir.planId){ status.innerHTML = `<div class="bg-slate-50 rounded-2xl p-3">คุณเป็นเจ้าของแผน <b>${escape_(dir.planName||dir.planId)}</b> สามารถเชิญสมาชิกทีมได้</div>`; }
-                    else { status.innerHTML = `<div class="bg-amber-50 text-amber-700 rounded-2xl p-3 font-bold">เลือกแผนก่อนจึงจะเชิญทีมได้</div>`; }
-                }catch(e){}
-            };
-            window.checkTeamInviteOnLogin = async function(){
-                if(!currentUser || currentUser.uid==='admin-bypass' || !currentUser.email) return;
-                try{
-                    const email = String(currentUser.email||'').toLowerCase();
-                    const ref = doc(db, TEAM_INVITE_COLLECTION, emailKey_(email));
-                    const snap = await getDoc(ref);
-                    if(!snap.exists()) return;
-                    const inv = snap.data() || {};
-                    if(inv.status !== 'pending') return;
-                    const seenKey = TEAM_NOTICE_FLAG + inv.id + '_' + currentUser.uid;
-                    if(sessionStorage.getItem(seenKey)) return;
-                    sessionStorage.setItem(seenKey,'1');
-                    showCustomConfirm('มีคำเชิญเข้าร่วมทีม', `${escape_(inv.ownerName||inv.ownerEmail||'ผู้ใช้คนหนึ่ง')} เชิญคุณเข้าร่วมทีม\n\nเมื่อรับคำเชิญ คุณจะใช้แผนร่วมกัน แต่ข้อมูลของแต่ละบัญชีจะยังแยกกัน ไม่เห็นข้อมูลของกันและกัน`, async()=>{
-                        toggleLoader(true);
-                        try{
-                            const memberPayload = { id:teamId_(inv.ownerUid,currentUser.uid), ownerUid:inv.ownerUid, ownerEmail:inv.ownerEmail||'', ownerName:inv.ownerName||'', memberUid:currentUser.uid, memberEmail:email, status:'active', acceptedAt:Date.now(), updatedAt:Date.now() };
-                            await setDoc(doc(db, TEAM_MEMBER_COLLECTION, memberPayload.id), memberPayload, {merge:true});
-                            await setDoc(ref, {status:'accepted', memberUid:currentUser.uid, acceptedAt:Date.now(), updatedAt:Date.now()}, {merge:true});
-                            window.__teamMembership = memberPayload;
-                            await refreshTeamPlanEntitlement();
-                            await refreshCurrentUserPlanLock();
-                            renderTeamBox();
-                            showCustomAlert('เข้าร่วมทีมแล้ว','คุณสามารถใช้แผนร่วมกับทีมนี้ได้แล้ว');
-                        }catch(e){ showCustomAlert('รับคำเชิญไม่ได้',getFirebaseErrorText(e),true); }
-                        toggleLoader(false);
-                    });
-                }catch(e){ console.warn('checkTeamInviteOnLogin failed',e); }
-            };
-            window.refreshTeamPlanEntitlement = async function(){
-                if(!currentUser || currentUser.uid==='admin-bypass') return null;
-                if(window.__teamMembership && window.__teamMembership.ownerUid){
-                    const ownerDir = await getUserDirectoryByUid_(window.__teamMembership.ownerUid);
-                    if(ownerDir && ownerDir.planId){ window.__teamPlanOwnerDir = ownerDir; return ownerDir; }
-                }
-                try{
-                    const email = String(currentUser.email||'').toLowerCase();
-                    const invSnap = await getDoc(doc(db, TEAM_INVITE_COLLECTION, emailKey_(email)));
-                    if(invSnap.exists() && invSnap.data().status === 'accepted'){
-                        const inv=invSnap.data(); window.__teamMembership={ownerUid:inv.ownerUid,ownerEmail:inv.ownerEmail,ownerName:inv.ownerName,memberUid:currentUser.uid,memberEmail:email,status:'active'};
-                        const ownerDir = await getUserDirectoryByUid_(inv.ownerUid);
-                        if(ownerDir && ownerDir.planId){ window.__teamPlanOwnerDir = ownerDir; return ownerDir; }
-                    }
-                }catch(e){}
-                return null;
-            };
-            try{
-                const __oldRefreshPlanLockTeam = window.refreshCurrentUserPlanLock;
-                window.refreshCurrentUserPlanLock = async function(){
-                    await refreshTeamPlanEntitlement();
-                    await (__oldRefreshPlanLockTeam && __oldRefreshPlanLockTeam());
-                    const teamDir = window.__teamPlanOwnerDir;
-                    if(teamDir && teamDir.planId){
-                        window.__currentUserDir = Object.assign({}, window.__currentUserDir||{}, { teamPlan:true, planId:teamDir.planId, planName:teamDir.planName, planStatus:teamDir.planStatus || teamDir.status, planExpiresAt:teamDir.planExpiresAt, planNextBillingAt:teamDir.planNextBillingAt, courseLimit:teamDir.courseLimit });
-                        window.__schoolhubPlanLocked = false;
-                    }
-                };
-            }catch(e){}
-            try{
-                const __oldOpenUserPlanSelectorTeam = window.openUserPlanSelector;
-                window.openUserPlanSelector = async function(){
-                    if(!(await requireVerifiedBeforePlan_())) return;
-                    const r = await (__oldOpenUserPlanSelectorTeam && __oldOpenUserPlanSelectorTeam.apply(this, arguments));
-                    setTimeout(renderTeamBox, 100);
-                    return r;
-                };
-                const __oldRenderUserPlansTeam = window.renderUserPlans;
-                window.renderUserPlans = function(){
-                    const r = __oldRenderUserPlansTeam && __oldRenderUserPlansTeam.apply(this, arguments);
-                    setTimeout(renderTeamBox, 100);
-                    return r;
-                };
-                const __oldRequestPlanTeam = window.requestSubscriptionPlan;
-                window.requestSubscriptionPlan = async function(planId){ if(!(await requireVerifiedBeforePlan_())) return; return __oldRequestPlanTeam && __oldRequestPlanTeam(planId); };
-                const __oldSubmitPlanTeam = window.submitPlanRequest;
-                window.submitPlanRequest = async function(planId){ if(!(await requireVerifiedBeforePlan_())) return; return __oldSubmitPlanTeam && __oldSubmitPlanTeam(planId); };
-            }catch(e){}
-            try{
-                const __oldGoToHomeTeam = window.goToHome;
-                window.goToHome = function(){ const r=__oldGoToHomeTeam && __oldGoToHomeTeam.apply(this,arguments); setTimeout(()=>{checkTeamInviteOnLogin();},500); return r; };
-            }catch(e){}
-            // แสดงคำเชิญหลังล็อกอินและเมื่อ URL มาจากอีเมลเชิญ
-            setInterval(()=>{ if(currentUser && !isAdmin) { checkTeamInviteOnLogin(); } }, 8000);
-
-            // --- ฐานข้อมูลนักเรียนแบบห้อง + มือถือเป็นการ์ด ---
-            window.renderStudentsMaster = function(){
-                const tbody = document.getElementById('student-list-master'); if(!tbody) return;
-                const students = state.students || [];
-                tbody.innerHTML = '';
-                const empty = document.getElementById('empty-student-master');
-                if(students.length === 0){ empty?.classList.remove('hidden'); return; }
-                empty?.classList.add('hidden');
-                const rooms = [...new Set(students.map(s=>window.getStudentClassName(s)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'th'));
-                rooms.forEach(room=>{
-                    const list = students.filter(s=>window.getStudentClassName(s)===room).sort((a,b)=>String(a.code||'').localeCompare(String(b.code||''),'th'));
-                    tbody.innerHTML += `<tr class="student-room-header"><td colspan="4" class="bg-slate-100 text-slate-700 font-black p-3"><i class="fas fa-door-open text-primary mr-2"></i>${escape_(room)} <span class="text-xs text-slate-400 ml-2">${list.length} คน</span></td></tr>`;
-                    list.forEach(s=>{
-                        tbody.innerHTML += `<tr class="student-room-row" data-room="${escape_(room)}"><td class="font-mono font-medium text-slate-500" data-label="รหัส">${escape_(s.code)}</td><td class="font-bold text-slate-700" data-label="ชื่อ-นามสกุล">${escape_(s.name)}</td><td data-label="ห้อง"><span class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-lg text-xs font-bold">${escape_(room)}</span></td><td class="text-right" data-label="จัดการ"><button onclick="editStudent('${s.id}')" class="text-blue-500 bg-blue-50 w-8 h-8 rounded-lg hover:bg-blue-100"><i class="fas fa-edit"></i></button><button onclick="deleteStudent('${s.id}')" class="text-rose-500 bg-rose-50 w-8 h-8 rounded-lg hover:bg-rose-100 ml-1"><i class="fas fa-trash"></i></button></td></tr>`;
-                    });
-                });
-            };
-            // --- CSS มือถือและตารางไม่ล้น ---
-            const mobileStyle = document.createElement('style');
-            mobileStyle.textContent = `
-                html, body, #main-app, main { overflow-y:auto !important; max-width:100vw !important; }
-                .modal, .fixed.inset-0 { z-index: 999999 !important; }
-                @media (max-width: 768px){
-                    table { min-width:0 !important; }
-                    .overflow-x-auto { overflow-x:auto !important; -webkit-overflow-scrolling:touch; }
-                    #attendance-area table, #score-area table, #student-list-master { width:100% !important; }
-                    #attendance-area thead, #score-area thead, #student-list-master thead { display:none !important; }
-                    #attendance-area tr, #score-area tr, #student-list-master tr.student-room-row { display:block; background:#fff; border:1px solid #e2e8f0; border-radius:18px; margin:10px 0; padding:10px; box-shadow:0 8px 22px rgba(15,23,42,.05); }
-                    #attendance-area td, #score-area td, #student-list-master tr.student-room-row td { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100% !important; border:0 !important; padding:8px 6px !important; text-align:right !important; }
-                    #attendance-area td:before, #score-area td:before, #student-list-master tr.student-room-row td:before { content:attr(data-label); font-weight:800; color:#64748b; font-size:12px; text-align:left; }
-                    .student-room-header { display:block !important; margin-top:16px; border-radius:18px; overflow:hidden; }
-                    .student-room-header td { display:block !important; border-radius:18px; }
-                    #calendar-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:10px !important; }
-                    #calendar-grid .cal-day { min-height:auto !important; border-radius:18px !important; padding:14px !important; cursor:pointer; }
-                    #calendar-container { overflow:visible !important; }
-                    #team-share-box { margin-left:0 !important; margin-right:0 !important; }
-                }
-            `;
-            document.head.appendChild(mobileStyle);
-        })();
 </script>
+
+
+<script id="schoolhub-overview-student-card-export-patch">
+(function(){
+  if (window.__schoolhubOverviewStudentCardPatch) return;
+  window.__schoolhubOverviewStudentCardPatch = true;
+
+  function esc(v){ try { return window.escapeHTML ? window.escapeHTML(v) : String(v||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); } catch(e){ return String(v||''); } }
+  function className(st){ return (window.getStudentClassName ? window.getStudentClassName(st) : (st && (st.room||st.classroom||st.grade)) || '-').toString().trim() || '-'; }
+  function courseRooms(courseId){
+    try { return window.getCourseSelectedRooms ? window.getCourseSelectedRooms(courseId) : []; } catch(e){ return []; }
+  }
+  function allStudentsForCourse(courseId){
+    if (!courseId || !window.state) return [];
+    var course = (state.courses||[]).find(c=>c.id===courseId) || {};
+    var rooms = Array.isArray(course.studentRooms) ? course.studentRooms : (Array.isArray(course.studentGrades) ? course.studentGrades : []);
+    var extraIds = Array.isArray(course.extraStudentIds) ? course.extraStudentIds : [];
+    if (!rooms.length && !extraIds.length) return [];
+    return (state.students||[]).filter(st => rooms.includes(className(st)) || extraIds.includes(st.id))
+      .sort((a,b)=>String(className(a)).localeCompare(String(className(b)),'th',{numeric:true}) || String(a.code||'').localeCompare(String(b.code||''),'th',{numeric:true}) || String(a.name||'').localeCompare(String(b.name||''),'th'));
+  }
+  window.__overviewRoomFilter = window.__overviewRoomFilter || {};
+  function getOverviewStudents(courseId){
+    var students = allStudentsForCourse(courseId);
+    var rooms = Array.from(new Set(students.map(className))).sort((a,b)=>a.localeCompare(b,'th',{numeric:true}));
+    var selected = window.__overviewRoomFilter[courseId] || 'all';
+    if (selected !== 'all') students = students.filter(st => className(st) === selected);
+    return {students, rooms, selected};
+  }
+  window.renderOverviewRoomFilter = function(){
+    var box = document.getElementById('overview-room-filter');
+    if (!box || !window.currentActiveCourseId) return;
+    var data = getOverviewStudents(window.currentActiveCourseId);
+    if (data.rooms.length <= 1) { box.classList.add('hidden'); box.innerHTML=''; return; }
+    box.classList.remove('hidden');
+    box.innerHTML = '<label class="text-xs font-black text-slate-500 mr-2"><i class="fas fa-layer-group text-primary mr-1"></i>เลือกชั้น/ห้องในภาพรวม</label>'+
+      '<select class="bg-white border border-indigo-100 rounded-xl px-3 py-2 text-sm font-bold text-primary focus:ring-2 focus:ring-primary outline-none" onchange="window.__overviewRoomFilter[\''+window.currentActiveCourseId+'\']=this.value; renderCourseOverview();">'+
+      '<option value="all" '+(data.selected==='all'?'selected':'')+'>ทั้งหมด</option>'+ data.rooms.map(r=>'<option value="'+esc(r)+'" '+(data.selected===r?'selected':'')+'>'+esc(r)+'</option>').join('') + '</select>';
+  };
+
+  window.renderCourseOverview = function(){
+    var table = document.getElementById('course-summary-table'); if(!table) return; table.innerHTML='';
+    var cid = window.currentActiveCourseId;
+    var overview = getOverviewStudents(cid);
+    var courseStudents = overview.students;
+    window.renderOverviewRoomFilter();
+    if(!cid || courseStudents.length===0){ var empty=document.getElementById('empty-summary'); if(empty) empty.classList.remove('hidden'); return; }
+    var empty=document.getElementById('empty-summary'); if(empty) empty.classList.add('hidden');
+    var history = (state.attendance && state.attendance[cid]) || {}; var attDates = Object.keys(history);
+    var plans = ((state.coursePlans && state.coursePlans[cid]) || []).sort((a,b)=>Number(a.week)-Number(b.week));
+    var courseScores = (state.scores||[]).filter(s=>s.courseId===cid);
+    var gradeCriteria = (state.courseGrades && state.courseGrades[cid]) ? state.courseGrades[cid] : (window.defaultGradeCriteria || []);
+    var totalMax=0;
+    var thead='<thead><tr><th class="sticky summary-sticky-no summary-no-col bg-slate-50 z-20 border-r text-center align-middle">ลำดับ</th><th class="sticky summary-sticky-code summary-code-col bg-slate-50 z-20 border-r text-center align-middle">รหัสนักเรียน</th><th class="sticky summary-sticky-name summary-name-col bg-slate-50 z-20 border-r text-center align-middle">ชื่อ - นามสกุล</th><th class="text-center bg-slate-100 text-slate-600">ชั้น/ห้อง</th>';
+    thead += '<th class="text-center bg-emerald-50 text-emerald-700 summary-att-col">เช็คชื่อ<br><span class="text-[9px]">มา/สาย/ขาด</span></th>';
+    plans.forEach(function(p){ var isChecklist=Number(p.maxScore)===0; var subtitle=isChecklist?'เช็คงาน':'เต็ม '+p.maxScore; thead += '<th class="text-center bg-indigo-50 text-indigo-700 summary-score-col" title="คลิกเพื่อดูรายละเอียด: สัปดาห์ '+esc(p.week)+' | '+esc(p.title)+' | '+esc(subtitle)+'"><button type="button" onclick="showPlanDetail(\''+cid+'\', \''+p.id+'\')" class="week-detail-btn inline-flex items-center justify-center bg-white border border-indigo-200 text-primary font-bold hover:bg-primary hover:text-white transition shadow-sm">'+esc(p.week)+'</button></th>'; if(!isChecklist) totalMax+=Number(p.maxScore||0); });
+    thead += '<th class="text-center bg-slate-800 text-white font-bold summary-total-col">รวม<br><span class="text-[9px] text-slate-300">'+totalMax+'</span></th><th class="text-center bg-amber-50 text-amber-700 font-bold summary-grade-col">เกรด</th></tr></thead>';
+    var tbody='<tbody>';
+    courseStudents.forEach(function(st,index){
+      var pr=0,la=0,ab=0; attDates.forEach(function(d){ var rec=history[d]&&history[d].records||{}; var x=rec[st.id]; if(x==='present')pr++; else if(x==='late')la++; else if(x==='absent')ab++; });
+      tbody += '<tr><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center font-bold text-slate-500">'+(index+1)+'</td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700">'+esc(st.code)+'</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700">'+esc(st.name)+'</td><td class="text-center text-xs font-bold text-slate-500 bg-slate-50">'+esc(className(st))+'</td>';
+      tbody += '<td class="text-center font-bold summary-att-col"><span class="text-emerald-500">'+pr+'</span>/<span class="text-amber-500">'+la+'</span>/<span class="text-rose-500">'+ab+'</span></td>';
+      var total=0;
+      plans.forEach(function(p){ var task=courseScores.find(ts=>ts.week==p.week && ts.title===p.title); var raw=task && task.records ? task.records[st.id] : null; var isChecklist=Number(p.maxScore)===0; if(isChecklist){ var icon= raw===1 ? '<span class="summary-score-cell-content text-emerald-500"><i class="fas fa-check"></i></span>' : (raw===0 ? '<span class="summary-score-cell-content text-rose-300"><i class="fas fa-times"></i></span>' : '<span class="summary-score-cell-content text-slate-300">-</span>'); tbody += '<td class="text-center summary-score-col">'+icon+'</td>'; } else { if(raw!==null && raw!=='') total+=Number(raw); var disp=!task?'<span class="summary-score-cell-content text-slate-300">-</span>':(raw===''?'<span class="summary-score-cell-content text-rose-500">-</span>':'<span class="summary-score-cell-content text-slate-700">'+esc(raw)+'</span>'); tbody += '<td class="text-center font-mono summary-score-col">'+disp+'</td>'; }});
+      var grade='-', color='text-slate-400'; if(totalMax>0 && window.calculateGrade){ grade=calculateGrade(total, gradeCriteria); if(['4','3.5'].includes(grade)) color='text-emerald-500'; else if(['3','2.5'].includes(grade)) color='text-blue-500'; else if(['2','1.5'].includes(grade)) color='text-amber-500'; else if(['1','0'].includes(grade)) color='text-rose-500'; }
+      tbody += '<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col">'+total+'</td><td class="text-center font-bold '+color+' bg-amber-50/30 summary-grade-col">'+esc(grade)+'</td></tr>';
+    });
+    tbody+='</tbody>'; table.innerHTML=thead+tbody;
+  };
+
+  window.renderStudentsMaster = function(){
+    var tbody=document.getElementById('student-list-master'); if(!tbody) return;
+    var students=(state.students||[]).slice(); tbody.innerHTML='';
+    var empty=document.getElementById('empty-student-master');
+    if(!students.length){ if(empty) empty.classList.remove('hidden'); return; } if(empty) empty.classList.add('hidden');
+    var rooms={}; students.forEach(function(st){ var r=className(st); (rooms[r]||(rooms[r]=[])).push(st); });
+    Object.keys(rooms).sort((a,b)=>a.localeCompare(b,'th',{numeric:true})).forEach(function(room){
+      var list=rooms[room].sort((a,b)=>String(a.code||'').localeCompare(String(b.code||''),'th',{numeric:true}) || String(a.name||'').localeCompare(String(b.name||''),'th'));
+      var cards=list.map(function(st){ return '<button type="button" onclick="editStudent(\''+st.id+'\')" class="text-left bg-white border border-slate-100 hover:border-indigo-200 hover:shadow-md rounded-2xl p-4 transition"><div class="flex items-start justify-between gap-3"><div><div class="font-black text-slate-800">'+esc(st.name)+'</div><div class="text-xs font-mono text-slate-400 mt-1">'+esc(st.code)+'</div></div><span class="text-primary bg-indigo-50 rounded-full w-9 h-9 flex items-center justify-center"><i class="fas fa-pen"></i></span></div></button>'; }).join('');
+      tbody.innerHTML += '<tr><td colspan="4" class="p-4 bg-slate-50/60"><div class="bg-indigo-50/80 border border-indigo-100 rounded-3xl p-4"><div class="flex items-center justify-between mb-4"><div class="font-black text-primary text-lg"><i class="fas fa-door-open mr-2"></i>'+esc(room)+'</div><div class="text-xs font-bold text-indigo-500 bg-white px-3 py-1 rounded-full">'+list.length+' คน</div></div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">'+cards+'</div></div></td></tr>';
+    });
+  };
+
+  window.exportScoresToExcel = function(){
+    var cid=window.currentActiveCourseId; if(!cid) return showCustomAlert('ผิดพลาด','กรุณาเลือกรายวิชา',true);
+    var all=allStudentsForCourse(cid); if(!all.length) return showCustomAlert('ผิดพลาด','ไม่มีข้อมูลนักเรียนในวิชานี้',true);
+    var course=(state.courses||[]).find(c=>c.id===cid)||{}; var cName=course.name||'Unknown';
+    var history=(state.attendance&&state.attendance[cid])||{}; var attDates=Object.keys(history);
+    var plans=((state.coursePlans&&state.coursePlans[cid])||[]).sort((a,b)=>Number(a.week)-Number(b.week));
+    var courseScores=(state.scores||[]).filter(s=>s.courseId===cid);
+    var gradeCriteria=(state.courseGrades&&state.courseGrades[cid])?state.courseGrades[cid]:(window.defaultGradeCriteria||[]);
+    var rooms={}; all.forEach(st=>{ var r=className(st); (rooms[r]||(rooms[r]=[])).push(st); });
+    var sheets={};
+    Object.keys(rooms).sort((a,b)=>a.localeCompare(b,'th',{numeric:true})).forEach(function(room){
+      var list=rooms[room].sort((a,b)=>String(a.code||'').localeCompare(String(b.code||''),'th',{numeric:true}));
+      var aoa=[[`สรุปภาพรวมวิชา: ${cName}`],[`ชั้น/ห้อง: ${room}`],[]]; var header=['รหัส','ชื่อ','ชั้น/ห้อง','มา','สาย','ขาด']; var tMax=0;
+      plans.forEach(function(p){ var isChecklist=Number(p.maxScore)===0; header.push(`${p.title}(${isChecklist?'เช็คงาน':'เต็ม '+p.maxScore})`); if(!isChecklist) tMax+=Number(p.maxScore||0); }); header.push(`รวมคะแนน(เต็ม ${tMax})`,'เกรดที่ได้'); aoa.push(header);
+      list.forEach(function(st){ var pr=0,la=0,ab=0; attDates.forEach(function(d){ var rec=history[d]&&history[d].records||{}; var x=rec[st.id]; if(x==='present')pr++; else if(x==='late')la++; else if(x==='absent')ab++; }); var row=[st.code,st.name,room,pr,la,ab]; var total=0; plans.forEach(function(p){ var task=courseScores.find(ts=>ts.week==p.week && ts.title===p.title); var raw=task&&task.records?task.records[st.id]:null; if(Number(p.maxScore)===0){ row.push(raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-')); } else { if(raw!==null && raw!=='') total+=Number(raw); row.push(!task?'-':(raw===''?'ขาดส่ง (-)':Number(raw))); }}); row.push(total); row.push(tMax>0&&window.calculateGrade?calculateGrade(total,gradeCriteria):'-'); aoa.push(row); });
+      var sheetName=String(room||'ชั้น').replace(/[\\/?*\[\]:]/g,' ').slice(0,31) || 'ชั้น'; sheets[sheetName]=aoa;
+    });
+    window.downloadExcelMultiSheet(sheets, `ภาพรวม_${cName}_แยกชั้น`);
+  };
+
+  var oldSwitch = window.switchCourseTab;
+  if (oldSwitch) window.switchCourseTab = function(tabId){ oldSwitch(tabId); if(tabId==='overview') setTimeout(function(){ try{renderOverviewRoomFilter();}catch(e){} },50); };
+
+  /* Patch: block must not delete data, global admin credentials, team plan controls */
+  const SCHOOLHUB_ADMIN_CONFIG_PATH = ['schoolhub_system','admin_config'];
+  async function getSystemAdminConfig_(){
+    try{ const snap = await getDoc(doc(db, SCHOOLHUB_ADMIN_CONFIG_PATH[0], SCHOOLHUB_ADMIN_CONFIG_PATH[1])); return snap.exists() ? (snap.data()||{}) : {}; }
+    catch(e){ console.warn('getSystemAdminConfig failed', e); return {}; }
+  }
+  async function setSystemAdminConfig_(payload){
+    await setDoc(doc(db, SCHOOLHUB_ADMIN_CONFIG_PATH[0], SCHOOLHUB_ADMIN_CONFIG_PATH[1]), Object.assign({}, payload, {updatedAt:Date.now()}), {merge:true});
+  }
+
+  const __oldEnterAdminModeGlobal = enterAdminMode;
+  enterAdminMode = async function(){
+    try{
+      const cfg = await getSystemAdminConfig_();
+      if(cfg && cfg.name) localStorage.setItem('schoolhub_admin_name', cfg.name);
+      if(cfg && cfg.password){ localStorage.setItem('schoolhub_admin_password', cfg.password); localStorage.setItem('schoolhub_admin_default_disabled','true'); }
+    }catch(e){}
+    return __oldEnterAdminModeGlobal();
+  };
+
+  const __oldHandleLoginGlobalAdmin = window.handleLogin;
+  window.handleLogin = async function(e){
+    if(e) e.preventDefault();
+    const email = (document.getElementById('login-email')?.value || '').trim();
+    const pass = document.getElementById('login-pass')?.value || '';
+    if(email.toLowerCase() === 'admin'){
+      toggleLoader(true);
+      try{
+        const cfg = await getSystemAdminConfig_();
+        const hasConfigured = !!(cfg && cfg.defaultDisabled && cfg.password);
+        if(hasConfigured){
+          if(pass !== cfg.password){ toggleLoader(false); return showCustomAlert('รหัสผ่าน Admin ไม่ถูกต้อง','รหัสเริ่มต้น Admin123 ถูกปิดแล้ว ต้องใช้รหัสผ่าน Admin ที่ตั้งไว้ในระบบเท่านั้น',true); }
+          localStorage.setItem('schoolhub_admin_bypass','true');
+          localStorage.setItem('schoolhub_admin_name', cfg.name || 'Administrator');
+          localStorage.setItem('schoolhub_admin_password', cfg.password);
+          localStorage.setItem('schoolhub_admin_default_disabled','true');
+          await enterAdminMode();
+          toggleLoader(false);
+          return;
+        }
+        if(pass !== 'Admin123'){ toggleLoader(false); return showCustomAlert('รหัสผ่าน Admin ไม่ถูกต้อง','ครั้งแรกเท่านั้นให้ใช้ Admin / Admin123 หลังตั้งค่าแล้วรหัสนี้จะใช้ไม่ได้ทุกเครื่อง',true); }
+        localStorage.setItem('schoolhub_admin_bypass','true');
+        await enterAdminMode();
+        toggleLoader(false);
+        setTimeout(()=>openAdminFirstSetupModal(), 250);
+        return;
+      }catch(err){ toggleLoader(false); return showCustomAlert('เข้าสู่ระบบ Admin ไม่สำเร็จ', getFirebaseErrorText(err), true); }
+    }
+    return __oldHandleLoginGlobalAdmin(e || {preventDefault(){}});
+  };
+
+  window.saveAdminFirstSetup = async function(){
+    const name = (document.getElementById('admin-setup-name')?.value || '').trim();
+    const pass = document.getElementById('admin-setup-password')?.value || '';
+    if (!name) return showCustomAlert('กรุณากรอกชื่อแอดมิน', 'ชื่อแอดมินห้ามว่าง', true);
+    if (!pass || pass.length < 6) return showCustomAlert('รหัสผ่านสั้นเกินไป', 'รหัสผ่าน Admin ต้องมีอย่างน้อย 6 ตัวอักษร', true);
+    if (pass === 'Admin123') return showCustomAlert('ห้ามใช้รหัสเริ่มต้น', 'เพื่อความปลอดภัย กรุณาตั้งรหัสผ่านใหม่ที่ไม่ใช่ Admin123', true);
+    toggleLoader(true);
+    try{
+      await setSystemAdminConfig_({name, password:pass, defaultDisabled:true});
+      localStorage.setItem('schoolhub_admin_name', name);
+      localStorage.setItem('schoolhub_admin_password', pass);
+      localStorage.setItem('schoolhub_admin_default_disabled', 'true');
+      if (currentUser?.uid === 'admin-bypass') currentUser.displayName = name;
+      const nameEl = document.getElementById('user-display-name');
+      const emailEl = document.getElementById('user-display-email');
+      const avatarEl = document.getElementById('user-avatar-initial');
+      if (nameEl) nameEl.textContent = name;
+      if (emailEl) emailEl.textContent = 'Admin';
+      if (avatarEl) avatarEl.textContent = name.charAt(0).toUpperCase();
+      closeModal('admin-first-setup-modal');
+      showCustomAlert('ตั้งค่า Admin สำเร็จ', 'รหัส Admin / Admin123 ถูกปิดถาวรแล้ว ทุกเครื่องต้องใช้รหัสที่ตั้งใหม่นี้เท่านั้น');
+    }catch(e){ showCustomAlert('บันทึก Admin ไม่สำเร็จ', getFirebaseErrorText(e), true); }
+    toggleLoader(false);
+  };
+
+  const __oldSaveUserProfileGlobalAdmin = window.saveUserProfileChanges;
+  window.saveUserProfileChanges = async function(){
+    if(currentUser?.uid !== 'admin-bypass') return __oldSaveUserProfileGlobalAdmin();
+    const newName = (document.getElementById('profile-display-name-input')?.value || '').trim();
+    const newAdminPass = (document.getElementById('admin-profile-password-input')?.value || '').trim();
+    if(!newName) return showCustomAlert('กรุณากรอกชื่อ','ชื่อที่แสดงห้ามว่าง',true);
+    if(newAdminPass && newAdminPass.length < 6) return showCustomAlert('รหัสผ่านสั้นเกินไป','รหัสผ่าน Admin ต้องมีอย่างน้อย 6 ตัวอักษร',true);
+    if(newAdminPass === 'Admin123') return showCustomAlert('ห้ามใช้รหัสเริ่มต้น','รหัส Admin123 ใช้ได้เฉพาะก่อนตั้งค่าครั้งแรกเท่านั้น',true);
+    toggleLoader(true);
+    try{
+      const payload = {name:newName, defaultDisabled:true};
+      if(newAdminPass) payload.password = newAdminPass;
+      await setSystemAdminConfig_(payload);
+      localStorage.setItem('schoolhub_admin_name', newName);
+      if(newAdminPass){ localStorage.setItem('schoolhub_admin_password', newAdminPass); localStorage.setItem('schoolhub_admin_default_disabled','true'); }
+      currentUser.displayName = newName;
+      document.getElementById('user-display-name').textContent = newName;
+      document.getElementById('user-avatar-initial').textContent = newName.charAt(0).toUpperCase();
+      closeModal('user-profile-modal'); showCustomAlert('บันทึกสำเร็จ','แก้ไขชื่อ/รหัสผ่าน Admin ในระบบเรียบร้อยแล้ว');
+    }catch(e){ showCustomAlert('บันทึก Admin ไม่สำเร็จ', getFirebaseErrorText(e), true); }
+    toggleLoader(false);
+  };
+
+  window.executeUserStatusUpdate = async function(uid, userKey, status){
+    try{
+      toggleLoader(true);
+      const blocked = status === 'blocked' || status === 'deleted';
+      const payload = blocked ? {status:'blocked', blocked:true, blockedAt:Date.now(), deletedAt:null} : {status:'active', blocked:false, blockedAt:null, deletedAt:null};
+      await setDoc(doc(db, getPublicPath(), uid), payload, { merge:true });
+      await setDoc(doc(db, 'users_status', userKey), payload, { merge:true });
+      await loadAdminData();
+      showCustomAlert(blocked?'บล็อกแล้ว':'ปลดบล็อกแล้ว', blocked?'ผู้ใช้นี้ยังอยู่ในรายชื่อ ข้อมูลไม่ถูกลบ และจะเข้าใช้งานไม่ได้':'ผู้ใช้นี้กลับมาใช้งานได้แล้ว');
+    }catch(e){ showCustomAlert('เปลี่ยนสถานะไม่ได้', getFirebaseErrorText(e), true); }
+    toggleLoader(false);
+  };
+  window.updateUserStatus = function(uid, userKey, status){
+    const target = (status === 'deleted' || status === 'blocked') ? 'blocked' : 'active';
+    if(target === 'blocked') window.showCustomConfirm('บล็อกผู้ใช้','บล็อกเฉพาะการใช้งาน ไม่ลบข้อมูล และผู้ใช้ที่ออนไลน์อยู่จะถูกเด้งออก ต้องการทำต่อหรือไม่?',()=>executeUserStatusUpdate(uid,userKey,target));
+    else executeUserStatusUpdate(uid,userKey,target);
+  };
+
+  const __oldLoadAdminDataBlock = window.loadAdminData;
+  window.loadAdminData = async function(){
+    const tbody = document.getElementById('admin-user-list');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center p-8 text-slate-500"><i class="fas fa-spinner fa-spin mr-2"></i>กำลังโหลดข้อมูลผู้ใช้...</td></tr>';
+    try{
+      if (!Array.isArray(adminPlanRequests) || adminPlanRequests.length === 0) { try { await window.loadPlanRequests(); } catch(e){} }
+      const querySnapshot = await getDocs(collection(db, getPublicPath()));
+      let rows=''; window.__adminUsersByUid = {};
+      querySnapshot.forEach((d)=>{
+        const u=d.data()||{}; const uid=u.uid||d.id; window.__adminUsersByUid[uid]={...u,uid};
+        const isBlocked = ['blocked','deleted'].includes(u.status) || u.blocked === true;
+        const displayKey=u.userKey||u.email||uid; const safeKey=String(displayKey).replace(/'/g,"\\'");
+        const userRequests=getRequestsForUser(u,uid); const pendingRequests=userRequests.filter(r=>r.status==='pending');
+        const roleBadge = u.role==='admin' ? '<span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-bold">Admin</span>' : (isBlocked?'<span class="bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-xs font-black">บล็อก</span>':(pendingRequests.length?'<span class="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs font-bold">มีคำขอแผน</span>':'<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs">User</span>'));
+        let planBadge='';
+        if(u.role==='admin') planBadge='<span class="text-xs text-slate-400">-</span>';
+        else if(pendingRequests.length){ const latest=pendingRequests[0]; planBadge=`<button onclick="openPlanRequestPopup('${uid}')" class="clickable-plan-cell inline-flex items-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-1.5 rounded-full text-xs font-black border border-amber-200"><i class="fas fa-bell animate-pulse"></i> ${escapeHTML(latest.planName||'คำขอแผน')}</button>`; }
+        else if(userRequests.length){ const latest=userRequests[0]; const cls=latest.status==='approved'?'bg-emerald-100 hover:bg-emerald-200 text-emerald-700 border-emerald-200':'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'; planBadge=`<button onclick="openPlanRequestPopup('${uid}')" class="clickable-plan-cell inline-flex items-center gap-2 ${cls} px-3 py-1.5 rounded-full text-xs font-bold border">${escapeHTML(u.planName||latest.planName||'ดูประวัติแผน')}</button>`; }
+        else if(u.planName) planBadge=`<span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold">${escapeHTML(u.planName)}</span>`;
+        else planBadge='<span class="text-xs text-slate-400">ยังไม่กำหนด</span>';
+        const actionBtn = u.role==='admin'?'':`<button onclick="updateUserStatus('${uid}', '${safeKey}', '${isBlocked?'active':'blocked'}')" class="${isBlocked?'text-emerald-600 bg-emerald-50 border-emerald-100':'text-rose-600 bg-rose-50 border-rose-100'} px-3 py-1 rounded-lg text-sm font-bold border"><i class="fas ${isBlocked?'fa-unlock':'fa-ban'}"></i> ${isBlocked?'ปลดบล็อก':'บล็อก'}</button>`;
+        rows += `<tr class="${isBlocked?'bg-rose-50/30':''}"><td class="font-bold text-slate-700">${escapeHTML(u.name||'ไม่มีชื่อ')}<br><span class="text-xs font-normal text-slate-400 font-mono">${escapeHTML(displayKey)}</span>${isBlocked?'<div class="text-[11px] text-rose-500 font-bold mt-1">ถูกบล็อก ข้อมูลยังคงอยู่</div>':''}</td><td class="text-center">${planBadge}</td><td class="text-center">${roleBadge}</td><td class="text-right">${actionBtn}</td></tr>`;
+      });
+      tbody.innerHTML = rows || '<tr><td colspan="4" class="text-center p-8 text-slate-400">ยังไม่มีข้อมูลผู้ใช้</td></tr>';
+    }catch(e){ tbody.innerHTML = `<tr><td colspan="4" class="text-center p-8 text-rose-500">โหลดข้อมูลผู้ใช้ไม่ได้<br><span class="text-xs text-slate-500">${escapeHTML(e.message||String(e))}</span></td></tr>`; }
+    finally{ setTimeout(updateSmartScrollbars,80); }
+  };
+
+  async function forceLogoutIfBlocked_(){
+    try{
+      if(!auth.currentUser || currentUser?.uid === 'admin-bypass') return;
+      const key = auth.currentUser.email || getUserKey(auth.currentUser);
+      const s = await getDoc(doc(db, 'users_status', key));
+      const p = await getDoc(doc(db, getPublicPath(), auth.currentUser.uid));
+      const sd=s.exists()?s.data():{}; const pd=p.exists()?p.data():{};
+      if(['blocked','deleted'].includes(sd.status)||sd.blocked===true||['blocked','deleted'].includes(pd.status)||pd.blocked===true){
+        await signOut(auth);
+        currentUser=null; isAdmin=false; localStorage.removeItem('schoolhub_admin_bypass');
+        document.getElementById('main-app')?.classList.add('hidden'); document.getElementById('auth-view')?.classList.remove('hidden');
+        showCustomAlert('บัญชีถูกบล็อก','บัญชีนี้ถูกบล็อกโดยผู้ดูแลระบบ จึงถูกออกจากระบบทันที',true);
+      }
+    }catch(e){}
+  }
+  setInterval(forceLogoutIfBlocked_, 5000);
+
+
+})();
+</script>
+
+
+<script>
+/* Patch: เมนูผู้ใช้ที่ถูกบล็อก + ไม่ลบข้อมูล + team limit + รองรับ status=deleted เดิม */
+(function(){
+  function esc(v){ try{return escapeHTML(v||'');}catch(e){return String(v||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));} }
+  function isBlockedUser(u){
+    const st = String((u && u.status) || '').toLowerCase();
+    return st === 'blocked' || st === 'deleted' || (u && u.blocked === true);
+  }
+  function userKeyOf(u, fallback){ return String((u && (u.userKey || u.email || u.uid)) || fallback || '').trim(); }
+
+  // แก้คำสั่งบล็อก: ห้ามลบเอกสารผู้ใช้เด็ดขาด ให้เปลี่ยนสถานะอย่างเดียว
+  window.executeUserStatusUpdate = async function(uid, userKey, status){
+    try{
+      if(typeof toggleLoader === 'function') toggleLoader(true);
+      const makeBlocked = status === 'blocked' || status === 'deleted';
+      const now = Date.now();
+      const payload = makeBlocked
+        ? { status:'blocked', blocked:true, blockedAt:now, deletedAt:null, updatedAt:now }
+        : { status:'active', blocked:false, blockedAt:null, deletedAt:null, unblockedAt:now, updatedAt:now };
+
+      // สำคัญ: ไม่ใช้ deleteDoc ในการบล็อกอีกต่อไป ข้อมูลรายวิชา/นักเรียน/คะแนนไม่หาย
+      if(uid && String(uid).indexOf('status_') !== 0) {
+        await setDoc(doc(db, getPublicPath(), uid), payload, { merge:true });
+      }
+      if(userKey) {
+        await setDoc(doc(db, 'users_status', userKey), payload, { merge:true });
+      }
+
+      await Promise.allSettled([
+        typeof loadAdminData === 'function' ? loadAdminData() : Promise.resolve(),
+        typeof renderBlockedUsersList === 'function' ? renderBlockedUsersList() : Promise.resolve()
+      ]);
+      showCustomAlert(
+        makeBlocked ? 'บล็อกแล้ว' : 'ปลดบล็อกแล้ว',
+        makeBlocked ? 'ผู้ใช้นี้ยังอยู่ในระบบ ข้อมูลไม่ถูกลบ และถ้ากำลังใช้งานจะถูกเด้งออก' : 'ผู้ใช้นี้กลับมาใช้งานได้แล้ว'
+      );
+    }catch(e){
+      showCustomAlert('เปลี่ยนสถานะไม่ได้', (typeof getFirebaseErrorText==='function'?getFirebaseErrorText(e):(e.message||String(e))), true);
+    }finally{
+      if(typeof toggleLoader === 'function') toggleLoader(false);
+    }
+  };
+
+  window.updateUserStatus = function(uid,userKey,status){
+    const target = (status === 'blocked' || status === 'deleted') ? 'blocked' : 'active';
+    if(target === 'blocked') {
+      showCustomConfirm('บล็อกผู้ใช้','บล็อกเฉพาะการใช้งาน ไม่ลบข้อมูลใด ๆ และผู้ใช้ที่ออนไลน์อยู่จะถูกเด้งออกทันทีเมื่อตรวจพบ ต้องการทำต่อหรือไม่?',()=>executeUserStatusUpdate(uid,userKey,target));
+    } else {
+      executeUserStatusUpdate(uid,userKey,target);
+    }
+  };
+
+  // โหลดรายชื่อผู้ใช้ถูกบล็อก: รองรับทั้ง status=blocked และ status=deleted เดิม
+  window.renderBlockedUsersList = async function(){
+    const box=document.getElementById('blocked-users-card-list');
+    if(!box) return;
+    box.innerHTML='<div class="col-span-full text-center p-10 text-slate-500"><i class="fas fa-spinner fa-spin mr-2"></i>กำลังโหลดรายชื่อผู้ใช้ที่ถูกบล็อก...</div>';
+
+    const map=new Map();
+    const errors=[];
+    try{
+      const pub=await getDocs(collection(db,getPublicPath()));
+      pub.forEach(d=>{
+        const u=d.data()||{};
+        const uid=u.uid||d.id;
+        const key=userKeyOf(u, uid);
+        if(isBlockedUser(u)) map.set(key || uid,{...u,uid,key,source:'public'});
+      });
+    }catch(e){ errors.push('public_users_directory: '+(e.message||String(e))); }
+
+    // อ่าน users_status ด้วย เพื่อดึงคนที่เคยถูกบล็อกแบบเก่า status="deleted" แม้ข้อมูล public ถูกลบไปแล้ว
+    try{
+      const st=await getDocs(collection(db,'users_status'));
+      st.forEach(d=>{
+        const sd=d.data()||{};
+        if(!isBlockedUser(sd)) return;
+        const key=d.id;
+        if(!map.has(key)) {
+          map.set(key,{uid:'status_'+key,userKey:key,email:key,name:sd.name||key,status:sd.status||'blocked',blocked:sd.blocked!==false,blockedAt:sd.blockedAt||sd.deletedAt||null,key,source:'status_only'});
+        } else {
+          map.set(key,{...map.get(key),...sd,status:sd.status||map.get(key).status,blocked:true});
+        }
+      });
+    }catch(e){ errors.push('users_status: '+(e.message||String(e))); }
+
+    const items=[...map.values()].filter(u=>u.role!=='admin' && isBlockedUser(u));
+    const badge=document.getElementById('blocked-users-badge');
+    if(badge){ badge.textContent=items.length; badge.classList.toggle('hidden',items.length===0); }
+
+    if(!items.length){
+      box.innerHTML='<div class="col-span-full text-center p-12 text-slate-400"><i class="fas fa-user-check text-4xl mb-3 block"></i>ยังไม่มีผู้ใช้ที่ถูกบล็อก</div>' + (errors.length?`<div class="col-span-full text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-2xl p-3">หมายเหตุ: อ่านบางแหล่งข้อมูลไม่ได้ ${esc(errors.join(' | '))}</div>`:'');
+      return;
+    }
+
+    box.innerHTML=items.map(u=>{
+      const key=userKeyOf(u,u.key);
+      const uid=u.uid||'';
+      const plan=u.planName||u.requestedPlanName||'ยังไม่กำหนดแผน';
+      const when=(u.blockedAt||u.deletedAt)?new Date(u.blockedAt||u.deletedAt).toLocaleString('th-TH'):'';
+      const wasDeleted=String(u.status||'')==='deleted';
+      return `<div class="rounded-3xl border border-rose-100 bg-rose-50/40 p-5 shadow-sm">
+        <div class="flex items-start gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0"><i class="fas fa-user-lock"></i></div>
+          <div class="min-w-0 flex-1">
+            <div class="font-black text-slate-800 truncate">${esc(u.name||'ไม่มีชื่อ')}</div>
+            <div class="text-xs text-slate-500 font-mono break-all">${esc(key)}</div>
+            <div class="mt-2 flex flex-wrap gap-2 text-[11px] font-bold">
+              <span class="px-2 py-1 rounded-full bg-rose-100 text-rose-700">ถูกบล็อก</span>
+              ${wasDeleted?'<span class="px-2 py-1 rounded-full bg-amber-100 text-amber-700">สถานะเก่า: deleted</span>':''}
+              <span class="px-2 py-1 rounded-full bg-slate-100 text-slate-600">${esc(plan)}</span>
+            </div>
+            ${when?`<div class="text-[11px] text-slate-400 mt-2">บล็อกเมื่อ ${esc(when)}</div>`:''}
+            ${u.source==='status_only'?'<div class="text-[11px] text-amber-600 mt-2">พบจาก users_status: ข้อมูลหลักอาจเคยถูกลบก่อนหน้า แต่สถานะยังปลดบล็อกได้</div>':'<div class="text-[11px] text-emerald-600 mt-2">ข้อมูลผู้ใช้ยังคงอยู่ ไม่ได้ลบ</div>'}
+          </div>
+        </div>
+        <button onclick="updateUserStatus('${esc(uid).replace(/'/g,'\&#39;')}', '${esc(key).replace(/'/g,'\&#39;')}', 'active')" class="mt-4 w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-3 font-black"><i class="fas fa-unlock mr-1"></i> ปลดบล็อก</button>
+      </div>`;
+    }).join('') + (errors.length?`<div class="col-span-full text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-2xl p-3">หมายเหตุ: อ่านบางแหล่งข้อมูลไม่ได้ ${esc(errors.join(' | '))}</div>`:'');
+  };
+
+  // ให้ตารางผู้ใช้หลักแสดง deleted เป็นบล็อก ไม่ซ่อน และปุ่มเป็นปลดบล็อก
+  const oldLoad=window.loadAdminData;
+  if(typeof oldLoad==='function'){
+    window.loadAdminData=async function(){
+      await oldLoad.apply(this,arguments);
+      setTimeout(()=>{
+        try{
+          // ถ้าฟังก์ชันเดิมแสดง deleted หาย ให้โหลดเมนูบล็อกซ้ำให้เห็นแน่นอน
+          if(typeof renderBlockedUsersList==='function') renderBlockedUsersList();
+        }catch(e){}
+      },80);
+    };
+  }
+
+  // เด้งผู้ใช้ที่ถูกบล็อกออกทันที โดยไม่ลบข้อมูล
+  async function forceLogoutIfBlocked(){
+    try{
+      if(!auth?.currentUser || currentUser?.uid==='admin-bypass') return;
+      const key=auth.currentUser.email || (typeof getUserKey==='function'?getUserKey(auth.currentUser):auth.currentUser.uid);
+      const uid=auth.currentUser.uid;
+      const checks=[];
+      if(key) checks.push(getDoc(doc(db,'users_status',key)));
+      if(uid) checks.push(getDoc(doc(db,getPublicPath(),uid)));
+      const rs=await Promise.allSettled(checks);
+      const blocked=rs.some(r=>r.status==='fulfilled' && r.value.exists && r.value.exists() && isBlockedUser(r.value.data()));
+      if(blocked){
+        await signOut(auth);
+        currentUser=null; isAdmin=false; localStorage.removeItem('schoolhub_admin_bypass');
+        document.getElementById('main-app')?.classList.add('hidden'); document.getElementById('auth-view')?.classList.remove('hidden');
+        showCustomAlert('บัญชีถูกบล็อก','บัญชีนี้ถูกบล็อกโดยผู้ดูแลระบบ จึงถูกออกจากระบบทันที',true);
+      }
+    }catch(e){}
+  }
+  setInterval(forceLogoutIfBlocked,4000);
+
+  // แสดงจำนวนสมาชิกทีมในแผน
+  const oldSumm=window.planFeatureSummary;
+  window.planFeatureSummary=function(p){
+    const base=typeof oldSumm==='function'?oldSumm(p):'';
+    const limit=Math.max(1,Number(p?.teamMemberLimit||p?.maxTeamMembers||1));
+    const team=p?.allowTeam?`ใช้แบบทีมได้ ${limit} คน`:'ใช้คนเดียว';
+    return base && base.includes('ทีม') ? base : [base,team].filter(Boolean).join(' • ');
+  };
+})();
+</script>
+
 </body>
 </html>
