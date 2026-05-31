@@ -1251,7 +1251,7 @@
             </div>
 
             <!-- User Profile Area in Sidebar -->
-            <div class="p-6 border-b border-slate-100 bg-slate-50/50">
+            <div class="p-6 border-b border-slate-100 bg-slate-50/50 cursor-pointer hover:bg-indigo-50/60 transition" onclick="openUserProfileSettings()" title="โปรไฟล์ผู้ใช้งาน">
                 <div class="flex items-center gap-3">
                     <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-primary to-purple-500 text-white flex items-center justify-center text-xl font-bold shadow-md" id="user-avatar-initial">U</div>
                     <div class="overflow-hidden">
@@ -1324,6 +1324,9 @@
                     <button onclick="toggleMobileMenu()" class="p-2 bg-white rounded-lg border shadow-sm"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="p-4 overflow-y-auto flex-1 space-y-2">
+                    <button onclick="openUserProfileSettings(); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-left bg-indigo-50 text-primary font-bold border border-indigo-100">
+                        <i class="fas fa-user-circle text-lg"></i> โปรไฟล์ผู้ใช้งาน
+                    </button>
                     <button id="mobile-nav-dashboard" onclick="goToHome(); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left bg-indigo-50 text-primary font-medium"><i class="fas fa-border-all"></i> ห้องเรียนของฉัน</button>
                     <button id="mobile-nav-students" onclick="openStudentsManager(); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-slate-700 hover:bg-slate-50 font-medium"><i class="fas fa-users"></i> ฐานข้อมูลนักเรียน</button>
                     <button id="mobile-nav-user-plans" onclick="openUserPlanSelector(); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-slate-700 hover:bg-slate-50 font-medium"><i class="fas fa-layer-group"></i> เลือก / เปลี่ยนแผน</button>
@@ -1334,6 +1337,54 @@
                         <button onclick="switchView('admin-plans'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-emerald-600 bg-emerald-50 font-medium"><i class="fas fa-layer-group"></i> แผนการใช้งาน</button>
                     </div>
                     <button onclick="doLogout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-rose-600 font-medium mt-8 bg-rose-50"><i class="fas fa-sign-out-alt"></i> ออกจากระบบ</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Profile Settings Modal -->
+        <div id="user-profile-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[180] hidden flex items-center justify-center p-4 fade-in">
+            <div class="bg-white rounded-[2rem] w-full max-w-md shadow-2xl overflow-hidden">
+                <div class="p-6 border-b border-slate-100 bg-indigo-50/60 flex justify-between items-start gap-4">
+                    <div>
+                        <h3 class="text-2xl font-black text-slate-900"><i class="fas fa-user-circle text-primary mr-2"></i>โปรไฟล์ผู้ใช้งาน</h3>
+                        <p class="text-sm text-slate-500 mt-1">แก้ชื่อที่แสดงในระบบ หรือขอรีเซ็ตรหัสผ่าน</p>
+                    </div>
+                    <button onclick="closeModal('user-profile-modal')" class="w-10 h-10 rounded-xl bg-white text-slate-500 hover:text-rose-500 border"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5">ชื่อที่แสดง</label>
+                        <input id="profile-display-name-input" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-primary" placeholder="ชื่อ - นามสกุล">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5">อีเมล</label>
+                        <input id="profile-email-input" type="text" class="w-full bg-slate-100 border border-slate-200 rounded-2xl px-4 py-3 text-slate-500" readonly>
+                    </div>
+                    <div class="grid grid-cols-1 gap-3 pt-2">
+                        <button onclick="saveUserProfileChanges()" class="w-full bg-primary hover:bg-indigo-700 text-white font-black py-3.5 rounded-2xl shadow-lg shadow-indigo-100 transition"><i class="fas fa-save mr-1"></i> บันทึกชื่อ</button>
+                        <button onclick="requestOwnPasswordReset()" class="w-full bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold py-3.5 rounded-2xl border border-amber-200 transition"><i class="fas fa-key mr-1"></i> ขอรีเซ็ตรหัสผ่าน</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin First Setup Modal -->
+        <div id="admin-first-setup-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[190] hidden flex items-center justify-center p-4 fade-in">
+            <div class="bg-white rounded-[2rem] w-full max-w-md shadow-2xl overflow-hidden">
+                <div class="p-6 border-b border-slate-100 bg-rose-50/70">
+                    <h3 class="text-2xl font-black text-slate-900"><i class="fas fa-user-shield text-rose-500 mr-2"></i>ตั้งค่า Admin ครั้งแรก</h3>
+                    <p class="text-sm text-slate-500 mt-1">ครั้งแรกที่เข้า Admin ให้ตั้งชื่อแอดมินและรหัสผ่านใหม่</p>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5">ชื่อแอดมิน</label>
+                        <input id="admin-setup-name" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none focus:ring-4 focus:ring-rose-100 focus:border-rose-400" placeholder="เช่น Administrator">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5">รหัสผ่าน Admin ใหม่</label>
+                        <input id="admin-setup-password" type="password" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none focus:ring-4 focus:ring-rose-100 focus:border-rose-400" placeholder="อย่างน้อย 6 ตัวอักษร">
+                    </div>
+                    <button onclick="saveAdminFirstSetup()" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-black py-3.5 rounded-2xl shadow-lg shadow-rose-100 transition"><i class="fas fa-check mr-1"></i> บันทึกและใช้งาน Admin</button>
                 </div>
             </div>
         </div>
@@ -1450,6 +1501,17 @@
 
                 <!-- View 3: Inside a Course -->
                 <div id="view-course-detail" class="view-section hidden fade-in h-full flex flex-col">
+
+                    <!-- Mobile-only course menu: แสดงเฉพาะโทรศัพท์ เหนือตารางสรุปภาพรวมรายวิชา -->
+                    <div id="mobile-course-submenu" class="md:hidden bg-white rounded-[1.5rem] border border-indigo-100 shadow-sm p-3 mb-4">
+                        <div id="mobile-course-name" class="text-xs font-black text-indigo-500 px-1 mb-2 truncate">เมนูประจำรายวิชา</div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="switchCourseTab('overview')" class="mobile-course-tab-btn course-tab-btn flex items-center justify-center gap-2 px-3 py-3 rounded-2xl text-sm font-bold bg-indigo-50 text-primary border border-indigo-100" data-tab="overview"><i class="fas fa-chart-pie"></i> ภาพรวม</button>
+                            <button onclick="switchCourseTab('attendance')" class="mobile-course-tab-btn course-tab-btn flex items-center justify-center gap-2 px-3 py-3 rounded-2xl text-sm font-bold bg-slate-50 text-slate-700 border border-slate-100" data-tab="attendance"><i class="fas fa-calendar-check"></i> เช็คชื่อ</button>
+                            <button onclick="switchCourseTab('scores')" class="mobile-course-tab-btn course-tab-btn flex items-center justify-center gap-2 px-3 py-3 rounded-2xl text-sm font-bold bg-slate-50 text-slate-700 border border-slate-100" data-tab="scores"><i class="fas fa-star"></i> คะแนน</button>
+                            <button onclick="openPlanModalForCurrentCourse()" class="flex items-center justify-center gap-2 px-3 py-3 rounded-2xl text-sm font-bold bg-slate-50 text-slate-700 border border-slate-100"><i class="fas fa-cog"></i> แผนคะแนน</button>
+                        </div>
+                    </div>
 
                     <!-- Sub-view: Course Overview (Summary Table) -->
                     <div id="course-tab-overview" class="course-subview">
@@ -2013,7 +2075,7 @@
 
 <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -3274,11 +3336,21 @@ async function submitPlanRequest(planId){
             e.preventDefault();
             const email = document.getElementById('login-email').value.trim();
             const pass = document.getElementById('login-pass').value;
-            if(!email || !pass) return showCustomAlert("ผิดพลาด", "กรุณากรอกอีเมลและรหัสผ่าน", true);
 
-            if(email.toLowerCase() === 'admin' && pass === '65030900') {
-                localStorage.setItem('schoolhub_admin_bypass', 'true'); enterAdminMode(); return;
+            // Admin shortcut: กรอกอีเมลว่า Admin เพื่อเข้าโหมดแอดมิน
+            // ครั้งแรกเข้าได้ทันที แล้วระบบจะบังคับตั้งชื่อและรหัสผ่านใหม่
+            if(email.toLowerCase() === 'admin') {
+                const savedAdminPass = localStorage.getItem('schoolhub_admin_password') || '';
+                if(savedAdminPass && pass !== savedAdminPass) {
+                    return showCustomAlert("รหัสผ่าน Admin ไม่ถูกต้อง", "กรุณากรอกรหัสผ่าน Admin ที่ตั้งไว้", true);
+                }
+                localStorage.setItem('schoolhub_admin_bypass', 'true');
+                await enterAdminMode();
+                if(!savedAdminPass) setTimeout(() => openAdminFirstSetupModal(), 300);
+                return;
             }
+
+            if(!email || !pass) return showCustomAlert("ผิดพลาด", "กรุณากรอกอีเมลและรหัสผ่าน", true);
 
             toggleLoader(true);
             try {
@@ -3354,7 +3426,7 @@ async function submitPlanRequest(planId){
                         handleCodeInApp: false
                     };
                     await sendEmailVerification(userCred.user, actionCodeSettings);
-                    sendMailViaWebApp({
+                    await sendMailViaWebApp({
                         to: email,
                         name: name,
                         type: 'verify',
@@ -3447,9 +3519,10 @@ async function submitPlanRequest(planId){
         }
 
         async function enterAdminMode() {
-            currentUser = { uid: 'admin-bypass', email: 'Admin' }; isAdmin = true;
+            const adminName = localStorage.getItem('schoolhub_admin_name') || 'Administrator';
+            currentUser = { uid: 'admin-bypass', email: 'Admin', displayName: adminName }; isAdmin = true;
             document.getElementById('landing-view').classList.add('hidden'); document.getElementById('auth-view').classList.add('hidden'); document.getElementById('main-app').classList.remove('hidden');
-            document.getElementById('user-display-name').textContent = 'Administrator'; document.getElementById('user-display-email').textContent = 'ระบบควบคุม';
+            document.getElementById('user-display-name').textContent = adminName; document.getElementById('user-display-email').textContent = 'Admin';
             setAdminNavigationMode(true);
             try {
                 toggleLoader(true);
@@ -3464,6 +3537,101 @@ async function submitPlanRequest(planId){
                 showCustomAlert('โหลดแอดมินไม่ครบ', getFirebaseErrorText(error), true);
             }
         }
+
+
+        window.openUserProfileSettings = () => {
+            if (!currentUser) return showCustomAlert('ยังไม่ได้เข้าสู่ระบบ', 'กรุณาเข้าสู่ระบบก่อนใช้งานโปรไฟล์', true);
+            const nameInput = document.getElementById('profile-display-name-input');
+            const emailInput = document.getElementById('profile-email-input');
+            if (nameInput) nameInput.value = currentUser.displayName || localStorage.getItem('schoolhub_admin_name') || '';
+            if (emailInput) emailInput.value = currentUser.email || 'Admin';
+            document.getElementById('user-profile-modal')?.classList.remove('hidden');
+        };
+
+        window.saveUserProfileChanges = async () => {
+            const newName = (document.getElementById('profile-display-name-input')?.value || '').trim();
+            if (!newName) return showCustomAlert('กรุณากรอกชื่อ', 'ชื่อที่แสดงห้ามว่าง', true);
+            try {
+                toggleLoader(true);
+                if (currentUser?.uid === 'admin-bypass') {
+                    localStorage.setItem('schoolhub_admin_name', newName);
+                    currentUser.displayName = newName;
+                } else if (auth.currentUser) {
+                    await updateProfile(auth.currentUser, { displayName: newName });
+                    currentUser.displayName = newName;
+                    await addUserToDirectory(auth.currentUser, newName, isAdmin ? 'admin' : 'user');
+                }
+                const nameEl = document.getElementById('user-display-name');
+                const avatarEl = document.getElementById('user-avatar-initial');
+                if (nameEl) nameEl.textContent = newName;
+                if (avatarEl) avatarEl.textContent = newName.charAt(0).toUpperCase();
+                closeModal('user-profile-modal');
+                showCustomAlert('บันทึกสำเร็จ', 'เปลี่ยนชื่อโปรไฟล์เรียบร้อยแล้ว');
+            } catch (err) {
+                showCustomAlert('บันทึกชื่อไม่สำเร็จ', getFirebaseErrorText(err), true);
+            } finally { toggleLoader(false); }
+        };
+
+        window.requestOwnPasswordReset = async () => {
+            if (!currentUser || currentUser.uid === 'admin-bypass') {
+                return showCustomAlert('ไม่สามารถรีเซ็ตผ่านอีเมลได้', 'บัญชี Admin แบบพิเศษให้เปลี่ยนรหัสผ่านในหน้าตั้งค่า Admin ครั้งแรก/ตั้งค่าใหม่ในเครื่องนี้', true);
+            }
+            const email = currentUser.email || '';
+            if (!email) return showCustomAlert('ไม่พบอีเมล', 'บัญชีนี้ไม่มีอีเมลสำหรับรีเซ็ตรหัสผ่าน', true);
+            try {
+                toggleLoader(true);
+                const resetUrl = new URL('reset-password.html', window.location.href);
+                resetUrl.searchParams.set('schoolhubReset', '1');
+                resetUrl.searchParams.set('email', email);
+                const token = makeToken();
+                resetUrl.searchParams.set('token', token);
+                await sendMailViaWebApp({
+                    to: email,
+                    name: currentUser.displayName || email,
+                    type: 'reset',
+                    subject: 'SchoolHub - รีเซ็ตรหัสผ่าน',
+                    message: `สวัสดี ${currentUser.displayName || email}
+
+กรุณากดลิงก์ด้านล่างเพื่อรีเซ็ตรหัสผ่าน:
+${resetUrl.toString()}
+
+ลิงก์หมดอายุใน 1 ชั่วโมง
+
+— SchoolHub`,
+                    extra: { link: resetUrl.toString(), token }
+                });
+                closeModal('user-profile-modal');
+                showCustomAlert('ส่งลิงก์แล้ว', `ส่งลิงก์รีเซ็ตรหัสผ่านไปที่ ${email} แล้ว`);
+            } catch (err) {
+                showCustomAlert('ส่งลิงก์ไม่สำเร็จ', err.message || String(err), true);
+            } finally { toggleLoader(false); }
+        };
+
+        window.openAdminFirstSetupModal = () => {
+            const modal = document.getElementById('admin-first-setup-modal');
+            if (!modal) return;
+            document.getElementById('admin-setup-name').value = localStorage.getItem('schoolhub_admin_name') || 'Administrator';
+            document.getElementById('admin-setup-password').value = '';
+            modal.classList.remove('hidden');
+        };
+
+        window.saveAdminFirstSetup = () => {
+            const name = (document.getElementById('admin-setup-name')?.value || '').trim();
+            const pass = document.getElementById('admin-setup-password')?.value || '';
+            if (!name) return showCustomAlert('กรุณากรอกชื่อแอดมิน', 'ชื่อแอดมินห้ามว่าง', true);
+            if (!pass || pass.length < 6) return showCustomAlert('รหัสผ่านสั้นเกินไป', 'รหัสผ่าน Admin ต้องมีอย่างน้อย 6 ตัวอักษร', true);
+            localStorage.setItem('schoolhub_admin_name', name);
+            localStorage.setItem('schoolhub_admin_password', pass);
+            if (currentUser?.uid === 'admin-bypass') currentUser.displayName = name;
+            const nameEl = document.getElementById('user-display-name');
+            const emailEl = document.getElementById('user-display-email');
+            const avatarEl = document.getElementById('user-avatar-initial');
+            if (nameEl) nameEl.textContent = name;
+            if (emailEl) emailEl.textContent = 'Admin';
+            if (avatarEl) avatarEl.textContent = name.charAt(0).toUpperCase();
+            closeModal('admin-first-setup-modal');
+            showCustomAlert('ตั้งค่า Admin สำเร็จ', 'ครั้งต่อไปให้กรอกอีเมลว่า Admin และกรอกรหัสผ่าน Admin ที่ตั้งไว้');
+        };
 
         window.switchView = (viewId) => {
             document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
@@ -3514,6 +3682,8 @@ async function submitPlanRequest(planId){
 
             document.getElementById('page-title').textContent = course.name;
             document.getElementById('page-subtitle').innerHTML = `<span class="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded text-xs font-bold mr-2">${course.code}</span> จัดการข้อมูลรายวิชานี้`;
+            const mobileCourseName = document.getElementById('mobile-course-name');
+            if (mobileCourseName) mobileCourseName.textContent = `เมนูประจำรายวิชา: ${course.code} ${course.name}`;
 
             document.getElementById('header-actions').innerHTML = `
                 <button onclick="goToHome()" class="bg-white border text-slate-600 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-slate-50 transition shadow-sm">
@@ -3530,8 +3700,12 @@ async function submitPlanRequest(planId){
             document.getElementById(`course-tab-${tabId}`).classList.remove('hidden');
 
             document.querySelectorAll('.course-tab-btn').forEach(btn => {
-                btn.classList.remove('bg-indigo-50', 'text-primary', 'font-bold');
-                if(btn.dataset.tab === tabId) btn.classList.add('bg-indigo-50', 'text-primary', 'font-bold');
+                btn.classList.remove('bg-indigo-50', 'text-primary', 'font-bold', 'border-indigo-100');
+                if(btn.classList.contains('mobile-course-tab-btn')) btn.classList.add('bg-slate-50', 'text-slate-700');
+                if(btn.dataset.tab === tabId) {
+                    btn.classList.remove('bg-slate-50', 'text-slate-700');
+                    btn.classList.add('bg-indigo-50', 'text-primary', 'font-bold', 'border-indigo-100');
+                }
             });
 
             if(tabId === 'overview') renderCourseOverview();
