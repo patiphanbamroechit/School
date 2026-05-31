@@ -2013,7 +2013,7 @@
 
 <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -3290,15 +3290,7 @@ async function submitPlanRequest(planId){
                             toggleLoader(true);
                             try {
                                 const tmpCred = await signInWithEmailAndPassword(auth, email, pass);
-                                const { sendEmailVerification } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
-                                const idToken = await tmpCred.user.getIdToken(true);
-                                await sendMailViaWebApp({
-                                    to: email,
-                                    type: 'verify',
-                                    subject: 'ส่งลิงก์ยืนยัน SchoolHub ใหม่แล้ว',
-                                    message: `ระบบส่งลิงก์ยืนยันอีเมลใหม่ให้ ${email} แล้ว กรุณาตรวจสอบอีเมลและกดลิงก์ยืนยันก่อนเข้าสู่ระบบ`,
-                                    extra: { idToken, continueUrl: window.location.href }
-                                });
+                                await sendEmailVerification(tmpCred.user);
                                 await signOut(auth);
                                 showCustomAlert("ส่งลิงก์ใหม่แล้ว", "ตรวจสอบอีเมล " + email + " แล้วกดลิงก์ยืนยัน");
                             } catch(e2) { showCustomAlert("ส่งไม่ได้", getFirebaseErrorText(e2), true); }
@@ -3331,26 +3323,13 @@ async function submitPlanRequest(planId){
             } catch(e){}
 
             try {
-                const { sendEmailVerification } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
                 const userCred = await createUserWithEmailAndPassword(auth, email, pass);
                 await updateProfile(userCred.user, { displayName: name });
                 await addUserToDirectory(userCred.user, name, 'user');
                 await setDoc(doc(db, `users_status`, email), { status: 'active', deletedAt: null }, { merge: true });
                 // ส่ง email verification
                 try {
-                    const actionCodeSettings = {
-                        url: window.location.href,
-                        handleCodeInApp: false
-                    };
-                    const idToken = await userCred.user.getIdToken(true);
-                    await sendMailViaWebApp({
-                        to: email,
-                        name: name,
-                        type: 'verify',
-                        subject: 'ยืนยันการสมัครสมาชิก SchoolHub',
-                        message: `สวัสดี ${name || email}\n\nระบบได้รับการสมัครสมาชิก SchoolHub แล้ว กรุณากดลิงก์ยืนยันอีเมลก่อนเข้าสู่ระบบ\n\nอีเมล: ${email}`,
-                        extra: { idToken, continueUrl: window.location.href }
-                    });
+                    await sendEmailVerification(userCred.user);
                 } catch(verifyErr) { throw verifyErr; }
                 // Sign out แล้วแจ้งให้ยืนยันเมลก่อน
                 await signOut(auth);
