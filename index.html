@@ -1019,32 +1019,21 @@
 </style>
 
 
+
 <style>
-/* SchoolHub UserStats Email ID + Dashboard Clean + Mini Calendar Popup */
+/* SchoolHub Email Only UserStats Strict Final */
 #gd-summary-json,
 #gd-summary-json-container {
     display: none !important;
 }
-
-/* Mini calendar popup */
-#schoolhub-mini-calendar-backdrop.hidden {
-    display: none !important;
-}
-#schoolhub-mini-calendar-backdrop:not(.hidden) {
-    display: flex !important;
-}
+#schoolhub-mini-calendar-backdrop.hidden { display: none !important; }
+#schoolhub-mini-calendar-backdrop:not(.hidden) { display: flex !important; }
 #schoolhub-mini-calendar {
     width: min(360px, calc(100vw - 32px));
     border: 1px solid rgba(226,232,240,.95);
     box-shadow: 0 24px 70px rgba(15,23,42,.18);
 }
-#schoolhub-mini-calendar button {
-    user-select: none;
-}
-.schoolhub-mini-cal-day {
-    width: 38px;
-    height: 38px;
-}
+.schoolhub-mini-cal-day { width: 38px; height: 38px; }
 .schoolhub-mini-cal-day.is-selected {
     background: #4f46e5 !important;
     color: white !important;
@@ -7958,1071 +7947,6 @@ window.loadAdminGlobalDashboard = async function() {
 </script>
 
 
-<script type="module">
-/* SchoolHub Stats Count Fix: attendance nested dates + coursePlans assignments
-   แก้การนับ:
-   - attendance เป็น map เช่น attendance.{courseId/timestamp}.{dateKey} จึงต้องนับชั้นวันที่ย่อย
-   - totalAssignments ให้นับจาก coursePlans เป็นหลัก
-   - อ่านจาก users/{userKey}/school_data/state
-   - เขียน user_stats และ global_stats/summary ใหม่
-*/
-import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, collection, getDocs, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-
-const statsCountFixConfig = {
-    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
-    authDomain: "schoolhub-5677d.firebaseapp.com",
-    projectId: "schoolhub-5677d",
-    storageBucket: "schoolhub-5677d.firebasestorage.app",
-    messagingSenderId: "803574136389",
-    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
-    measurementId: "G-ME7E38XNX6"
-};
-
-const statsCountFixApp = getApps().length ? getApp() : initializeApp(statsCountFixConfig);
-const statsCountFixDb = getFirestore(statsCountFixApp);
-const statsCountFixAuth = getAuth(statsCountFixApp);
-
-let currentStatsUser = null;
-
-function n(v) {
-    const x = Number(v);
-    return Number.isFinite(x) ? x : 0;
-}
-
-function values(v) {
-    if (Array.isArray(v)) return v;
-    if (v && typeof v === 'object') return Object.values(v);
-    return [];
-}
-
-function objectKeys(v) {
-    return v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v) : [];
-}
-
-function countAny(v) {
-    if (!v) return 0;
-    if (Array.isArray(v)) return v.length;
-    if (typeof v === 'object') return Object.keys(v).length;
-    return 0;
-}
-
-/*
- attendance ตัวอย่าง:
- attendance: {
-   "1780116499482": {
-      "2026-05-31": {...},
-      "2026-06-01": {...}
-   }
- }
- ต้องนับ 2 ไม่ใช่ 1
-*/
-function countAttendanceNested(attendance) {
-    if (!attendance) return 0;
-
-    if (Array.isArray(attendance)) return attendance.length;
-
-    if (typeof attendance !== 'object') return 0;
-
-    let total = 0;
-
-    Object.values(attendance).forEach(group => {
-        if (!group) return;
-
-        if (Array.isArray(group)) {
-            total += group.length;
-            return;
-        }
-
-        if (typeof group === 'object') {
-            const keys = Object.keys(group);
-
-            // ถ้าด้านในเป็นวันที่/record ย่อย ให้นับ key ย่อย
-            // เช่น "2026-05-31", "31/05/2569", timestamp date key
-            if (keys.length) {
-                total += keys.length;
-            } else {
-                total += 1;
-            }
-            return;
-        }
-
-        total += 1;
-    });
-
-    return total;
-}
-
-function countCoursePlans(coursePlans) {
-    if (!coursePlans) return 0;
-
-    // ถ้าเป็น array ของงาน
-    if (Array.isArray(coursePlans)) return coursePlans.length;
-
-    if (typeof coursePlans !== 'object') return 0;
-
-    let total = 0;
-
-    Object.values(coursePlans).forEach(plan => {
-        if (!plan) return;
-
-        if (Array.isArray(plan)) {
-            total += plan.length;
-            return;
-        }
-
-        if (typeof plan === 'object') {
-            // รูปแบบที่เป็นไปได้: coursePlans.{courseId}.{weekId/taskId}
-            // นับชั้นย่อยเป็นจำนวนงาน
-            const innerKeys = Object.keys(plan);
-
-            // ถ้าใน plan มี arrays ที่เป็นงาน ให้รวม array เหล่านั้น
-            let arraySum = 0;
-            ['items','assignments','tasks','works','plans','scoreItems'].forEach(k => {
-                if (Array.isArray(plan[k])) arraySum += plan[k].length;
-                else if (plan[k] && typeof plan[k] === 'object') arraySum += Object.keys(plan[k]).length;
-            });
-
-            if (arraySum > 0) {
-                total += arraySum;
-            } else {
-                total += innerKeys.length;
-            }
-        }
-    });
-
-    return total;
-}
-
-function getCourses(state) {
-    return values(state?.courses || state?.courseList || state?.coursesMap);
-}
-
-function getStudents(state) {
-    return values(state?.students || state?.studentList || state?.masterStudents || state?.studentsMap);
-}
-
-function countStateCorrectly(state) {
-    const courses = getCourses(state);
-    const students = getStudents(state);
-
-    // เช็คชื่อ: ใช้ attendance แบบ nested ก่อน
-    let attendanceRecords = 0;
-    attendanceRecords += countAttendanceNested(state?.attendance);
-
-    // fallback เผื่อชื่ออื่น
-    if (!attendanceRecords) {
-        ['attendanceRecords','attendances','checkIns','checkins'].forEach(k => {
-            attendanceRecords += countAttendanceNested(state?.[k]);
-        });
-    }
-
-    // งาน: ให้นับจาก coursePlans เป็นหลัก
-    let assignments = countCoursePlans(state?.coursePlans);
-
-    // fallback เผื่อยังไม่มี coursePlans
-    if (!assignments) {
-        ['assignments','works','tasks','scoreItems'].forEach(k => {
-            assignments += countAny(state?.[k]);
-        });
-        courses.forEach(course => {
-            ['assignments','works','tasks','scoreItems'].forEach(k => {
-                assignments += countAny(course?.[k]);
-            });
-        });
-    }
-
-    let scoreItems = 0;
-    ['scores','scoreRecords','scoreList','studentScores'].forEach(k => {
-        scoreItems += countAny(state?.[k]);
-    });
-    courses.forEach(course => {
-        ['scores','scoreRecords','scoreList','studentScores'].forEach(k => {
-            scoreItems += countAny(course?.[k]);
-        });
-    });
-
-    return {
-        courses: courses.length,
-        students: students.length,
-        attendanceRecords,
-        assignments,
-        scoreItems
-    };
-}
-
-async function readState(userKey) {
-    if (!userKey) return null;
-    try {
-        const snap = await getDoc(doc(statsCountFixDb, 'users', String(userKey), 'school_data', 'state'));
-        return snap.exists() ? (snap.data() || {}) : null;
-    } catch (error) {
-        console.warn('อ่าน state ไม่สำเร็จ:', userKey, error);
-        return null;
-    }
-}
-
-function candidateKeysFromUser(user) {
-    return Array.from(new Set([
-        window.currentUserEmail,
-        window.userEmail,
-        user?.email,
-        user?.uid
-    ].filter(Boolean).map(String)));
-}
-
-async function findStateForCurrentUser() {
-    const user = currentStatsUser || statsCountFixAuth.currentUser || window.currentUser || {};
-    const keys = candidateKeysFromUser(user);
-    for (const key of keys) {
-        const state = await readState(key);
-        if (state) return { key, state };
-    }
-    return { key: keys[0] || '', state: null };
-}
-
-async function syncCurrentUserStatsCorrected() {
-    const user = currentStatsUser || statsCountFixAuth.currentUser || window.currentUser || {};
-    const found = await findStateForCurrentUser();
-    if (!found.state || !found.key) return null;
-
-    const counts = countStateCorrectly(found.state);
-    const statKey = user.uid || user.email || found.key;
-
-    const payload = {
-        uid: user.uid || '',
-        email: user.email || window.currentUserEmail || (String(found.key).includes('@') ? found.key : ''),
-        displayName: user.displayName || window.currentUserName || '',
-        role: window.currentUserRole || window.userRole || 'teacher',
-        status: window.currentUserStatus || 'active',
-        stateUserKey: found.key,
-        courses: counts.courses,
-        students: counts.students,
-        attendanceRecords: counts.attendanceRecords,
-        assignments: counts.assignments,
-        scoreItems: counts.scoreItems,
-        updatedAt: serverTimestamp()
-    };
-
-    await setDoc(doc(statsCountFixDb, 'user_stats', String(statKey)), payload, { merge: true });
-    return payload;
-}
-
-function isActiveUser(d) {
-    const status = String(d?.status || '').toLowerCase();
-    return status !== 'blocked' && status !== 'deleted' && d?.blocked !== true;
-}
-
-function isAdminUser(d) {
-    const role = String(d?.role || '').toLowerCase();
-    return role === 'admin' || d?.isAdmin === true;
-}
-
-async function rebuildGlobalSummaryFromUserStatsCorrected() {
-    let totalTeachers = 0;
-    let totalUsers = 0;
-    let totalCourses = 0;
-    let totalStudents = 0;
-    let totalAttendanceRecords = 0;
-    let totalAssignments = 0;
-    let totalScoreItems = 0;
-    let countedUserStats = 0;
-
-    const snap = await getDocs(collection(statsCountFixDb, 'user_stats'));
-    snap.forEach(docSnap => {
-        const d = docSnap.data() || {};
-        if (!isActiveUser(d)) return;
-
-        countedUserStats += 1;
-        totalUsers += 1;
-        if (!isAdminUser(d)) totalTeachers += 1;
-
-        totalCourses += n(d.courses ?? d.courseCount ?? d.totalCourses);
-        totalStudents += n(d.students ?? d.studentCount ?? d.totalStudents);
-        totalAttendanceRecords += n(d.attendanceRecords ?? d.attendanceCount ?? d.totalAttendanceRecords);
-        totalAssignments += n(d.assignments ?? d.assignmentCount ?? d.totalAssignments);
-        totalScoreItems += n(d.scoreItems ?? d.scoreCount ?? d.totalScoreItems);
-    });
-
-    const summary = {
-        totalTeachers,
-        totalUsers,
-        totalCourses,
-        totalStudents,
-        totalAttendanceRecords,
-        totalAssignments,
-        totalScoreItems,
-        countedUserStats,
-        updatedAt: serverTimestamp()
-    };
-
-    await setDoc(doc(statsCountFixDb, 'global_stats', 'summary'), summary, { merge: true });
-
-    if (typeof window.loadAdminGlobalDashboard === 'function') window.loadAdminGlobalDashboard();
-    if (typeof window.loadGlobalSiteStats === 'function') window.loadGlobalSiteStats();
-
-    return summary;
-}
-
-async function syncAndRebuildCorrected() {
-    try {
-        if (typeof window.toggleLoader === 'function') window.toggleLoader(true);
-        await syncCurrentUserStatsCorrected();
-        await rebuildGlobalSummaryFromUserStatsCorrected();
-    } catch (error) {
-        console.error('sync corrected stats failed:', error);
-    } finally {
-        if (typeof window.toggleLoader === 'function') window.toggleLoader(false);
-    }
-}
-
-window.__schoolhubCountAttendanceNested = countAttendanceNested;
-window.__schoolhubCountCoursePlans = countCoursePlans;
-window.__schoolhubSyncCorrectedStats = syncAndRebuildCorrected;
-window.__schoolhubCentralStatsRebuild = syncAndRebuildCorrected;
-window.__schoolhubSyncAndRebuildStats = syncAndRebuildCorrected;
-
-document.addEventListener('click', function(e) {
-    const text = (e.target?.innerText || e.target?.textContent || '').toString();
-    if (/บันทึก|เพิ่ม|ลบ|เช็คชื่อ|คะแนน|งาน|รีเฟรช|อัปเดตสถิติ/.test(text)) {
-        setTimeout(syncAndRebuildCorrected, 1300);
-    }
-}, true);
-
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(syncAndRebuildCorrected, 2200);
-});
-
-onAuthStateChanged(statsCountFixAuth, user => {
-    currentStatsUser = user;
-    if (user) setTimeout(syncAndRebuildCorrected, 1600);
-});
-</script>
-
-
-<script type="module">
-/* SchoolHub Stats Full Rebuild From Users State
-   ใช้ข้อมูลจริงจาก users/{email}/school_data/state
-   - attendance แบบ A: attendance.{courseId/timestamp}.{dateKey} => นับ dateKey ด้านใน
-   - coursePlans: coursePlans.{courseId/timestamp} = array งาน => นับ array.length
-   - เขียน user_stats ใหม่ทุกบัญชี
-   - รวม global_stats/summary ใหม่
-*/
-import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, collection, getDocs, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-const statsRebuildConfig = {
-    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
-    authDomain: "schoolhub-5677d.firebaseapp.com",
-    projectId: "schoolhub-5677d",
-    storageBucket: "schoolhub-5677d.firebasestorage.app",
-    messagingSenderId: "803574136389",
-    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
-    measurementId: "G-ME7E38XNX6"
-};
-
-const statsRebuildApp = getApps().length ? getApp() : initializeApp(statsRebuildConfig);
-const statsRebuildDb = getFirestore(statsRebuildApp);
-
-function num(v) {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
-}
-
-function arrOrValues(v) {
-    if (Array.isArray(v)) return v;
-    if (v && typeof v === 'object') return Object.values(v);
-    return [];
-}
-
-function countCollection(v) {
-    if (!v) return 0;
-    if (Array.isArray(v)) return v.length;
-    if (typeof v === 'object') return Object.keys(v).length;
-    return 0;
-}
-
-// attendance แบบ A:
-// attendance: {
-//   "1780116499482": {
-//      "2026-05-31": {...},
-//      "2026-06-01": {...}
-//   }
-// }
-// ต้องนับ = 2
-function countAttendance(attendance) {
-    if (!attendance) return 0;
-    if (Array.isArray(attendance)) return attendance.length;
-    if (typeof attendance !== 'object') return 0;
-
-    let total = 0;
-
-    Object.values(attendance).forEach(group => {
-        if (!group) return;
-
-        if (Array.isArray(group)) {
-            total += group.length;
-            return;
-        }
-
-        if (typeof group === 'object') {
-            // ถ้าข้างในมี dates ให้ใช้ dates
-            if (group.dates && typeof group.dates === 'object') {
-                total += Object.keys(group.dates).length;
-                return;
-            }
-
-            // ถ้าข้างในเป็นวันที่โดยตรง ให้นับ key ย่อย
-            const keys = Object.keys(group);
-            total += keys.length;
-            return;
-        }
-
-        total += 1;
-    });
-
-    return total;
-}
-
-// coursePlans ตามรูป:
-// coursePlans: {
-//   "1780116499482": [
-//      {id, week, maxScore, title},
-//      {id, week, maxScore, title}
-//   ]
-// }
-// ต้องนับ = จำนวน item ใน array
-function countCoursePlans(coursePlans) {
-    if (!coursePlans) return 0;
-
-    if (Array.isArray(coursePlans)) return coursePlans.length;
-
-    if (typeof coursePlans !== 'object') return 0;
-
-    let total = 0;
-
-    Object.values(coursePlans).forEach(group => {
-        if (!group) return;
-
-        if (Array.isArray(group)) {
-            total += group.length;
-            return;
-        }
-
-        if (typeof group === 'object') {
-            // รองรับกรณี group มี items เป็น array
-            if (Array.isArray(group.items)) {
-                total += group.items.length;
-                return;
-            }
-
-            // รองรับกรณี group มี assignments/tasks/works เป็น array หรือ map
-            let sub = 0;
-            ['assignments','tasks','works','plans','scoreItems'].forEach(k => {
-                if (Array.isArray(group[k])) sub += group[k].length;
-                else if (group[k] && typeof group[k] === 'object') sub += Object.keys(group[k]).length;
-            });
-
-            if (sub > 0) {
-                total += sub;
-                return;
-            }
-
-            // ถ้าเป็น map ของงานโดยตรง
-            total += Object.keys(group).length;
-        }
-    });
-
-    return total;
-}
-
-function countState(state) {
-    const courses = arrOrValues(state?.courses || state?.courseList || state?.coursesMap);
-    const students = arrOrValues(state?.students || state?.studentList || state?.masterStudents || state?.studentsMap);
-
-    const attendanceRecords = countAttendance(state?.attendance) ||
-        countAttendance(state?.attendanceRecords) ||
-        countAttendance(state?.attendances) ||
-        countAttendance(state?.checkIns);
-
-    let assignments = countCoursePlans(state?.coursePlans);
-
-    if (!assignments) {
-        assignments += countCollection(state?.assignments);
-        assignments += countCollection(state?.tasks);
-        assignments += countCollection(state?.works);
-        courses.forEach(c => {
-            assignments += countCollection(c?.assignments);
-            assignments += countCollection(c?.tasks);
-            assignments += countCollection(c?.works);
-        });
-    }
-
-    let scoreItems = 0;
-    scoreItems += countCollection(state?.scores);
-    scoreItems += countCollection(state?.scoreRecords);
-    scoreItems += countCollection(state?.scoreList);
-    scoreItems += countCollection(state?.studentScores);
-
-    return {
-        courses: courses.length,
-        students: students.length,
-        attendanceRecords,
-        assignments,
-        scoreItems
-    };
-}
-
-async function getAllUserKeys() {
-    const keys = new Set();
-
-    // users collection คือแหล่งหลัก เพราะ state อยู่ที่ users/{email}/school_data/state
-    try {
-        const usersSnap = await getDocs(collection(statsRebuildDb, 'users'));
-        usersSnap.forEach(d => keys.add(d.id));
-    } catch(e) {
-        console.warn('อ่าน users ไม่สำเร็จ:', e);
-    }
-
-    // เพิ่มจาก directory/status เผื่อมีอีเมลหรือ uid
-    for (const col of ['public_users_directory', 'users_status']) {
-        try {
-            const snap = await getDocs(collection(statsRebuildDb, col));
-            snap.forEach(d => {
-                const data = d.data() || {};
-                keys.add(d.id);
-                if (data.email) keys.add(String(data.email));
-                if (data.uid) keys.add(String(data.uid));
-                if (data.userKey) keys.add(String(data.userKey));
-            });
-        } catch(e) {
-            console.warn('อ่าน ' + col + ' ไม่สำเร็จ:', e);
-        }
-    }
-
-    return Array.from(keys).filter(Boolean);
-}
-
-async function readStateByKey(key) {
-    try {
-        const snap = await getDoc(doc(statsRebuildDb, 'users', String(key), 'school_data', 'state'));
-        return snap.exists() ? (snap.data() || {}) : null;
-    } catch(e) {
-        console.warn('อ่าน state ไม่สำเร็จ:', key, e);
-        return null;
-    }
-}
-
-async function rebuildAllStatsFromUsersState() {
-    const keys = await getAllUserKeys();
-
-    let totalUsers = 0;
-    let totalTeachers = 0;
-    let totalCourses = 0;
-    let totalStudents = 0;
-    let totalAttendanceRecords = 0;
-    let totalAssignments = 0;
-    let totalScoreItems = 0;
-    let foundStateCount = 0;
-
-    const usedStateKeys = new Set();
-
-    for (const key of keys) {
-        if (usedStateKeys.has(key)) continue;
-
-        const state = await readStateByKey(key);
-        if (!state) continue;
-
-        usedStateKeys.add(key);
-        foundStateCount += 1;
-        totalUsers += 1;
-        totalTeachers += 1;
-
-        const counts = countState(state);
-
-        totalCourses += counts.courses;
-        totalStudents += counts.students;
-        totalAttendanceRecords += counts.attendanceRecords;
-        totalAssignments += counts.assignments;
-        totalScoreItems += counts.scoreItems;
-
-        await setDoc(doc(statsRebuildDb, 'user_stats', String(key)), {
-            email: String(key).includes('@') ? String(key) : '',
-            stateUserKey: key,
-            role: 'teacher',
-            status: 'active',
-            courses: counts.courses,
-            students: counts.students,
-            attendanceRecords: counts.attendanceRecords,
-            assignments: counts.assignments,
-            scoreItems: counts.scoreItems,
-            updatedAt: serverTimestamp()
-        }, { merge: true });
-    }
-
-    const summary = {
-        totalTeachers,
-        totalUsers,
-        totalCourses,
-        totalStudents,
-        totalAttendanceRecords,
-        totalAssignments,
-        totalScoreItems,
-        foundStateCount,
-        updatedAt: serverTimestamp()
-    };
-
-    await setDoc(doc(statsRebuildDb, 'global_stats', 'summary'), summary, { merge: true });
-
-    if (typeof window.loadAdminGlobalDashboard === 'function') window.loadAdminGlobalDashboard();
-    if (typeof window.loadGlobalSiteStats === 'function') window.loadGlobalSiteStats();
-
-    console.log('SchoolHub rebuilt stats from users state:', summary);
-    return summary;
-}
-
-window.__schoolhubCountAttendance = countAttendance;
-window.__schoolhubCountCoursePlans = countCoursePlans;
-window.__schoolhubRebuildAllStatsFromUsersState = rebuildAllStatsFromUsersState;
-window.__schoolhubSyncCorrectedStats = rebuildAllStatsFromUsersState;
-window.__schoolhubCentralStatsRebuild = rebuildAllStatsFromUsersState;
-window.__schoolhubSyncAndRebuildStats = rebuildAllStatsFromUsersState;
-
-// ให้ปุ่มในแดชบอร์ดรวมเรียกตัวใหม่นี้
-const oldLoadAdminGlobalDashboard = window.loadAdminGlobalDashboard;
-window.loadAdminGlobalDashboard = async function() {
-    if (typeof oldLoadAdminGlobalDashboard === 'function') {
-        await oldLoadAdminGlobalDashboard();
-    }
-};
-
-document.addEventListener('click', function(e) {
-    const text = (e.target?.innerText || e.target?.textContent || '').toString();
-    if (/อัปเดตสถิติ|รีเฟรช/.test(text)) {
-        setTimeout(rebuildAllStatsFromUsersState, 300);
-    }
-}, true);
-
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(rebuildAllStatsFromUsersState, 2500);
-});
-</script>
-
-
-<script type="module">
-/* SchoolHub User Stats First Correct Sync
-   เป้าหมาย:
-   1) อ่านข้อมูลจริงจาก users/{email}/school_data/state ก่อน
-   2) เขียน user_stats ให้ถูกก่อน
-   3) แล้วค่อยรวม global_stats จาก user_stats
-
-   โครงสร้างที่รองรับ:
-   - attendance.{courseId/timestamp}.{dateKey} => นับ dateKey
-   - coursePlans.{courseId/timestamp} = array งาน => นับ array.length
-*/
-import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, collection, getDocs, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-
-const userStatsFixConfig = {
-    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
-    authDomain: "schoolhub-5677d.firebaseapp.com",
-    projectId: "schoolhub-5677d",
-    storageBucket: "schoolhub-5677d.firebasestorage.app",
-    messagingSenderId: "803574136389",
-    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
-    measurementId: "G-ME7E38XNX6"
-};
-
-const userStatsFixApp = getApps().length ? getApp() : initializeApp(userStatsFixConfig);
-const userStatsFixDb = getFirestore(userStatsFixApp);
-const userStatsFixAuth = getAuth(userStatsFixApp);
-let currentFixUser = null;
-
-function toNum(v) {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
-}
-
-function values(v) {
-    if (Array.isArray(v)) return v;
-    if (v && typeof v === 'object') return Object.values(v);
-    return [];
-}
-
-function countAny(v) {
-    if (!v) return 0;
-    if (Array.isArray(v)) return v.length;
-    if (v && typeof v === 'object') return Object.keys(v).length;
-    return 0;
-}
-
-// attendance ตัวอย่าง:
-// attendance: {
-//   "1780116499482": {
-//      "2026-05-31": {...},
-//      "2026-06-01": {...}
-//   }
-// }
-// นับ = 2
-function countAttendance(attendance) {
-    if (!attendance) return 0;
-    if (Array.isArray(attendance)) return attendance.length;
-    if (typeof attendance !== 'object') return 0;
-
-    let total = 0;
-
-    Object.values(attendance).forEach(group => {
-        if (!group) return;
-
-        if (Array.isArray(group)) {
-            total += group.length;
-            return;
-        }
-
-        if (typeof group === 'object') {
-            if (group.dates && typeof group.dates === 'object') {
-                total += Object.keys(group.dates).length;
-                return;
-            }
-
-            if (group.records && typeof group.records === 'object') {
-                total += Object.keys(group.records).length;
-                return;
-            }
-
-            total += Object.keys(group).length;
-            return;
-        }
-
-        total += 1;
-    });
-
-    return total;
-}
-
-// coursePlans ตัวอย่าง:
-// coursePlans: {
-//   "1780116499482": [
-//     {id, week, maxScore, title},
-//     {id, week, maxScore, title}
-//   ]
-// }
-// นับ = array.length
-function countCoursePlans(coursePlans) {
-    if (!coursePlans) return 0;
-    if (Array.isArray(coursePlans)) return coursePlans.length;
-    if (typeof coursePlans !== 'object') return 0;
-
-    let total = 0;
-
-    Object.values(coursePlans).forEach(group => {
-        if (!group) return;
-
-        if (Array.isArray(group)) {
-            total += group.length;
-            return;
-        }
-
-        if (typeof group === 'object') {
-            if (Array.isArray(group.items)) {
-                total += group.items.length;
-                return;
-            }
-
-            let sub = 0;
-            ['assignments','tasks','works','plans','scoreItems'].forEach(k => {
-                if (Array.isArray(group[k])) sub += group[k].length;
-                else if (group[k] && typeof group[k] === 'object') sub += Object.keys(group[k]).length;
-            });
-
-            total += sub || Object.keys(group).length;
-        }
-    });
-
-    return total;
-}
-
-function countState(state) {
-    const courses = values(state?.courses || state?.courseList || state?.coursesMap);
-    const students = values(state?.students || state?.studentList || state?.masterStudents || state?.studentsMap);
-
-    const attendanceRecords =
-        countAttendance(state?.attendance) ||
-        countAttendance(state?.attendanceRecords) ||
-        countAttendance(state?.attendances) ||
-        countAttendance(state?.checkIns) ||
-        countAttendance(state?.checkins);
-
-    let assignments = countCoursePlans(state?.coursePlans);
-
-    if (!assignments) {
-        assignments += countAny(state?.assignments);
-        assignments += countAny(state?.tasks);
-        assignments += countAny(state?.works);
-        courses.forEach(c => {
-            assignments += countAny(c?.assignments);
-            assignments += countAny(c?.tasks);
-            assignments += countAny(c?.works);
-        });
-    }
-
-    let scoreItems = 0;
-    scoreItems += countAny(state?.scores);
-    scoreItems += countAny(state?.scoreRecords);
-    scoreItems += countAny(state?.scoreList);
-    scoreItems += countAny(state?.studentScores);
-
-    return {
-        courses: courses.length,
-        students: students.length,
-        attendanceRecords,
-        assignments,
-        scoreItems
-    };
-}
-
-function isBlocked(data) {
-    const status = String(data?.status || '').toLowerCase();
-    return status === 'blocked' || status === 'deleted' || data?.blocked === true;
-}
-
-function isAdmin(data) {
-    const role = String(data?.role || '').toLowerCase();
-    return role === 'admin' || data?.isAdmin === true;
-}
-
-async function readStateByUserKey(userKey) {
-    if (!userKey) return null;
-    try {
-        const snap = await getDoc(doc(userStatsFixDb, 'users', String(userKey), 'school_data', 'state'));
-        return snap.exists() ? (snap.data() || {}) : null;
-    } catch (e) {
-        console.warn('อ่าน state ไม่สำเร็จ:', userKey, e);
-        return null;
-    }
-}
-
-// ดึงรายชื่อผู้ใช้จาก users_status/public_users_directory ก่อน
-// เพราะ users collection อาจไม่ list เอกสารที่มีแค่ subcollection
-async function getUserDirectoryRecords() {
-    const records = [];
-    const seen = new Set();
-
-    async function readDirectory(colName) {
-        try {
-            const snap = await getDocs(collection(userStatsFixDb, colName));
-            snap.forEach(docSnap => {
-                const data = docSnap.data() || {};
-                const key = data.uid || data.email || docSnap.id;
-                if (!key || seen.has(String(key))) return;
-                seen.add(String(key));
-
-                records.push({
-                    directoryId: docSnap.id,
-                    uid: data.uid || '',
-                    email: data.email || (String(docSnap.id).includes('@') ? docSnap.id : ''),
-                    displayName: data.displayName || data.name || data.fullName || '',
-                    role: data.role || 'teacher',
-                    status: data.status || 'active',
-                    data
-                });
-            });
-        } catch (e) {
-            console.warn('อ่าน ' + colName + ' ไม่สำเร็จ:', e);
-        }
-    }
-
-    await readDirectory('users_status');
-    await readDirectory('public_users_directory');
-
-    // เพิ่มผู้ใช้ปัจจุบัน เผื่อ directory ยังไม่มี
-    const user = currentFixUser || userStatsFixAuth.currentUser || window.currentUser || {};
-    const currentEmail = window.currentUserEmail || window.userEmail || user.email || '';
-    const currentUid = user.uid || '';
-    if ((currentEmail || currentUid) && !seen.has(currentUid || currentEmail)) {
-        records.push({
-            directoryId: currentUid || currentEmail,
-            uid: currentUid,
-            email: currentEmail,
-            displayName: user.displayName || window.currentUserName || '',
-            role: window.currentUserRole || window.userRole || 'teacher',
-            status: window.currentUserStatus || 'active',
-            data: {}
-        });
-    }
-
-    return records;
-}
-
-async function findStateForRecord(record) {
-    // สำคัญ: state อยู่ที่ users/{email}/school_data/state เป็นหลัก
-    const candidates = Array.from(new Set([
-        record.email,
-        record.directoryId,
-        record.uid,
-        record.data?.userKey,
-        record.data?.id
-    ].filter(Boolean).map(String)));
-
-    for (const key of candidates) {
-        const state = await readStateByUserKey(key);
-        if (state) return { stateKey: key, state };
-    }
-
-    return { stateKey: candidates[0] || '', state: null };
-}
-
-async function syncUserStatsOnly() {
-    const records = await getUserDirectoryRecords();
-
-    let updatedCount = 0;
-    let foundStateCount = 0;
-
-    for (const record of records) {
-        if (isBlocked(record.data)) continue;
-
-        const found = await findStateForRecord(record);
-        if (!found.state) {
-            console.warn('ไม่พบ state ของผู้ใช้:', record.email || record.uid || record.directoryId);
-            continue;
-        }
-
-        foundStateCount += 1;
-
-        const counts = countState(found.state);
-
-        // user_stats ให้ใช้ uid ถ้ามี ไม่งั้นใช้ email ไม่งั้นใช้ stateKey
-        const statDocId = record.uid || record.email || found.stateKey || record.directoryId;
-
-        const payload = {
-            uid: record.uid || '',
-            email: record.email || (String(found.stateKey).includes('@') ? found.stateKey : ''),
-            displayName: record.displayName || '',
-            role: isAdmin(record.data) ? 'admin' : (record.role || 'teacher'),
-            status: record.status || 'active',
-            stateUserKey: found.stateKey,
-            courses: counts.courses,
-            students: counts.students,
-            attendanceRecords: counts.attendanceRecords,
-            assignments: counts.assignments,
-            scoreItems: counts.scoreItems,
-            updatedAt: serverTimestamp()
-        };
-
-        await setDoc(doc(userStatsFixDb, 'user_stats', String(statDocId)), payload, { merge: true });
-
-        // ถ้า stateKey เป็น email แต่ statDocId เป็น uid ให้เขียน mirror email ด้วย เพื่อให้หาเจอใน Firebase ง่าย
-        if (record.email && String(record.email) !== String(statDocId)) {
-            await setDoc(doc(userStatsFixDb, 'user_stats', String(record.email)), {
-                ...payload,
-                mirrorOf: String(statDocId),
-                updatedAt: serverTimestamp()
-            }, { merge: true });
-        }
-
-        updatedCount += 1;
-    }
-
-    console.log('syncUserStatsOnly completed:', { updatedCount, foundStateCount });
-    return { updatedCount, foundStateCount };
-}
-
-async function rebuildGlobalFromUserStats() {
-    const snap = await getDocs(collection(userStatsFixDb, 'user_stats'));
-
-    let totalUsers = 0;
-    let totalTeachers = 0;
-    let totalCourses = 0;
-    let totalStudents = 0;
-    let totalAttendanceRecords = 0;
-    let totalAssignments = 0;
-    let totalScoreItems = 0;
-
-    const counted = new Set();
-
-    snap.forEach(docSnap => {
-        const d = docSnap.data() || {};
-        if (isBlocked(d)) return;
-
-        // กัน mirror email นับซ้ำ
-        const canonical = d.mirrorOf || docSnap.id;
-        if (counted.has(canonical)) return;
-        counted.add(canonical);
-
-        totalUsers += 1;
-        if (!isAdmin(d)) totalTeachers += 1;
-
-        totalCourses += toNum(d.courses);
-        totalStudents += toNum(d.students);
-        totalAttendanceRecords += toNum(d.attendanceRecords);
-        totalAssignments += toNum(d.assignments);
-        totalScoreItems += toNum(d.scoreItems);
-    });
-
-    const summary = {
-        totalUsers,
-        totalTeachers,
-        totalCourses,
-        totalStudents,
-        totalAttendanceRecords,
-        totalAssignments,
-        totalScoreItems,
-        countedUserStats: counted.size,
-        updatedAt: serverTimestamp()
-    };
-
-    await setDoc(doc(userStatsFixDb, 'global_stats', 'summary'), summary, { merge: true });
-
-    if (typeof window.loadAdminGlobalDashboard === 'function') window.loadAdminGlobalDashboard();
-    if (typeof window.loadGlobalSiteStats === 'function') window.loadGlobalSiteStats();
-
-    return summary;
-}
-
-async function syncUserStatsThenGlobal() {
-    try {
-        if (typeof window.toggleLoader === 'function') window.toggleLoader(true);
-        await syncUserStatsOnly();
-        await rebuildGlobalFromUserStats();
-    } catch (error) {
-        console.error('syncUserStatsThenGlobal failed:', error);
-        alert('อัปเดต user_stats ไม่สำเร็จ: ' + (error.message || error));
-    } finally {
-        if (typeof window.toggleLoader === 'function') window.toggleLoader(false);
-    }
-}
-
-window.__schoolhubCountState = countState;
-window.__schoolhubCountAttendance = countAttendance;
-window.__schoolhubCountCoursePlans = countCoursePlans;
-window.__schoolhubSyncUserStatsOnly = syncUserStatsOnly;
-window.__schoolhubSyncUserStatsThenGlobal = syncUserStatsThenGlobal;
-window.__schoolhubRebuildAllStatsFromUsersState = syncUserStatsThenGlobal;
-window.__schoolhubSyncCorrectedStats = syncUserStatsThenGlobal;
-window.__schoolhubCentralStatsRebuild = syncUserStatsThenGlobal;
-window.__schoolhubSyncAndRebuildStats = syncUserStatsThenGlobal;
-
-// ปุ่มอัปเดตสถิติ / รีเฟรช ในแดชบอร์ดให้บังคับ sync user_stats ก่อน
-document.addEventListener('click', function(e) {
-    const text = (e.target?.innerText || e.target?.textContent || '').toString();
-    if (/อัปเดตสถิติ|รีเฟรช/.test(text)) {
-        setTimeout(syncUserStatsThenGlobal, 250);
-    }
-}, true);
-
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(syncUserStatsThenGlobal, 2500);
-});
-
-onAuthStateChanged(userStatsFixAuth, user => {
-    currentFixUser = user;
-    if (user) setTimeout(syncUserStatsThenGlobal, 1600);
-});
-</script>
-
-
 <!-- SchoolHub Mini Calendar Popup -->
 <div id="schoolhub-mini-calendar-backdrop" class="fixed inset-0 bg-slate-900/35 backdrop-blur-[2px] z-[999997] hidden items-center justify-center p-4">
     <div id="schoolhub-mini-calendar" class="bg-white rounded-[1.75rem] overflow-hidden">
@@ -9052,13 +7976,20 @@ onAuthStateChanged(userStatsFixAuth, user => {
 </div>
 
 
+
 <script type="module">
-/* SchoolHub UserStats Email ID + Dashboard Clean + Mini Calendar Popup */
+/* SchoolHub Email Only UserStats Strict Final
+   สำคัญ:
+   - user_stats จะเขียนเฉพาะ document id ที่เป็นอีเมลเท่านั้น
+   - ไม่เขียน user_stats/{uid} หรือ user_stats/{ชื่อสุ่ม} อีก
+   - global_stats/summary จะรวมเฉพาะ user_stats ที่ doc.id มี @ เท่านั้น
+   - ข้อมูล state ต้องอ่านจาก users/{email}/school_data/state เท่านั้น
+*/
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, collection, getDocs, doc, getDoc, setDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-const patchConfig = {
+const emailOnlyConfig = {
     apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
     authDomain: "schoolhub-5677d.firebaseapp.com",
     projectId: "schoolhub-5677d",
@@ -9068,11 +7999,18 @@ const patchConfig = {
     measurementId: "G-ME7E38XNX6"
 };
 
-const patchApp = getApps().length ? getApp() : initializeApp(patchConfig);
-const patchDb = getFirestore(patchApp);
-const patchAuth = getAuth(patchApp);
-let patchCurrentUser = null;
+const emailOnlyApp = getApps().length ? getApp() : initializeApp(emailOnlyConfig);
+const emailOnlyDb = getFirestore(emailOnlyApp);
+const emailOnlyAuth = getAuth(emailOnlyApp);
+let emailOnlyCurrentUser = null;
 
+function isEmail(v) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || '').trim());
+}
+function cleanEmail(v) {
+    const s = String(v || '').trim().toLowerCase();
+    return isEmail(s) ? s : '';
+}
 function toNum(v) {
     const n = Number(v);
     return Number.isFinite(n) ? n : 0;
@@ -9100,7 +8038,9 @@ function countAttendance(attendance) {
             if (group.dates && typeof group.dates === 'object') total += Object.keys(group.dates).length;
             else if (group.records && typeof group.records === 'object') total += Object.keys(group.records).length;
             else total += Object.keys(group).length;
-        } else total += 1;
+        } else {
+            total += 1;
+        }
     });
     return total;
 }
@@ -9145,115 +8085,109 @@ function countState(state) {
         });
     }
 
-    let scoreItems = countAny(state?.scores) + countAny(state?.scoreRecords) + countAny(state?.scoreList) + countAny(state?.studentScores);
+    let scoreItems = 0;
+    scoreItems += countAny(state?.scores);
+    scoreItems += countAny(state?.scoreRecords);
+    scoreItems += countAny(state?.scoreList);
+    scoreItems += countAny(state?.studentScores);
 
-    return { courses: courses.length, students: students.length, attendanceRecords, assignments, scoreItems };
+    return {
+        courses: courses.length,
+        students: students.length,
+        attendanceRecords,
+        assignments,
+        scoreItems
+    };
 }
-function isBlocked(data) {
-    const status = String(data?.status || '').toLowerCase();
-    return status === 'blocked' || status === 'deleted' || data?.blocked === true;
+function isBlocked(d) {
+    const status = String(d?.status || '').toLowerCase();
+    return status === 'blocked' || status === 'deleted' || d?.blocked === true;
 }
-function isAdmin(data) {
-    const role = String(data?.role || '').toLowerCase();
-    return role === 'admin' || data?.isAdmin === true;
+function isAdmin(d) {
+    const role = String(d?.role || '').toLowerCase();
+    return role === 'admin' || d?.isAdmin === true;
 }
-async function readStateByUserKey(userKey) {
-    if (!userKey) return null;
+async function readStateByEmail(email) {
+    email = cleanEmail(email);
+    if (!email) return null;
     try {
-        const snap = await getDoc(doc(patchDb, 'users', String(userKey), 'school_data', 'state'));
+        const snap = await getDoc(doc(emailOnlyDb, 'users', email, 'school_data', 'state'));
         return snap.exists() ? (snap.data() || {}) : null;
-    } catch(e) {
-        console.warn('อ่าน state ไม่สำเร็จ:', userKey, e);
+    } catch (e) {
+        console.warn('อ่าน users/{email}/school_data/state ไม่สำเร็จ:', email, e);
         return null;
     }
 }
-async function getUserDirectoryRecords() {
-    const records = [];
-    const seenEmails = new Set();
+async function collectRealEmailsOnly() {
+    const emails = new Map();
 
-    async function readDirectory(colName) {
+    function add(email, data = {}) {
+        const e = cleanEmail(email);
+        if (!e) return;
+        if (!emails.has(e)) emails.set(e, {});
+        emails.set(e, { ...emails.get(e), ...data, email: e });
+    }
+
+    // 1) users collection: เอาเฉพาะ doc.id ที่เป็นอีเมลเท่านั้น
+    try {
+        const snap = await getDocs(collection(emailOnlyDb, 'users'));
+        snap.forEach(d => {
+            if (isEmail(d.id)) add(d.id, d.data() || {});
+        });
+    } catch (e) {
+        console.warn('อ่าน users ไม่สำเร็จ:', e);
+    }
+
+    // 2) users_status/public_users_directory: เอาเฉพาะ field email หรือ doc.id ที่เป็นอีเมล
+    for (const col of ['users_status', 'public_users_directory']) {
         try {
-            const snap = await getDocs(collection(patchDb, colName));
-            snap.forEach(docSnap => {
-                const data = docSnap.data() || {};
-                const email = String(data.email || (String(docSnap.id).includes('@') ? docSnap.id : '') || '').trim();
-                if (!email || seenEmails.has(email)) return;
-                seenEmails.add(email);
-                records.push({
-                    directoryId: docSnap.id,
-                    uid: data.uid || '',
-                    email,
-                    displayName: data.displayName || data.name || data.fullName || '',
-                    role: data.role || 'teacher',
-                    status: data.status || 'active',
-                    data
-                });
+            const snap = await getDocs(collection(emailOnlyDb, col));
+            snap.forEach(d => {
+                const data = d.data() || {};
+                add(data.email || d.id, data);
             });
-        } catch(e) {
-            console.warn('อ่าน ' + colName + ' ไม่สำเร็จ:', e);
+        } catch (e) {
+            console.warn('อ่าน ' + col + ' ไม่สำเร็จ:', e);
         }
     }
 
-    await readDirectory('users_status');
-    await readDirectory('public_users_directory');
+    // 3) current user
+    const u = emailOnlyCurrentUser || emailOnlyAuth.currentUser || window.currentUser || {};
+    add(window.currentUserEmail || window.userEmail || u.email, {
+        uid: u.uid || '',
+        displayName: u.displayName || window.currentUserName || '',
+        role: window.currentUserRole || window.userRole || 'teacher',
+        status: window.currentUserStatus || 'active'
+    });
 
-    // fallback from current user
-    const user = patchCurrentUser || patchAuth.currentUser || window.currentUser || {};
-    const currentEmail = String(window.currentUserEmail || window.userEmail || user.email || '').trim();
-    if (currentEmail && !seenEmails.has(currentEmail)) {
-        records.push({
-            directoryId: currentEmail,
-            uid: user.uid || '',
-            email: currentEmail,
-            displayName: user.displayName || window.currentUserName || '',
-            role: window.currentUserRole || window.userRole || 'teacher',
-            status: window.currentUserStatus || 'active',
-            data: {}
-        });
-    }
-
-    return records;
+    return Array.from(emails.values()).filter(r => isEmail(r.email));
 }
-async function findStateForRecord(record) {
-    // ใช้อีเมลเป็น path หลัก
-    const candidates = Array.from(new Set([
-        record.email,
-        record.data?.email,
-        record.data?.userKey,
-        record.directoryId,
-        record.uid
-    ].filter(Boolean).map(String)));
+async function syncEmailOnlyUserStats() {
+    const records = await collectRealEmailsOnly();
 
-    for (const key of candidates) {
-        const state = await readStateByUserKey(key);
-        if (state) return { stateKey: key, state };
-    }
-    return { stateKey: record.email || candidates[0] || '', state: null };
-}
-async function syncUserStatsEmailOnly() {
-    const records = await getUserDirectoryRecords();
     let updatedCount = 0;
-    let foundStateCount = 0;
+    let skippedNoState = 0;
 
-    for (const record of records) {
-        if (!record.email || isBlocked(record.data)) continue;
+    for (const r of records) {
+        const email = cleanEmail(r.email);
+        if (!email || isBlocked(r)) continue;
 
-        const found = await findStateForRecord(record);
-        if (!found.state) {
-            console.warn('ไม่พบ state ของ:', record.email);
+        const state = await readStateByEmail(email);
+        if (!state) {
+            skippedNoState++;
+            console.warn('ข้าม เพราะไม่มี state ที่ users/{email}/school_data/state:', email);
             continue;
         }
 
-        foundStateCount++;
-        const counts = countState(found.state);
+        const counts = countState(state);
 
         const payload = {
-            uid: record.uid || '',
-            email: record.email,
-            displayName: record.displayName || '',
-            role: isAdmin(record.data) ? 'admin' : (record.role || 'teacher'),
-            status: record.status || 'active',
-            stateUserKey: found.stateKey,
+            uid: r.uid || '',
+            email,
+            displayName: r.displayName || r.name || r.fullName || '',
+            role: isAdmin(r) ? 'admin' : (r.role || 'teacher'),
+            status: r.status || 'active',
+            stateUserKey: email,
             courses: counts.courses,
             students: counts.students,
             attendanceRecords: counts.attendanceRecords,
@@ -9262,61 +8196,81 @@ async function syncUserStatsEmailOnly() {
             updatedAt: serverTimestamp()
         };
 
-        // สำคัญ: ใช้อีเมลเป็น document id เท่านั้น
-        await setDoc(doc(patchDb, 'user_stats', record.email), payload, { merge: true });
+        // จุดสำคัญ: ใช้อีเมลเป็น document id เท่านั้น
+        await setDoc(doc(emailOnlyDb, 'user_stats', email), payload, { merge: true });
         updatedCount++;
     }
 
-    console.log('user_stats email only synced:', { updatedCount, foundStateCount });
-    return { updatedCount, foundStateCount };
+    console.log('Email-only user_stats synced:', { updatedCount, skippedNoState, totalEmailRecords: records.length });
+    return { updatedCount, skippedNoState, totalEmailRecords: records.length };
 }
-async function rebuildGlobalFromEmailUserStats() {
-    const snap = await getDocs(collection(patchDb, 'user_stats'));
+async function rebuildGlobalFromEmailOnlyStats() {
+    const snap = await getDocs(collection(emailOnlyDb, 'user_stats'));
 
-    let totalUsers = 0, totalTeachers = 0, totalCourses = 0, totalStudents = 0, totalAttendanceRecords = 0, totalAssignments = 0, totalScoreItems = 0;
+    let totalUsers = 0;
+    let totalTeachers = 0;
+    let totalCourses = 0;
+    let totalStudents = 0;
+    let totalAttendanceRecords = 0;
+    let totalAssignments = 0;
+    let totalScoreItems = 0;
 
-    snap.forEach(docSnap => {
-        // นับเฉพาะ doc id ที่เป็นอีเมลเท่านั้น
-        if (!String(docSnap.id).includes('@')) return;
-        const d = docSnap.data() || {};
-        if (isBlocked(d)) return;
+    snap.forEach(d => {
+        // จุดสำคัญ: รวมเฉพาะ doc.id ที่เป็นอีเมล
+        if (!isEmail(d.id)) return;
+
+        const data = d.data() || {};
+        if (isBlocked(data)) return;
 
         totalUsers++;
-        if (!isAdmin(d)) totalTeachers++;
-        totalCourses += toNum(d.courses);
-        totalStudents += toNum(d.students);
-        totalAttendanceRecords += toNum(d.attendanceRecords);
-        totalAssignments += toNum(d.assignments);
-        totalScoreItems += toNum(d.scoreItems);
+        if (!isAdmin(data)) totalTeachers++;
+
+        totalCourses += toNum(data.courses);
+        totalStudents += toNum(data.students);
+        totalAttendanceRecords += toNum(data.attendanceRecords);
+        totalAssignments += toNum(data.assignments);
+        totalScoreItems += toNum(data.scoreItems);
     });
 
-    const summary = { totalUsers, totalTeachers, totalCourses, totalStudents, totalAttendanceRecords, totalAssignments, totalScoreItems, countedUserStats: totalUsers, updatedAt: serverTimestamp() };
-    await setDoc(doc(patchDb, 'global_stats', 'summary'), summary, { merge: true });
+    const summary = {
+        totalUsers,
+        totalTeachers,
+        totalCourses,
+        totalStudents,
+        totalAttendanceRecords,
+        totalAssignments,
+        totalScoreItems,
+        countedUserStats: totalUsers,
+        updatedAt: serverTimestamp()
+    };
+
+    await setDoc(doc(emailOnlyDb, 'global_stats', 'summary'), summary, { merge: true });
 
     if (typeof window.loadAdminGlobalDashboard === 'function') window.loadAdminGlobalDashboard();
     if (typeof window.loadGlobalSiteStats === 'function') window.loadGlobalSiteStats();
+
     return summary;
 }
-async function syncEmailUserStatsThenGlobal() {
+async function syncEmailOnlyThenGlobal() {
     try {
         if (typeof window.toggleLoader === 'function') window.toggleLoader(true);
-        await syncUserStatsEmailOnly();
-        await rebuildGlobalFromEmailUserStats();
+        await syncEmailOnlyUserStats();
+        await rebuildGlobalFromEmailOnlyStats();
     } catch(e) {
         console.error(e);
-        alert('อัปเดตสถิติไม่สำเร็จ: ' + (e.message || e));
+        alert('อัปเดตสถิติแบบอีเมลไม่สำเร็จ: ' + (e.message || e));
     } finally {
         if (typeof window.toggleLoader === 'function') window.toggleLoader(false);
     }
 }
 
-window.__schoolhubSyncUserStatsOnly = syncUserStatsEmailOnly;
-window.__schoolhubSyncUserStatsThenGlobal = syncEmailUserStatsThenGlobal;
-window.__schoolhubSyncAndRebuildStats = syncEmailUserStatsThenGlobal;
-window.__schoolhubCentralStatsRebuild = syncEmailUserStatsThenGlobal;
-window.__schoolhubRebuildAllStatsFromUsersState = syncEmailUserStatsThenGlobal;
+window.__schoolhubSyncEmailOnlyUserStats = syncEmailOnlyUserStats;
+window.__schoolhubSyncUserStatsOnly = syncEmailOnlyUserStats;
+window.__schoolhubSyncUserStatsThenGlobal = syncEmailOnlyThenGlobal;
+window.__schoolhubSyncAndRebuildStats = syncEmailOnlyThenGlobal;
+window.__schoolhubCentralStatsRebuild = syncEmailOnlyThenGlobal;
+window.__schoolhubRebuildAllStatsFromUsersState = syncEmailOnlyThenGlobal;
 
-// Clean dashboard raw JSON if old HTML remains
 function cleanDashboardRawBox() {
     const pre = document.getElementById('gd-summary-json');
     if (pre) {
@@ -9324,27 +8278,29 @@ function cleanDashboardRawBox() {
         if (box) box.remove();
     }
 }
+
 document.addEventListener('click', function(e) {
     const text = (e.target?.innerText || e.target?.textContent || '').toString();
-    if (/อัปเดตสถิติ|รีเฟรช/.test(text)) setTimeout(syncEmailUserStatsThenGlobal, 250);
+    if (/อัปเดตสถิติ|รีเฟรช/.test(text)) {
+        setTimeout(syncEmailOnlyThenGlobal, 250);
+    }
 }, true);
 
 document.addEventListener('DOMContentLoaded', () => {
     cleanDashboardRawBox();
     setTimeout(cleanDashboardRawBox, 800);
-    setTimeout(syncEmailUserStatsThenGlobal, 2200);
+    setTimeout(syncEmailOnlyThenGlobal, 2200);
 });
 
-onAuthStateChanged(patchAuth, user => {
-    patchCurrentUser = user;
-    if (user) setTimeout(syncEmailUserStatsThenGlobal, 1600);
+onAuthStateChanged(emailOnlyAuth, user => {
+    emailOnlyCurrentUser = user;
+    if (user) setTimeout(syncEmailOnlyThenGlobal, 1600);
 });
 
-/* Minimal calendar popup for attendance date input */
+/* Mini calendar popup */
 (function initMiniCalendar(){
     let targetInput = null;
     let viewDate = new Date();
-
     function pad(n){ return String(n).padStart(2,'0'); }
     function toInputDate(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
     function parseDate(v){
@@ -9357,15 +8313,12 @@ onAuthStateChanged(patchAuth, user => {
         const grid = document.getElementById('mini-cal-grid');
         if (!title || !grid) return;
         title.textContent = viewDate.toLocaleDateString('th-TH', { month:'long', year:'numeric' });
-
         const year = viewDate.getFullYear();
         const month = viewDate.getMonth();
         const first = new Date(year, month, 1);
         const start = first.getDay();
-        const lastDate = new Date(year, month+1, 0).getDate();
-        const selected = targetInput ? parseDate(targetInput.value) : new Date();
+        const lastDate = new Date(year, month + 1, 0).getDate();
         const todayStr = toInputDate(new Date());
-
         let html = '';
         for (let i=0; i<start; i++) html += '<div></div>';
         for (let day=1; day<=lastDate; day++) {
@@ -9396,10 +8349,8 @@ onAuthStateChanged(patchAuth, user => {
             closeCalendar();
             return;
         }
-
         const input = e.target.closest('input[type="date"]');
-        if (input && (location.href || '').includes('') ) {
-            // ใช้กับ input date ในหน้าเช็คชื่อ/ทั่วไปโดยไม่พัง input อื่น
+        if (input) {
             e.preventDefault();
             try { input.blur(); } catch(e) {}
             openCalendar(input);
