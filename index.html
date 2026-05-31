@@ -2985,9 +2985,15 @@ display:none !important;
         let currentUser = null;
         let isAdmin = false;
         let state = { courses: [], students: [], scores: [], attendance: {}, coursePlans: {}, courseGrades: {} };
+        window.state = state;
         window.isSocialAuthenticating = false;
 
         let currentActiveCourseId = null;
+        Object.defineProperty(window, 'currentActiveCourseId', {
+            configurable: true,
+            get: function(){ return currentActiveCourseId; },
+            set: function(v){ currentActiveCourseId = v; }
+        });
         let publicAnnouncements = [];
         let subscriptionPlans = [];
         let adminPlanRequests = [];
@@ -4077,8 +4083,10 @@ async function submitPlanRequest(planId){
                     state.courses = data.courses || []; state.students = data.students || [];
                     state.scores = data.scores || []; state.attendance = data.attendance || {}; state.coursePlans = data.coursePlans || {};
                     state.courseGrades = data.courseGrades || {};
+                    window.state = state;
                 } else {
                     state = { courses: [], students: [], scores: [], attendance: {}, coursePlans: {}, courseGrades: {} };
+                    window.state = state;
                     await saveStateToDB();
                 }
             } catch (error) {
@@ -4876,6 +4884,7 @@ ${resetUrl.toString()}
 
         // Grade Criteria Logic
         const defaultGradeCriteria = { 4: 80, 3.5: 75, 3: 70, 2.5: 65, 2: 60, 1.5: 55, 1: 50 };
+        window.defaultGradeCriteria = defaultGradeCriteria;
 
         window.openGradeCriteriaModalForCurrentCourse = () => {
             if(!currentActiveCourseId) return;
