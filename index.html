@@ -2033,15 +2033,12 @@
         // --- ระบบส่งเมลผ่าน Google Apps Script Web App เท่านั้น ---
         // ใช้ hidden iframe + postMessage เพื่อรับผลจริงจาก Apps Script โดยไม่ใช้ no-cors
         const MAIL_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx6vgxxjJBy0JPFPVjhCOEAn5aCCXXPjE0nBHEt7xkoXfYHeIZ5yGuM8dzcSWW0nsk8jg/exec';
+        const makeToken = () => Date.now().toString(36) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
         function buildSchoolHubLink(params = {}) {
             const url = new URL(window.location.href);
-            Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+            url.hash = '';
+            Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, String(v || '')));
             return url.toString();
-        }
-        function makeToken() {
-            const arr = new Uint32Array(4);
-            crypto.getRandomValues(arr);
-            return Array.from(arr).map(n => n.toString(36)).join('');
         }
         async function sendMailViaWebApp({ to, subject, message, htmlBody, type = 'schoolhub', name = '', extra = {} } = {}) {
             const target = String(to || '').trim();
@@ -2052,7 +2049,7 @@
                 type: String(type || ''),
                 email: target,
                 name: String(name || ''),
-                link: String((extra && (extra.link || extra.actionLink)) || ''),
+                link: String((extra && (extra.link || extra.actionLink || extra.returnUrl)) || ''),
                 subject: String(subject || ''),
                 message: String(message || ''),
                 htmlBody: String(htmlBody || '')
@@ -2090,27 +2087,27 @@
         }
         window.sendMailViaWebApp = sendMailViaWebApp;
 
-        async function handleSchoolHubEmailVerificationFromLink() {
-            const params = new URLSearchParams(window.location.search);
+        async function processSchoolHubVerifyFromURL() {
+            const params = new URLSearchParams(location.search);
             if (params.get('schoolhubVerify') !== '1') return;
             const email = (params.get('email') || '').trim();
             const token = (params.get('token') || '').trim();
-            if (!email || !token) return showCustomAlert('ยืนยันอีเมลไม่ได้', 'ลิงก์ยืนยันไม่สมบูรณ์', true);
+            if (!email || !token) return showCustomAlert('ลิงก์ไม่ถูกต้อง', 'ไม่พบข้อมูลยืนยันอีเมล', true);
+            toggleLoader(true);
             try {
-                toggleLoader(true);
                 const ref = doc(db, `users_status`, email);
                 const snap = await getDoc(ref);
-                if (!snap.exists() || snap.data().verifyToken !== token) throw new Error('ลิงก์ยืนยันไม่ถูกต้องหรือหมดอายุ');
-                await setDoc(ref, { emailVerified: true, verifyToken: null, verifiedAt: new Date().toISOString(), status: 'active' }, { merge: true });
-                const cleanUrl = new URL(window.location.href);
-                ['schoolhubVerify','email','token'].forEach(k => cleanUrl.searchParams.delete(k));
-                window.history.replaceState({}, '', cleanUrl.toString());
-                showCustomAlert('ยืนยันอีเมลสำเร็จ', 'อีเมลนี้ยืนยันเรียบร้อยแล้ว สามารถเข้าสู่ระบบได้ทันที');
+                const saved = snap.exists() ? (snap.data().verifyToken || '') : '';
+                if (saved && saved !== token) throw new Error('โทเคนยืนยันไม่ตรงกัน');
+                await setDoc(ref, { emailVerified: true, verifyToken: null, verifiedAt: Date.now(), status: 'active' }, { merge: true });
+                history.replaceState({}, document.title, location.pathname);
+                showCustomAlert('ยืนยันอีเมลสำเร็จ', 'บัญชีนี้ยืนยันอีเมลแล้ว สามารถเข้าสู่ระบบได้ทันที');
             } catch (err) {
                 showCustomAlert('ยืนยันอีเมลไม่ได้', err.message || String(err), true);
-            } finally { toggleLoader(false); }
+            }
+            toggleLoader(false);
         }
-        window.addEventListener('load', () => setTimeout(handleSchoolHubEmailVerificationFromLink, 500));
+        processSchoolHubVerifyFromURL();
 
         // ป้องกันหน้าโหลดค้าง: ถ้า Firebase ตอบช้า/โดน Rules บล็อก จะปล่อยหน้าเว็บให้ใช้งานต่อ
         const FIREBASE_TIMEOUT_MS = 8000;
@@ -3306,18 +3303,13 @@ async function submitPlanRequest(planId){
                             try {
                                 const token = makeToken();
                                 const verifyLink = buildSchoolHubLink({ schoolhubVerify: '1', email, token });
-                                await setDoc(doc(db, `users_status`, email), { emailVerified: false, verifyToken: token, verifyTokenCreatedAt: new Date().toISOString(), status: 'active' }, { merge: true });
+                                await setDoc(doc(db, `users_status`, email), { emailVerified: false, verifyToken: token, verifyTokenCreatedAt: Date.now(), status: 'active' }, { merge: true });
                                 await sendMailViaWebApp({
                                     to: email,
                                     type: 'verify',
                                     subject: 'SchoolHub - ยืนยันอีเมลของคุณ',
                                     name: email,
-                                    message: `สวัสดี ${email}
-
-กรุณากดลิงก์ด้านล่างเพื่อยืนยันอีเมล:
-${verifyLink}
-
-— SchoolHub`,
+                                    message: `สวัสดี ${email}\n\nกรุณากดลิงก์ด้านล่างเพื่อยืนยันอีเมล:\n${verifyLink}\n\n— SchoolHub`,
                                     extra: { link: verifyLink }
                                 });
                                 showCustomAlert("ส่งลิงก์ใหม่แล้ว", "ตรวจสอบอีเมล " + email + " แล้วกดลิงก์ยืนยัน");
@@ -3355,17 +3347,22 @@ ${verifyLink}
                 await updateProfile(userCred.user, { displayName: name });
                 await addUserToDirectory(userCred.user, name, 'user');
                 await setDoc(doc(db, `users_status`, email), { status: 'active', deletedAt: null }, { merge: true });
-                // ส่งลิงก์ยืนยันอีเมลผ่าน Apps Script/GmailApp เท่านั้น
+                // ส่งลิงก์ยืนยันอีเมลผ่าน Apps Script/GmailApp เท่านั้น และรอผลตอบกลับจริง
                 try {
                     const token = makeToken();
                     const verifyLink = buildSchoolHubLink({ schoolhubVerify: '1', email, token });
-                    await setDoc(doc(db, `users_status`, email), { emailVerified: false, verifyToken: token, verifyTokenCreatedAt: new Date().toISOString(), status: 'active' }, { merge: true });
+                    await setDoc(doc(db, `users_status`, email), { emailVerified: false, verifyToken: token, verifyTokenCreatedAt: Date.now(), status: 'active' }, { merge: true });
                     await sendMailViaWebApp({
                         to: email,
                         name: name,
                         type: 'verify',
                         subject: 'SchoolHub - ยืนยันอีเมลของคุณ',
-                        message: `สวัสดี ${name || email}\n\nกรุณากดลิงก์ด้านล่างเพื่อยืนยันอีเมล:\n${verifyLink}\n\n— SchoolHub`,
+                        message: `สวัสดี ${name || email}
+
+กรุณากดลิงก์ด้านล่างเพื่อยืนยันอีเมล:
+${verifyLink}
+
+— SchoolHub`,
                         extra: { link: verifyLink }
                     });
                 } catch(verifyErr) { toggleLoader(false); return showCustomAlert('สมัครแล้วแต่ส่งเมลไม่ได้', verifyErr.message || String(verifyErr), true); }
