@@ -3347,25 +3347,22 @@ async function submitPlanRequest(planId){
                 await updateProfile(userCred.user, { displayName: name });
                 await addUserToDirectory(userCred.user, name, 'user');
                 await setDoc(doc(db, `users_status`, email), { status: 'active', deletedAt: null }, { merge: true });
-                // ส่งลิงก์ยืนยันอีเมลผ่าน Apps Script/GmailApp เท่านั้น และรอผลตอบกลับจริง
+                // ส่ง email verification
                 try {
-                    const token = makeToken();
-                    const verifyLink = buildSchoolHubLink({ schoolhubVerify: '1', email, token });
-                    await setDoc(doc(db, `users_status`, email), { emailVerified: false, verifyToken: token, verifyTokenCreatedAt: Date.now(), status: 'active' }, { merge: true });
-                    await sendMailViaWebApp({
+                    const actionCodeSettings = {
+                        url: window.location.href,
+                        handleCodeInApp: false
+                    };
+                    await sendEmailVerification(userCred.user, actionCodeSettings);
+                    sendMailViaWebApp({
                         to: email,
                         name: name,
                         type: 'verify',
-                        subject: 'SchoolHub - ยืนยันอีเมลของคุณ',
-                        message: `สวัสดี ${name || email}
-
-กรุณากดลิงก์ด้านล่างเพื่อยืนยันอีเมล:
-${verifyLink}
-
-— SchoolHub`,
-                        extra: { link: verifyLink }
+                        subject: 'ยืนยันการสมัครสมาชิก SchoolHub',
+                        message: `สวัสดี ${name || email}\n\nระบบได้รับการสมัครสมาชิก SchoolHub แล้ว กรุณาตรวจสอบอีเมลจาก Firebase และกดลิงก์ยืนยันอีเมลก่อนเข้าสู่ระบบ\n\nอีเมล: ${email}`,
+                        extra: { link: window.location.href }
                     });
-                } catch(verifyErr) { toggleLoader(false); return showCustomAlert('สมัครแล้วแต่ส่งเมลไม่ได้', verifyErr.message || String(verifyErr), true); }
+                } catch(verifyErr) { console.warn('sendEmailVerification failed:', verifyErr); }
                 // Sign out แล้วแจ้งให้ยืนยันเมลก่อน
                 await signOut(auth);
                 toggleLoader(false);
