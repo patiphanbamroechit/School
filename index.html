@@ -1018,6 +1018,45 @@
 }
 </style>
 
+
+<style>
+/* SchoolHub UserStats Email ID + Dashboard Clean + Mini Calendar Popup */
+#gd-summary-json,
+#gd-summary-json-container {
+    display: none !important;
+}
+
+/* Mini calendar popup */
+#schoolhub-mini-calendar-backdrop.hidden {
+    display: none !important;
+}
+#schoolhub-mini-calendar-backdrop:not(.hidden) {
+    display: flex !important;
+}
+#schoolhub-mini-calendar {
+    width: min(360px, calc(100vw - 32px));
+    border: 1px solid rgba(226,232,240,.95);
+    box-shadow: 0 24px 70px rgba(15,23,42,.18);
+}
+#schoolhub-mini-calendar button {
+    user-select: none;
+}
+.schoolhub-mini-cal-day {
+    width: 38px;
+    height: 38px;
+}
+.schoolhub-mini-cal-day.is-selected {
+    background: #4f46e5 !important;
+    color: white !important;
+    font-weight: 900 !important;
+}
+.schoolhub-mini-cal-day.is-today:not(.is-selected) {
+    background: #eef2ff !important;
+    color: #4f46e5 !important;
+    font-weight: 900 !important;
+}
+</style>
+
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen overflow-hidden selection:bg-indigo-100 selection:text-indigo-900">
 
@@ -1886,13 +1925,6 @@
                             </div>
 
                             <p id="gd-updated-at" class="text-xs text-slate-400 mt-4">อัปเดตล่าสุด: —</p>
-
-                            <div class="mt-6 rounded-[2rem] border border-slate-100 bg-slate-50 p-5">
-                                <h4 class="font-black text-slate-900 mb-3">
-                                    <i class="fas fa-database text-primary mr-2"></i>ข้อมูลจาก global_stats/summary
-                                </h4>
-                                <pre id="gd-summary-json" class="text-xs bg-white rounded-2xl p-4 overflow-auto max-h-72 border border-slate-100 text-slate-700">กำลังโหลด...</pre>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -8988,6 +9020,408 @@ onAuthStateChanged(userStatsFixAuth, user => {
     currentFixUser = user;
     if (user) setTimeout(syncUserStatsThenGlobal, 1600);
 });
+</script>
+
+
+<!-- SchoolHub Mini Calendar Popup -->
+<div id="schoolhub-mini-calendar-backdrop" class="fixed inset-0 bg-slate-900/35 backdrop-blur-[2px] z-[999997] hidden items-center justify-center p-4">
+    <div id="schoolhub-mini-calendar" class="bg-white rounded-[1.75rem] overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+            <button type="button" id="mini-cal-prev" class="w-9 h-9 rounded-xl bg-white border border-slate-100 hover:bg-indigo-50 text-slate-600">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <div class="text-center">
+                <div id="mini-cal-title" class="font-black text-slate-900 text-base">เดือน</div>
+                <div class="text-[11px] text-slate-400 font-bold">เลือกวันที่เช็คชื่อ</div>
+            </div>
+            <button type="button" id="mini-cal-next" class="w-9 h-9 rounded-xl bg-white border border-slate-100 hover:bg-indigo-50 text-slate-600">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+        <div class="p-4">
+            <div class="grid grid-cols-7 gap-1 text-center text-[11px] font-black text-slate-400 mb-2">
+                <div>อา</div><div>จ</div><div>อ</div><div>พ</div><div>พฤ</div><div>ศ</div><div>ส</div>
+            </div>
+            <div id="mini-cal-grid" class="grid grid-cols-7 gap-1"></div>
+            <div class="flex gap-2 mt-4">
+                <button type="button" id="mini-cal-today" class="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black py-2.5 rounded-xl text-sm">วันนี้</button>
+                <button type="button" id="mini-cal-close" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black py-2.5 rounded-xl text-sm">ปิด</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script type="module">
+/* SchoolHub UserStats Email ID + Dashboard Clean + Mini Calendar Popup */
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getFirestore, collection, getDocs, doc, getDoc, setDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+const patchConfig = {
+    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
+    authDomain: "schoolhub-5677d.firebaseapp.com",
+    projectId: "schoolhub-5677d",
+    storageBucket: "schoolhub-5677d.firebasestorage.app",
+    messagingSenderId: "803574136389",
+    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
+    measurementId: "G-ME7E38XNX6"
+};
+
+const patchApp = getApps().length ? getApp() : initializeApp(patchConfig);
+const patchDb = getFirestore(patchApp);
+const patchAuth = getAuth(patchApp);
+let patchCurrentUser = null;
+
+function toNum(v) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+}
+function values(v) {
+    if (Array.isArray(v)) return v;
+    if (v && typeof v === 'object') return Object.values(v);
+    return [];
+}
+function countAny(v) {
+    if (!v) return 0;
+    if (Array.isArray(v)) return v.length;
+    if (v && typeof v === 'object') return Object.keys(v).length;
+    return 0;
+}
+function countAttendance(attendance) {
+    if (!attendance) return 0;
+    if (Array.isArray(attendance)) return attendance.length;
+    if (typeof attendance !== 'object') return 0;
+    let total = 0;
+    Object.values(attendance).forEach(group => {
+        if (!group) return;
+        if (Array.isArray(group)) total += group.length;
+        else if (typeof group === 'object') {
+            if (group.dates && typeof group.dates === 'object') total += Object.keys(group.dates).length;
+            else if (group.records && typeof group.records === 'object') total += Object.keys(group.records).length;
+            else total += Object.keys(group).length;
+        } else total += 1;
+    });
+    return total;
+}
+function countCoursePlans(coursePlans) {
+    if (!coursePlans) return 0;
+    if (Array.isArray(coursePlans)) return coursePlans.length;
+    if (typeof coursePlans !== 'object') return 0;
+    let total = 0;
+    Object.values(coursePlans).forEach(group => {
+        if (!group) return;
+        if (Array.isArray(group)) total += group.length;
+        else if (typeof group === 'object') {
+            if (Array.isArray(group.items)) total += group.items.length;
+            else {
+                let sub = 0;
+                ['assignments','tasks','works','plans','scoreItems'].forEach(k => {
+                    if (Array.isArray(group[k])) sub += group[k].length;
+                    else if (group[k] && typeof group[k] === 'object') sub += Object.keys(group[k]).length;
+                });
+                total += sub || Object.keys(group).length;
+            }
+        }
+    });
+    return total;
+}
+function countState(state) {
+    const courses = values(state?.courses || state?.courseList || state?.coursesMap);
+    const students = values(state?.students || state?.studentList || state?.masterStudents || state?.studentsMap);
+
+    const attendanceRecords =
+        countAttendance(state?.attendance) ||
+        countAttendance(state?.attendanceRecords) ||
+        countAttendance(state?.attendances) ||
+        countAttendance(state?.checkIns) ||
+        countAttendance(state?.checkins);
+
+    let assignments = countCoursePlans(state?.coursePlans);
+    if (!assignments) {
+        assignments += countAny(state?.assignments) + countAny(state?.tasks) + countAny(state?.works);
+        courses.forEach(c => {
+            assignments += countAny(c?.assignments) + countAny(c?.tasks) + countAny(c?.works);
+        });
+    }
+
+    let scoreItems = countAny(state?.scores) + countAny(state?.scoreRecords) + countAny(state?.scoreList) + countAny(state?.studentScores);
+
+    return { courses: courses.length, students: students.length, attendanceRecords, assignments, scoreItems };
+}
+function isBlocked(data) {
+    const status = String(data?.status || '').toLowerCase();
+    return status === 'blocked' || status === 'deleted' || data?.blocked === true;
+}
+function isAdmin(data) {
+    const role = String(data?.role || '').toLowerCase();
+    return role === 'admin' || data?.isAdmin === true;
+}
+async function readStateByUserKey(userKey) {
+    if (!userKey) return null;
+    try {
+        const snap = await getDoc(doc(patchDb, 'users', String(userKey), 'school_data', 'state'));
+        return snap.exists() ? (snap.data() || {}) : null;
+    } catch(e) {
+        console.warn('อ่าน state ไม่สำเร็จ:', userKey, e);
+        return null;
+    }
+}
+async function getUserDirectoryRecords() {
+    const records = [];
+    const seenEmails = new Set();
+
+    async function readDirectory(colName) {
+        try {
+            const snap = await getDocs(collection(patchDb, colName));
+            snap.forEach(docSnap => {
+                const data = docSnap.data() || {};
+                const email = String(data.email || (String(docSnap.id).includes('@') ? docSnap.id : '') || '').trim();
+                if (!email || seenEmails.has(email)) return;
+                seenEmails.add(email);
+                records.push({
+                    directoryId: docSnap.id,
+                    uid: data.uid || '',
+                    email,
+                    displayName: data.displayName || data.name || data.fullName || '',
+                    role: data.role || 'teacher',
+                    status: data.status || 'active',
+                    data
+                });
+            });
+        } catch(e) {
+            console.warn('อ่าน ' + colName + ' ไม่สำเร็จ:', e);
+        }
+    }
+
+    await readDirectory('users_status');
+    await readDirectory('public_users_directory');
+
+    // fallback from current user
+    const user = patchCurrentUser || patchAuth.currentUser || window.currentUser || {};
+    const currentEmail = String(window.currentUserEmail || window.userEmail || user.email || '').trim();
+    if (currentEmail && !seenEmails.has(currentEmail)) {
+        records.push({
+            directoryId: currentEmail,
+            uid: user.uid || '',
+            email: currentEmail,
+            displayName: user.displayName || window.currentUserName || '',
+            role: window.currentUserRole || window.userRole || 'teacher',
+            status: window.currentUserStatus || 'active',
+            data: {}
+        });
+    }
+
+    return records;
+}
+async function findStateForRecord(record) {
+    // ใช้อีเมลเป็น path หลัก
+    const candidates = Array.from(new Set([
+        record.email,
+        record.data?.email,
+        record.data?.userKey,
+        record.directoryId,
+        record.uid
+    ].filter(Boolean).map(String)));
+
+    for (const key of candidates) {
+        const state = await readStateByUserKey(key);
+        if (state) return { stateKey: key, state };
+    }
+    return { stateKey: record.email || candidates[0] || '', state: null };
+}
+async function syncUserStatsEmailOnly() {
+    const records = await getUserDirectoryRecords();
+    let updatedCount = 0;
+    let foundStateCount = 0;
+
+    for (const record of records) {
+        if (!record.email || isBlocked(record.data)) continue;
+
+        const found = await findStateForRecord(record);
+        if (!found.state) {
+            console.warn('ไม่พบ state ของ:', record.email);
+            continue;
+        }
+
+        foundStateCount++;
+        const counts = countState(found.state);
+
+        const payload = {
+            uid: record.uid || '',
+            email: record.email,
+            displayName: record.displayName || '',
+            role: isAdmin(record.data) ? 'admin' : (record.role || 'teacher'),
+            status: record.status || 'active',
+            stateUserKey: found.stateKey,
+            courses: counts.courses,
+            students: counts.students,
+            attendanceRecords: counts.attendanceRecords,
+            assignments: counts.assignments,
+            scoreItems: counts.scoreItems,
+            updatedAt: serverTimestamp()
+        };
+
+        // สำคัญ: ใช้อีเมลเป็น document id เท่านั้น
+        await setDoc(doc(patchDb, 'user_stats', record.email), payload, { merge: true });
+        updatedCount++;
+    }
+
+    console.log('user_stats email only synced:', { updatedCount, foundStateCount });
+    return { updatedCount, foundStateCount };
+}
+async function rebuildGlobalFromEmailUserStats() {
+    const snap = await getDocs(collection(patchDb, 'user_stats'));
+
+    let totalUsers = 0, totalTeachers = 0, totalCourses = 0, totalStudents = 0, totalAttendanceRecords = 0, totalAssignments = 0, totalScoreItems = 0;
+
+    snap.forEach(docSnap => {
+        // นับเฉพาะ doc id ที่เป็นอีเมลเท่านั้น
+        if (!String(docSnap.id).includes('@')) return;
+        const d = docSnap.data() || {};
+        if (isBlocked(d)) return;
+
+        totalUsers++;
+        if (!isAdmin(d)) totalTeachers++;
+        totalCourses += toNum(d.courses);
+        totalStudents += toNum(d.students);
+        totalAttendanceRecords += toNum(d.attendanceRecords);
+        totalAssignments += toNum(d.assignments);
+        totalScoreItems += toNum(d.scoreItems);
+    });
+
+    const summary = { totalUsers, totalTeachers, totalCourses, totalStudents, totalAttendanceRecords, totalAssignments, totalScoreItems, countedUserStats: totalUsers, updatedAt: serverTimestamp() };
+    await setDoc(doc(patchDb, 'global_stats', 'summary'), summary, { merge: true });
+
+    if (typeof window.loadAdminGlobalDashboard === 'function') window.loadAdminGlobalDashboard();
+    if (typeof window.loadGlobalSiteStats === 'function') window.loadGlobalSiteStats();
+    return summary;
+}
+async function syncEmailUserStatsThenGlobal() {
+    try {
+        if (typeof window.toggleLoader === 'function') window.toggleLoader(true);
+        await syncUserStatsEmailOnly();
+        await rebuildGlobalFromEmailUserStats();
+    } catch(e) {
+        console.error(e);
+        alert('อัปเดตสถิติไม่สำเร็จ: ' + (e.message || e));
+    } finally {
+        if (typeof window.toggleLoader === 'function') window.toggleLoader(false);
+    }
+}
+
+window.__schoolhubSyncUserStatsOnly = syncUserStatsEmailOnly;
+window.__schoolhubSyncUserStatsThenGlobal = syncEmailUserStatsThenGlobal;
+window.__schoolhubSyncAndRebuildStats = syncEmailUserStatsThenGlobal;
+window.__schoolhubCentralStatsRebuild = syncEmailUserStatsThenGlobal;
+window.__schoolhubRebuildAllStatsFromUsersState = syncEmailUserStatsThenGlobal;
+
+// Clean dashboard raw JSON if old HTML remains
+function cleanDashboardRawBox() {
+    const pre = document.getElementById('gd-summary-json');
+    if (pre) {
+        const box = pre.closest('.mt-6') || pre.parentElement;
+        if (box) box.remove();
+    }
+}
+document.addEventListener('click', function(e) {
+    const text = (e.target?.innerText || e.target?.textContent || '').toString();
+    if (/อัปเดตสถิติ|รีเฟรช/.test(text)) setTimeout(syncEmailUserStatsThenGlobal, 250);
+}, true);
+
+document.addEventListener('DOMContentLoaded', () => {
+    cleanDashboardRawBox();
+    setTimeout(cleanDashboardRawBox, 800);
+    setTimeout(syncEmailUserStatsThenGlobal, 2200);
+});
+
+onAuthStateChanged(patchAuth, user => {
+    patchCurrentUser = user;
+    if (user) setTimeout(syncEmailUserStatsThenGlobal, 1600);
+});
+
+/* Minimal calendar popup for attendance date input */
+(function initMiniCalendar(){
+    let targetInput = null;
+    let viewDate = new Date();
+
+    function pad(n){ return String(n).padStart(2,'0'); }
+    function toInputDate(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+    function parseDate(v){
+        if (!v) return new Date();
+        const d = new Date(v);
+        return isNaN(d.getTime()) ? new Date() : d;
+    }
+    function render(){
+        const title = document.getElementById('mini-cal-title');
+        const grid = document.getElementById('mini-cal-grid');
+        if (!title || !grid) return;
+        title.textContent = viewDate.toLocaleDateString('th-TH', { month:'long', year:'numeric' });
+
+        const year = viewDate.getFullYear();
+        const month = viewDate.getMonth();
+        const first = new Date(year, month, 1);
+        const start = first.getDay();
+        const lastDate = new Date(year, month+1, 0).getDate();
+        const selected = targetInput ? parseDate(targetInput.value) : new Date();
+        const todayStr = toInputDate(new Date());
+
+        let html = '';
+        for (let i=0; i<start; i++) html += '<div></div>';
+        for (let day=1; day<=lastDate; day++) {
+            const d = new Date(year, month, day);
+            const dateStr = toInputDate(d);
+            const isSelected = targetInput && targetInput.value === dateStr;
+            const isToday = dateStr === todayStr;
+            html += `<button type="button" data-mini-date="${dateStr}" class="schoolhub-mini-cal-day rounded-xl text-sm font-bold hover:bg-indigo-50 ${isSelected?'is-selected':''} ${isToday?'is-today':''}">${day}</button>`;
+        }
+        grid.innerHTML = html;
+    }
+    function openCalendar(input){
+        targetInput = input;
+        viewDate = parseDate(input.value);
+        document.getElementById('schoolhub-mini-calendar-backdrop')?.classList.remove('hidden');
+        render();
+    }
+    function closeCalendar(){
+        document.getElementById('schoolhub-mini-calendar-backdrop')?.classList.add('hidden');
+    }
+
+    document.addEventListener('click', function(e){
+        const btn = e.target.closest('[data-mini-date]');
+        if (btn && targetInput) {
+            targetInput.value = btn.getAttribute('data-mini-date');
+            targetInput.dispatchEvent(new Event('input', { bubbles:true }));
+            targetInput.dispatchEvent(new Event('change', { bubbles:true }));
+            closeCalendar();
+            return;
+        }
+
+        const input = e.target.closest('input[type="date"]');
+        if (input && (location.href || '').includes('') ) {
+            // ใช้กับ input date ในหน้าเช็คชื่อ/ทั่วไปโดยไม่พัง input อื่น
+            e.preventDefault();
+            try { input.blur(); } catch(e) {}
+            openCalendar(input);
+        }
+    }, true);
+
+    document.addEventListener('DOMContentLoaded', function(){
+        document.getElementById('mini-cal-close')?.addEventListener('click', closeCalendar);
+        document.getElementById('mini-cal-prev')?.addEventListener('click', () => { viewDate.setMonth(viewDate.getMonth()-1); render(); });
+        document.getElementById('mini-cal-next')?.addEventListener('click', () => { viewDate.setMonth(viewDate.getMonth()+1); render(); });
+        document.getElementById('mini-cal-today')?.addEventListener('click', () => {
+            if (!targetInput) return;
+            targetInput.value = toInputDate(new Date());
+            targetInput.dispatchEvent(new Event('input', { bubbles:true }));
+            targetInput.dispatchEvent(new Event('change', { bubbles:true }));
+            closeCalendar();
+        });
+        document.getElementById('schoolhub-mini-calendar-backdrop')?.addEventListener('click', e => {
+            if (e.target.id === 'schoolhub-mini-calendar-backdrop') closeCalendar();
+        });
+    });
+})();
 </script>
 
 </body>
