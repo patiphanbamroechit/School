@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -917,7 +916,7 @@
         </div>
     </div>
 
-    <div id="custom-confirm" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[160] hidden flex items-center justify-center p-4 fade-in">
+    <div id="custom-confirm" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[185] hidden flex items-center justify-center p-4 fade-in">
         <div class="bg-white rounded-3xl w-full max-w-md p-8 text-center shadow-2xl" id="custom-confirm-box">
             <div class="text-6xl mb-4 text-amber-500"><i class="fas fa-exclamation-circle drop-shadow-md"></i></div>
             <h3 id="custom-confirm-title" class="text-2xl font-bold text-slate-800 mb-2">ยืนยัน</h3>
@@ -940,6 +939,21 @@
                 <button onclick="closePlanRequestPopup()" class="w-10 h-10 rounded-full bg-white border text-slate-500 hover:bg-slate-100"><i class="fas fa-times"></i></button>
             </div>
             <div id="admin-plan-request-popup-body" class="p-6 space-y-4 max-h-[70dvh] overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <!-- Slip OCR Result Popup: แยกออกมาเพื่อไม่ซ้อนกับ plan-payment-modal -->
+    <div id="slip-result-popup" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[180] hidden flex items-center justify-center p-4 fade-in">
+        <div class="bg-white rounded-[2rem] w-full max-w-lg shadow-2xl overflow-hidden">
+            <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                <h3 class="text-xl font-black text-slate-900"><i class="fas fa-shield-halved text-primary mr-2"></i>ผลการตรวจสลิป</h3>
+                <button onclick="document.getElementById('slip-result-popup').classList.add('hidden')" class="w-9 h-9 rounded-full bg-white border text-slate-500 hover:bg-slate-100"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="slip-result-popup-body" class="p-6 space-y-4 max-h-[70dvh] overflow-y-auto"></div>
+            <div class="p-4 border-t bg-white flex gap-3">
+                <button onclick="document.getElementById('slip-result-popup').classList.add('hidden')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-2xl">ปิด</button>
+                <button id="slip-result-confirm-btn" onclick="window._slipResultConfirmCallback && window._slipResultConfirmCallback(); document.getElementById('slip-result-popup').classList.add('hidden')" class="flex-1 bg-primary hover:bg-indigo-700 text-white font-bold py-3 rounded-2xl shadow-lg shadow-indigo-200">ยืนยันส่งหลักฐาน</button>
+            </div>
         </div>
     </div>
 
@@ -1189,6 +1203,7 @@
                             </div>
                             <div class="text-center pt-1">
                                 <p class="text-sm font-medium text-slate-500">ไม่มีบัญชี? <button type="button" onclick="toggleAuthMode('register')" class="text-primary font-black hover:text-indigo-700 hover:underline">สมัครสมาชิก</button></p>
+                                <p class="text-sm font-medium text-slate-500 mt-2"><button type="button" onclick="openForgotPassword()" class="text-slate-400 hover:text-primary hover:underline">ลืมรหัสผ่าน?</button></p>
                             </div>
                         </form>
 
@@ -2366,14 +2381,36 @@
             const box=document.getElementById('user-plan-list');
             if(!box) return;
             const items=(subscriptionPlans||getDefaultPlans()).filter(p=>p.active!==false).sort((a,b)=>Number(a.order||0)-Number(b.order||0));
-            const currentPlanId = (currentUser && currentUser.currentPlanId) || localStorage.getItem('schoolhub_current_plan_id') || '';
+            // ดึงข้อมูลจริงจาก directory ที่ sync มาจาก Firebase
+            const dirUser = (window.__currentUserDir) || {};
+            const currentPlanId = dirUser.planId || '';
+            const currentPlanName = dirUser.planName || '';
+            const currentPlanPrice = dirUser.planPrice || '';
+            const pendingPlanName = dirUser.requestedPlanName || '';
+            const userStatus = dirUser.status || '';
             const currentBox=document.getElementById('user-current-plan-box');
             if(currentBox){
-                const currentPlan = items.find(p=>p.id===currentPlanId);
-                currentBox.innerHTML = `<div class="bg-indigo-50 border border-indigo-100 text-indigo-900 rounded-3xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"><div><div class="text-sm font-bold text-indigo-500">แผนปัจจุบัน</div><div class="text-xl font-black">${currentPlan?escapeHTML(currentPlan.name):'ยังไม่ได้เลือกแผน'}</div><div class="text-sm text-indigo-700/80">${currentPlan?escapeHTML(currentPlan.price||''):'เลือกแผนด้านล่างเพื่อเริ่มขั้นตอนสมัคร'}</div></div><i class="fas fa-id-card text-3xl text-primary"></i></div>`;
+                let planHtml = '';
+                if(currentPlanName){
+                    planHtml = `<div class="bg-indigo-50 border border-indigo-100 text-indigo-900 rounded-3xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"><div><div class="text-sm font-bold text-indigo-500">แผนปัจจุบัน</div><div class="text-xl font-black">${escapeHTML(currentPlanName)}</div><div class="text-sm text-indigo-700/80">${escapeHTML(currentPlanPrice)}</div></div><i class="fas fa-id-card text-3xl text-primary"></i></div>`;
+                } else if(pendingPlanName){
+                    planHtml = `<div class="bg-amber-50 border border-amber-200 text-amber-900 rounded-3xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"><div><div class="text-sm font-bold text-amber-500"><i class="fas fa-clock mr-1"></i>รอแอดมินอนุมัติ</div><div class="text-xl font-black">${escapeHTML(pendingPlanName)}</div><div class="text-sm text-amber-700/80">คำขอของคุณอยู่ระหว่างรอตรวจสอบ</div></div><i class="fas fa-hourglass-half text-3xl text-amber-500 animate-pulse"></i></div>`;
+                } else {
+                    planHtml = `<div class="bg-indigo-50 border border-indigo-100 text-indigo-900 rounded-3xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"><div><div class="text-sm font-bold text-indigo-500">แผนปัจจุบัน</div><div class="text-xl font-black">ยังไม่ได้เลือกแผน</div><div class="text-sm text-indigo-700/80">เลือกแผนด้านล่างเพื่อเริ่มขั้นตอนสมัคร</div></div><i class="fas fa-id-card text-3xl text-primary"></i></div>`;
+                }
+                currentBox.innerHTML = planHtml;
             }
+            const hasPending = !!pendingPlanName;
             box.innerHTML=items.map(p=>{
-                const active = p.id===currentPlanId;
+                const active = p.id===currentPlanId && !!currentPlanId;
+                let btnHtml = '';
+                if(hasPending && !active){
+                    btnHtml = `<button onclick="showCustomAlert('มีคำขออยู่แล้ว','คุณมีคำขอสมัครแผน &quot;${escapeHTML(pendingPlanName)}&quot; ที่รอตรวจสอบอยู่ กรุณารอให้แอดมินดำเนินการก่อนจึงจะส่งคำขอใหม่ได้',true)" class="w-full bg-amber-100 text-amber-700 rounded-2xl py-3 font-bold cursor-not-allowed"><i class="fas fa-hourglass-half mr-1"></i> มีคำขอรออนุมัติอยู่แล้ว</button>`;
+                } else if(active){
+                    btnHtml = `<button onclick="requestSubscriptionPlan('${p.id}')" class="w-full bg-emerald-100 text-emerald-700 rounded-2xl py-3 font-bold transition"><i class="fas fa-paper-plane mr-1"></i> ขอต่ออายุ</button>`;
+                } else {
+                    btnHtml = `<button onclick="requestSubscriptionPlan('${p.id}')" class="w-full bg-primary text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200 rounded-2xl py-3 font-bold transition"><i class="fas fa-paper-plane mr-1"></i> เลือกแผนนี้</button>`;
+                }
                 return `<div class="pricing-card ${p.featured?'featured':''} ${active?'ring-2 ring-emerald-400':''} rounded-[2rem] p-6 relative overflow-hidden bg-white">
                     ${p.featured?'<div class="absolute top-4 right-4 bg-primary text-white text-xs font-black px-3 py-1 rounded-full">แนะนำ</div>':''}
                     ${active?'<div class="absolute top-4 left-4 bg-emerald-500 text-white text-xs font-black px-3 py-1 rounded-full">ใช้อยู่</div>':''}
@@ -2381,7 +2418,7 @@
                     <p class="text-sm text-slate-500 min-h-[42px]">${escapeHTML(p.desc||'')}</p>
                     <div class="my-5"><span class="text-3xl font-black text-primary">${escapeHTML(p.price||'')}</span></div>
                     <ul class="space-y-3 mb-6">${(p.features||[]).map(f=>`<li class="flex gap-2 text-sm text-slate-600"><i class="fas fa-check text-emerald-500 mt-1"></i><span>${escapeHTML(f)}</span></li>`).join('')}</ul>
-                    <button onclick="requestSubscriptionPlan('${p.id}')" class="w-full ${active?'bg-emerald-100 text-emerald-700':'bg-primary text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200'} rounded-2xl py-3 font-bold transition"><i class="fas fa-paper-plane mr-1"></i> ${active?'ขอต่ออายุ / ส่งคำขออีกครั้ง':'เลือกแผนนี้'}</button>
+                    ${btnHtml}
                 </div>`;
             }).join('');
         }
@@ -2393,6 +2430,13 @@
             document.getElementById('page-subtitle').textContent='เลือกแผนที่ต้องการ แล้วกรอกข้อมูลการชำระเงิน';
             document.getElementById('header-actions').innerHTML='';
             await loadPublicPlans();
+            // โหลดข้อมูล user ล่าสุดจาก Firestore เพื่อแสดงแผนปัจจุบันถูกต้อง
+            if(currentUser && currentUser.uid !== 'admin-bypass'){
+                try {
+                    const snap = await withTimeout(getDoc(doc(db, getPublicPath(), currentUser.uid)), 6000, 'loadUserDir');
+                    if(snap.exists()) window.__currentUserDir = snap.data() || {};
+                } catch(e) { console.warn('loadUserDir failed:', e); }
+            }
             renderUserPlans();
             window.switchView('user-plans');
         };
@@ -2873,8 +2917,6 @@
                 setSlipCheckBox('fail','ตรวจสลิปอัตโนมัติไม่สำเร็จ',`${verification.verificationError}\n\nระบบจะบันทึกเป็น “รอตรวจสอบ” และจะไม่อนุมัติอัตโนมัติจนกว่าข้อมูลจะถูกต้องจริง`,{ 'สถานะ':'รอตรวจสอบโดยแอดมิน' },[{status:'fail',text:'ระบบ OCR หรือตัวตรวจสอบทำงานไม่สำเร็จ'}]);
             }
             try{
-                setPaymentSubmitBusy(true,verification?.autoApproved?'กำลังอนุมัติอัตโนมัติ...':'กำลังบันทึกเป็นรอตรวจสอบ...');
-                setSlipCheckBox(verification?.autoApproved?'pass':'fail',verification?.autoApproved?'ตรวจผ่าน กำลังอนุมัติสิทธิ์':'ตรวจไม่ผ่าน กำลังบันทึกเป็นรอตรวจสอบ',verification?.autoApproved?'ระบบกำลังบันทึกสิทธิ์ให้ผู้ใช้':'ระบบกำลังบันทึกคำขอเพื่อให้แอดมินตรวจสอบภายหลัง',verification?{ 'ผลตรวจ':verification.autoApproved?'ผ่าน':'ไม่ผ่าน', 'เลขอ้างอิง':verification.reference||'ไม่มี' }:{});
                 const slipDataUrl=await readFileAsDataURL(proofFile);
                 const userKey=getUserKey(currentUser);
                 const reqId=`${currentUser.uid}_${planId}_${Date.now()}`;
@@ -3143,6 +3185,11 @@ async function submitPlanRequest(planId){
             document.getElementById('auth-subtitle').textContent = isLogin ? "ระบบจัดการห้องเรียนอัจฉริยะ" : "สร้างบัญชีใหม่เพื่อเริ่มต้นใช้งาน";
         };
 
+        window.openForgotPassword = () => {
+            const resetUrl = 'reset-password.html';
+            window.open(resetUrl, '_blank');
+        };
+
         window.handleLogin = async (e) => {
             e.preventDefault();
             const email = document.getElementById('login-email').value.trim();
@@ -3161,7 +3208,31 @@ async function submitPlanRequest(planId){
                 }
             } catch (e) {}
 
-            try { await signInWithEmailAndPassword(auth, email, pass); }
+            try {
+                const userCred = await signInWithEmailAndPassword(auth, email, pass);
+                if (!userCred.user.emailVerified) {
+                    // ยังไม่ยืนยันเมล → sign out และแจ้ง
+                    await signOut(auth);
+                    toggleLoader(false);
+                    const { sendEmailVerification } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+                    window.showCustomConfirm(
+                        "ยังไม่ได้ยืนยันอีเมล",
+                        "กรุณากดลิงก์ยืนยันในอีเมลของคุณก่อนเข้าสู่ระบบ\n\nต้องการส่งลิงก์ยืนยันใหม่หรือไม่?",
+                        async () => {
+                            toggleLoader(true);
+                            try {
+                                const tmpCred = await signInWithEmailAndPassword(auth, email, pass);
+                                const { sendEmailVerification } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+                                await sendEmailVerification(tmpCred.user, { url: window.location.href });
+                                await signOut(auth);
+                                showCustomAlert("ส่งลิงก์ใหม่แล้ว", "ตรวจสอบอีเมล " + email + " แล้วกดลิงก์ยืนยัน");
+                            } catch(e2) { showCustomAlert("ส่งไม่ได้", getFirebaseErrorText(e2), true); }
+                            toggleLoader(false);
+                        }
+                    );
+                    return;
+                }
+            }
             catch (error) { toggleLoader(false); showCustomAlert("เข้าสู่ระบบไม่ได้", getFirebaseErrorText(error), true); }
         };
 
@@ -3185,11 +3256,23 @@ async function submitPlanRequest(planId){
             } catch(e){}
 
             try {
+                const { sendEmailVerification } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
                 const userCred = await createUserWithEmailAndPassword(auth, email, pass);
                 await updateProfile(userCred.user, { displayName: name });
                 await addUserToDirectory(userCred.user, name, 'user');
                 await setDoc(doc(db, `users_status`, email), { status: 'active', deletedAt: null }, { merge: true });
-                localStorage.setItem('schoolhub_after_register_choose_plan', '1');
+                // ส่ง email verification
+                try {
+                    const actionCodeSettings = {
+                        url: window.location.href,
+                        handleCodeInApp: false
+                    };
+                    await sendEmailVerification(userCred.user, actionCodeSettings);
+                } catch(verifyErr) { console.warn('sendEmailVerification failed:', verifyErr); }
+                // Sign out แล้วแจ้งให้ยืนยันเมลก่อน
+                await signOut(auth);
+                toggleLoader(false);
+                showCustomAlert("สมัครสมาชิกสำเร็จ!", "ระบบส่งลิงก์ยืนยันอีเมลไปที่ " + email + " แล้ว\n\nกรุณากดลิงก์ยืนยันในอีเมล จากนั้นกลับมาเข้าสู่ระบบได้ทันที");
             } catch (error) {
                 if(error.code === 'auth/email-already-in-use') {
                     toggleLoader(false); showCustomAlert("สมัครไม่ได้", "อีเมลนี้มีผู้ใช้งานในระบบแล้ว", true);
@@ -3226,6 +3309,11 @@ async function submitPlanRequest(planId){
                     setAdminNavigationMode(false);
 
                     await loadStateFromDB();
+                    // sync current user directory
+                    try {
+                        const dirSnap = await withTimeout(getDoc(doc(db, getPublicPath(), user.uid)), 6000, 'syncUserDir');
+                        if(dirSnap.exists()) window.__currentUserDir = dirSnap.data() || {};
+                    } catch(e) { console.warn('syncUserDir failed:', e); }
                     const planFlow = await processPendingPlanRequestAfterLogin();
                     if(!planFlow) window.goToHome();
                 } catch (error) { showCustomAlert("ผิดพลาด", error.message, true); }
