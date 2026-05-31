@@ -2013,7 +2013,7 @@
 
 <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -2030,65 +2030,58 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // --- ระบบส่งเมลผ่าน Google Apps Script Web App ---
-        // ส่งผ่าน hidden iframe เพื่อให้รับผลลัพธ์จริงจาก Apps Script ได้ (ไม่ใช้ no-cors)
+        // --- ระบบส่งเมลผ่าน Google Apps Script Web App เท่านั้น ---
+        // ใช้ hidden iframe + postMessage เพื่อรับผลจริงจาก Apps Script โดยไม่ใช้ no-cors
         const MAIL_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx6vgxxjJBy0JPFPVjhCOEAn5aCCXXPjE0nBHEt7xkoXfYHeIZ5yGuM8dzcSWW0nsk8jg/exec';
-        function sendMailViaWebApp(payload = {}) {
+        function buildSchoolHubLink(params = {}) {
+            const url = new URL(window.location.href);
+            Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+            return url.toString();
+        }
+        function makeToken() {
+            const arr = new Uint32Array(4);
+            crypto.getRandomValues(arr);
+            return Array.from(arr).map(n => n.toString(36)).join('');
+        }
+        async function sendMailViaWebApp({ to, subject, message, htmlBody, type = 'schoolhub', name = '', extra = {} } = {}) {
+            const target = String(to || '').trim();
+            if (!target || !MAIL_WEB_APP_URL) throw new Error('ไม่พบอีเมลผู้รับหรือ URL Apps Script');
+            const requestId = 'mail_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+            const payload = {
+                requestId,
+                type: String(type || ''),
+                email: target,
+                name: String(name || ''),
+                link: String((extra && (extra.link || extra.actionLink)) || ''),
+                subject: String(subject || ''),
+                message: String(message || ''),
+                htmlBody: String(htmlBody || '')
+            };
             return new Promise((resolve, reject) => {
-                const targetEmail = String(payload.to || payload.email || '').trim();
-                if (!targetEmail) return reject(new Error('ไม่พบอีเมลผู้รับ'));
-                if (!MAIL_WEB_APP_URL) return reject(new Error('ยังไม่ได้ตั้งค่า MAIL_WEB_APP_URL'));
-
-                const requestId = 'mail_' + Date.now() + '_' + Math.random().toString(36).slice(2);
-                const iframeName = 'mail_iframe_' + requestId;
+                const iframeName = 'schoolhub_mail_frame_' + requestId;
                 const iframe = document.createElement('iframe');
                 iframe.name = iframeName;
                 iframe.style.display = 'none';
-
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = MAIL_WEB_APP_URL;
                 form.target = iframeName;
                 form.style.display = 'none';
-
-                const normalizedPayload = {
-                    requestId,
-                    type: String(payload.type || ''),
-                    email: targetEmail,
-                    name: String(payload.name || ''),
-                    link: String((payload.extra && (payload.extra.link || payload.extra.actionLink || payload.extra.returnUrl)) || payload.link || ''),
-                    continueUrl: String((payload.extra && (payload.extra.continueUrl || payload.extra.returnUrl || payload.extra.link)) || payload.continueUrl || window.location.href),
-                    idToken: String((payload.extra && payload.extra.idToken) || payload.idToken || ''),
-                    subject: String(payload.subject || ''),
-                    message: String(payload.message || ''),
-                    htmlBody: String(payload.htmlBody || '')
-                };
-
                 const input = document.createElement('input');
                 input.type = 'hidden';
                 input.name = 'payload';
-                input.value = JSON.stringify(normalizedPayload);
+                input.value = JSON.stringify(payload);
                 form.appendChild(input);
-
-                const cleanup = () => {
-                    window.removeEventListener('message', onMessage);
-                    clearTimeout(timer);
-                    setTimeout(() => { iframe.remove(); form.remove(); }, 100);
-                };
-
-                const timer = setTimeout(() => {
-                    cleanup();
-                    reject(new Error('ยังไม่ได้รับผลยืนยันจาก Apps Script กรุณาเช็กว่า Deploy เป็นเวอร์ชันล่าสุดและตั้ง Anyone แล้ว'));
-                }, 20000);
-
-                function onMessage(event) {
+                const cleanup = () => { window.removeEventListener('message', onMessage); iframe.remove(); form.remove(); };
+                const timer = setTimeout(() => { cleanup(); reject(new Error('Apps Script ไม่ตอบกลับ กรุณาตรวจ Deploy และสิทธิ์ Anyone')); }, 20000);
+                const onMessage = (event) => {
                     const data = event.data || {};
                     if (!data || data.requestId !== requestId) return;
+                    clearTimeout(timer);
                     cleanup();
-                    if (data.ok === true) resolve(data);
+                    if (data.ok) resolve(data);
                     else reject(new Error(data.error || 'Apps Script ส่งอีเมลไม่สำเร็จ'));
-                }
-
+                };
                 window.addEventListener('message', onMessage);
                 document.body.appendChild(iframe);
                 document.body.appendChild(form);
@@ -2096,6 +2089,28 @@
             });
         }
         window.sendMailViaWebApp = sendMailViaWebApp;
+
+        async function handleSchoolHubEmailVerificationFromLink() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('schoolhubVerify') !== '1') return;
+            const email = (params.get('email') || '').trim();
+            const token = (params.get('token') || '').trim();
+            if (!email || !token) return showCustomAlert('ยืนยันอีเมลไม่ได้', 'ลิงก์ยืนยันไม่สมบูรณ์', true);
+            try {
+                toggleLoader(true);
+                const ref = doc(db, `users_status`, email);
+                const snap = await getDoc(ref);
+                if (!snap.exists() || snap.data().verifyToken !== token) throw new Error('ลิงก์ยืนยันไม่ถูกต้องหรือหมดอายุ');
+                await setDoc(ref, { emailVerified: true, verifyToken: null, verifiedAt: new Date().toISOString(), status: 'active' }, { merge: true });
+                const cleanUrl = new URL(window.location.href);
+                ['schoolhubVerify','email','token'].forEach(k => cleanUrl.searchParams.delete(k));
+                window.history.replaceState({}, '', cleanUrl.toString());
+                showCustomAlert('ยืนยันอีเมลสำเร็จ', 'อีเมลนี้ยืนยันเรียบร้อยแล้ว สามารถเข้าสู่ระบบได้ทันที');
+            } catch (err) {
+                showCustomAlert('ยืนยันอีเมลไม่ได้', err.message || String(err), true);
+            } finally { toggleLoader(false); }
+        }
+        window.addEventListener('load', () => setTimeout(handleSchoolHubEmailVerificationFromLink, 500));
 
         // ป้องกันหน้าโหลดค้าง: ถ้า Firebase ตอบช้า/โดน Rules บล็อก จะปล่อยหน้าเว็บให้ใช้งานต่อ
         const FIREBASE_TIMEOUT_MS = 8000;
@@ -3278,22 +3293,35 @@ async function submitPlanRequest(planId){
 
             try {
                 const userCred = await signInWithEmailAndPassword(auth, email, pass);
-                if (!userCred.user.emailVerified) {
-                    // ยังไม่ยืนยันเมล → sign out และแจ้ง
+                const verifySnap = await getDoc(doc(db, `users_status`, email));
+                const isSchoolHubVerified = verifySnap.exists() && verifySnap.data().emailVerified === true;
+                if (!isSchoolHubVerified) {
                     await signOut(auth);
                     toggleLoader(false);
-                    const { sendEmailVerification } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
                     window.showCustomConfirm(
                         "ยังไม่ได้ยืนยันอีเมล",
                         "กรุณากดลิงก์ยืนยันในอีเมลของคุณก่อนเข้าสู่ระบบ\n\nต้องการส่งลิงก์ยืนยันใหม่หรือไม่?",
                         async () => {
                             toggleLoader(true);
                             try {
-                                const tmpCred = await signInWithEmailAndPassword(auth, email, pass);
-                                await sendEmailVerification(tmpCred.user);
-                                await signOut(auth);
+                                const token = makeToken();
+                                const verifyLink = buildSchoolHubLink({ schoolhubVerify: '1', email, token });
+                                await setDoc(doc(db, `users_status`, email), { emailVerified: false, verifyToken: token, verifyTokenCreatedAt: new Date().toISOString(), status: 'active' }, { merge: true });
+                                await sendMailViaWebApp({
+                                    to: email,
+                                    type: 'verify',
+                                    subject: 'SchoolHub - ยืนยันอีเมลของคุณ',
+                                    name: email,
+                                    message: `สวัสดี ${email}
+
+กรุณากดลิงก์ด้านล่างเพื่อยืนยันอีเมล:
+${verifyLink}
+
+— SchoolHub`,
+                                    extra: { link: verifyLink }
+                                });
                                 showCustomAlert("ส่งลิงก์ใหม่แล้ว", "ตรวจสอบอีเมล " + email + " แล้วกดลิงก์ยืนยัน");
-                            } catch(e2) { showCustomAlert("ส่งไม่ได้", getFirebaseErrorText(e2), true); }
+                            } catch(e2) { showCustomAlert("ส่งไม่ได้", e2.message || String(e2), true); }
                             toggleLoader(false);
                         }
                     );
@@ -3327,14 +3355,24 @@ async function submitPlanRequest(planId){
                 await updateProfile(userCred.user, { displayName: name });
                 await addUserToDirectory(userCred.user, name, 'user');
                 await setDoc(doc(db, `users_status`, email), { status: 'active', deletedAt: null }, { merge: true });
-                // ส่ง email verification
+                // ส่งลิงก์ยืนยันอีเมลผ่าน Apps Script/GmailApp เท่านั้น
                 try {
-                    await sendEmailVerification(userCred.user);
-                } catch(verifyErr) { throw verifyErr; }
+                    const token = makeToken();
+                    const verifyLink = buildSchoolHubLink({ schoolhubVerify: '1', email, token });
+                    await setDoc(doc(db, `users_status`, email), { emailVerified: false, verifyToken: token, verifyTokenCreatedAt: new Date().toISOString(), status: 'active' }, { merge: true });
+                    await sendMailViaWebApp({
+                        to: email,
+                        name: name,
+                        type: 'verify',
+                        subject: 'SchoolHub - ยืนยันอีเมลของคุณ',
+                        message: `สวัสดี ${name || email}\n\nกรุณากดลิงก์ด้านล่างเพื่อยืนยันอีเมล:\n${verifyLink}\n\n— SchoolHub`,
+                        extra: { link: verifyLink }
+                    });
+                } catch(verifyErr) { toggleLoader(false); return showCustomAlert('สมัครแล้วแต่ส่งเมลไม่ได้', verifyErr.message || String(verifyErr), true); }
                 // Sign out แล้วแจ้งให้ยืนยันเมลก่อน
                 await signOut(auth);
                 toggleLoader(false);
-                showCustomAlert("สมัครสมาชิกสำเร็จ!", "ระบบส่งลิงก์ยืนยันอีเมลไปที่ " + email + " แล้ว\n\nกรุณากดลิงก์ยืนยันในอีเมล จากนั้นกลับมาเข้าสู่ระบบได้ทันที");
+                showCustomAlert("สมัครสมาชิกสำเร็จ!", "ระบบส่งลิงก์ยืนยันอีเมลผ่าน Apps Script ไปที่ " + email + " แล้ว\n\nกรุณากดลิงก์ยืนยันในอีเมล จากนั้นกลับมาเข้าสู่ระบบได้ทันที");
             } catch (error) {
                 if(error.code === 'auth/email-already-in-use') {
                     toggleLoader(false); showCustomAlert("สมัครไม่ได้", "อีเมลนี้มีผู้ใช้งานในระบบแล้ว", true);
