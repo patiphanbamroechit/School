@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -13,6 +12,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -1961,7 +1961,19 @@
                         <input id="payment-proof-file" type="file" accept="image/*" required
                             class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none"
                             onchange="previewPaymentSlip(event)">
-                        <p class="text-xs text-slate-400 mt-1">รองรับ JPG, PNG — สลิปจะแนบไปให้แอดมินตรวจสอบ</p>
+                        <p class="text-xs text-slate-400 mt-1">รองรับ JPG, PNG — ระบบจะอ่านสลิป ตรวจยอดเงิน เลขอ้างอิง ชื่อ และเวลา ก่อนอนุมัติอัตโนมัติ</p>
+                        <div id="payment-slip-check-box" class="hidden mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
+                            <div class="flex items-start gap-3">
+                                <div id="payment-slip-check-icon" class="w-10 h-10 rounded-2xl bg-slate-200 text-slate-500 flex items-center justify-center shrink-0">
+                                    <i class="fas fa-shield-halved"></i>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div id="payment-slip-check-title" class="font-black text-slate-800">รอตรวจสอบสลิป</div>
+                                    <div id="payment-slip-check-message" class="text-xs text-slate-500 leading-6 mt-1 whitespace-pre-line">เลือกไฟล์สลิปเพื่อให้ระบบตรวจสอบ</div>
+                                    <div id="payment-slip-check-details" class="hidden mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
+                                </div>
+                            </div>
+                        </div>
                         <!-- Slip preview -->
                         <div id="payment-slip-preview-wrap" class="hidden mt-3">
                             <div class="relative inline-block w-full">
@@ -2439,6 +2451,268 @@
             return base+_ppCRC16(base);
         }
 
+
+        // --- Strict slip verification before automatic approval ---
+        function normalizeThaiTextForMatch(value){
+            return String(value||'')
+                .toLowerCase()
+                .replace(/[^\u0E00-\u0E7Fa-z0-9]/g,'')
+                .replace(/นาย|นางสาว|นาง|ดร|คุณ/g,'')
+                .trim();
+        }
+        function levenshteinDistance(a,b){
+            a=String(a||''); b=String(b||'');
+            const dp=Array.from({length:a.length+1},()=>Array(b.length+1).fill(0));
+            for(let i=0;i<=a.length;i++) dp[i][0]=i;
+            for(let j=0;j<=b.length;j++) dp[0][j]=j;
+            for(let i=1;i<=a.length;i++){
+                for(let j=1;j<=b.length;j++){
+                    dp[i][j]=Math.min(
+                        dp[i-1][j]+1,
+                        dp[i][j-1]+1,
+                        dp[i-1][j-1]+(a[i-1]===b[j-1]?0:1)
+                    );
+                }
+            }
+            return dp[a.length][b.length];
+        }
+        function similarityScore(a,b){
+            const x=normalizeThaiTextForMatch(a);
+            const y=normalizeThaiTextForMatch(b);
+            if(!x || !y) return 0;
+            if(x.includes(y) || y.includes(x)) return 1;
+            const maxLen=Math.max(x.length,y.length);
+            return maxLen ? 1-(levenshteinDistance(x,y)/maxLen) : 0;
+        }
+        function extractSlipAmount(ocrText){
+            const text=String(ocrText||'').replace(/,/g,'');
+            const amountPatterns=[
+                /(?:จำนวนเงิน|ยอดเงิน|ยอดชำระ|amount|total)[^\d]{0,20}(\d+(?:\.\d{1,2})?)/i,
+                /(\d+(?:\.\d{2}))\s*(?:บาท|THB|฿)/i,
+                /฿\s*(\d+(?:\.\d{1,2})?)/i
+            ];
+            const values=[];
+            amountPatterns.forEach(re=>{
+                let m;
+                const g=new RegExp(re.source,re.flags.includes('g')?re.flags:re.flags+'g');
+                while((m=g.exec(text))!==null){
+                    const n=Number(m[1]);
+                    if(Number.isFinite(n) && n>0 && n<1000000) values.push(n);
+                }
+            });
+            return values.length ? values[0] : null;
+        }
+        function extractSlipReference(ocrText){
+            const text=String(ocrText||'').replace(/\s+/g,' ');
+            const patterns=[
+                /(?:เลขที่รายการ|เลขอ้างอิง|หมายเลขอ้างอิง|เลขที่อ้างอิง|reference|ref\.?|transaction\s*id|รหัสรายการ)[^\w\d]{0,12}([A-Z0-9]{10,32})/i,
+                /\b([0-9]{12,32})\b/g,
+                /\b([A-Z0-9]{16,32})\b/g
+            ];
+            for(const re of patterns){
+                const g=new RegExp(re.source,re.flags.includes('g')?re.flags:re.flags+'g');
+                let m;
+                while((m=g.exec(text))!==null){
+                    const ref=String(m[1]||'').replace(/[^A-Z0-9]/gi,'').toUpperCase();
+                    if(ref.length>=10) return ref;
+                }
+            }
+            return '';
+        }
+        function parseSlipDateTime(ocrText, userPaidAt){
+            const text=String(ocrText||'').replace(/\s+/g,' ');
+            const currentYear=new Date().getFullYear();
+            const monthMap={
+                'ม.ค.':1,'มกราคม':1,'ก.พ.':2,'กุมภาพันธ์':2,'มี.ค.':3,'มีนาคม':3,'เม.ย.':4,'เมษายน':4,
+                'พ.ค.':5,'พฤษภาคม':5,'มิ.ย.':6,'มิถุนายน':6,'ก.ค.':7,'กรกฎาคม':7,'ส.ค.':8,'สิงหาคม':8,
+                'ก.ย.':9,'กันยายน':9,'ต.ค.':10,'ตุลาคม':10,'พ.ย.':11,'พฤศจิกายน':11,'ธ.ค.':12,'ธันวาคม':12
+            };
+            let timeMatch=text.match(/(\d{1,2})[:.](\d{2})(?::(\d{2}))?/);
+            const time = timeMatch ? {h:Number(timeMatch[1]), m:Number(timeMatch[2]), s:Number(timeMatch[3]||0)} : null;
+            let dateObj=null;
+            const numeric=text.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
+            if(numeric){
+                let d=Number(numeric[1]), mo=Number(numeric[2]), y=Number(numeric[3]);
+                if(y<100) y+=2500;
+                if(y>2400) y-=543;
+                dateObj=new Date(y,mo-1,d,time?.h||0,time?.m||0,time?.s||0);
+            }else{
+                const thRe=new RegExp('(\\d{1,2})\\s*('+Object.keys(monthMap).join('|')+')\\s*(\\d{2,4})?');
+                const th=text.match(thRe);
+                if(th){
+                    let y=th[3]?Number(th[3]):currentYear;
+                    if(y<100) y+=2500;
+                    if(y>2400) y-=543;
+                    dateObj=new Date(y,monthMap[th[2]]-1,Number(th[1]),time?.h||0,time?.m||0,time?.s||0);
+                }
+            }
+            if(!dateObj && time && userPaidAt){
+                const base=new Date(userPaidAt);
+                dateObj=new Date(base.getFullYear(),base.getMonth(),base.getDate(),time.h,time.m,time.s||0);
+            }
+            return dateObj && !Number.isNaN(dateObj.getTime()) ? dateObj : null;
+        }
+        function looksLikeBankSlip(ocrText){
+            const t=String(ocrText||'').toLowerCase();
+            const keywords=['โอนเงิน','โอนสำเร็จ','รายการสำเร็จ','สำเร็จ','สลิป','เลขที่รายการ','เลขอ้างอิง','พร้อมเพย์','promptpay','prompt pay','scb','kbank','krungthai','กรุงไทย','กสิกร','ไทยพาณิชย์','ธนาคาร','บาท','amount','transaction','reference'];
+            const hit=keywords.filter(k=>t.includes(k.toLowerCase())).length;
+            return hit>=2;
+        }
+        function setSlipCheckBox(status,title,message,details){
+            const box=document.getElementById('payment-slip-check-box');
+            const icon=document.getElementById('payment-slip-check-icon');
+            const ttl=document.getElementById('payment-slip-check-title');
+            const msg=document.getElementById('payment-slip-check-message');
+            const det=document.getElementById('payment-slip-check-details');
+            if(!box||!icon||!ttl||!msg) return;
+            box.classList.remove('hidden','border-emerald-200','border-rose-200','border-amber-200','bg-emerald-50','bg-rose-50','bg-amber-50','bg-slate-50');
+            icon.className='w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ';
+            const map={
+                checking:['bg-amber-100','text-amber-600','border-amber-200','bg-amber-50','fa-spinner fa-spin'],
+                pass:['bg-emerald-100','text-emerald-600','border-emerald-200','bg-emerald-50','fa-circle-check'],
+                fail:['bg-rose-100','text-rose-600','border-rose-200','bg-rose-50','fa-circle-xmark'],
+                idle:['bg-slate-200','text-slate-500','border-slate-200','bg-slate-50','fa-shield-halved']
+            }[status]||[];
+            icon.classList.add(map[0],map[1]);
+            box.classList.add(map[2],map[3]);
+            icon.innerHTML=`<i class="fas ${map[4]}"></i>`;
+            ttl.textContent=title||'ตรวจสอบสลิป';
+            msg.textContent=message||'';
+            if(det){
+                if(details && Object.keys(details).length){
+                    det.classList.remove('hidden');
+                    det.innerHTML=Object.entries(details).map(([k,v])=>`<div class="bg-white/70 border border-white rounded-xl p-2"><b class="block text-slate-500">${escapeHTML(k)}</b><span class="font-bold text-slate-800 break-all">${escapeHTML(String(v||'-'))}</span></div>`).join('');
+                }else{
+                    det.classList.add('hidden'); det.innerHTML='';
+                }
+            }
+        }
+        async function readImageMeta(file){
+            return new Promise((resolve,reject)=>{
+                const url=URL.createObjectURL(file);
+                const img=new Image();
+                img.onload=()=>{ const meta={width:img.naturalWidth,height:img.naturalHeight}; URL.revokeObjectURL(url); resolve(meta); };
+                img.onerror=()=>{ URL.revokeObjectURL(url); reject(new Error('อ่านรูปไม่ได้')); };
+                img.src=url;
+            });
+        }
+        async function isReferenceUsed(reference){
+            if(!reference) return true;
+            const localKey='schoolhub_used_payment_refs';
+            const localRefs=readLocalJSON(localKey,[]);
+            if(localRefs.includes(reference)) return true;
+            try{
+                const snap=await getDocs(collection(db,'subscription_requests'));
+                return snap.docs.some(d=>{
+                    const r=d.data()||{};
+                    return String(r.paymentReference||r.slipReference||r.referenceNo||'').toUpperCase()===reference && r.status!=='rejected';
+                });
+            }catch(e){
+                console.warn('ตรวจเลขอ้างอิงใน Firestore ไม่ได้ ใช้ local duplicate guard แทน',e);
+                return false;
+            }
+        }
+        function rememberUsedReference(reference){
+            if(!reference) return;
+            const localKey='schoolhub_used_payment_refs';
+            const refs=readLocalJSON(localKey,[]);
+            if(!refs.includes(reference)){
+                refs.unshift(reference);
+                writeLocalJSON(localKey,refs.slice(0,300));
+            }
+        }
+        async function verifySlipBeforeSubmit({file, plan, payerName, paidAt}){
+            currentSlipVerification=null;
+            setSlipCheckBox('checking','กำลังอ่านและตรวจสอบสลิป','ระบบกำลังตรวจรูปว่าเป็นสลิปจริง อ่านยอดเงิน เลขอ้างอิง ชื่อ และเวลา...');
+            const amountExpected=extractPlanAmount(plan.price);
+            const imageMeta=await readImageMeta(file);
+            if(imageMeta.width<420 || imageMeta.height<420){
+                throw new Error('รูปสลิปมีขนาดเล็กเกินไป กรุณาอัปโหลดรูปที่คมชัดกว่าเดิม');
+            }
+            if(!window.Tesseract){
+                throw new Error('โหลดระบบ OCR ไม่สำเร็จ จึงยังไม่สามารถอนุมัติอัตโนมัติได้');
+            }
+            const ocr=await Tesseract.recognize(file,'tha+eng',{ logger: m => {
+                if(m?.status==='recognizing text'){
+                    const pct=Math.round((m.progress||0)*100);
+                    setSlipCheckBox('checking','กำลังอ่านตัวอักษรจากสลิป',`กำลังประมวลผล OCR ${pct}%`);
+                }
+            }});
+            const ocrText=ocr?.data?.text||'';
+            const amountRead=extractSlipAmount(ocrText);
+            const reference=extractSlipReference(ocrText);
+            const slipDate=parseSlipDateTime(ocrText,paidAt);
+            const userDate=new Date(paidAt);
+            const nameScore=Math.max(similarityScore(ocrText,payerName), similarityScore(ocrText,currentUser?.displayName||''), similarityScore(ocrText,currentUser?.email||''));
+            const isRealSlip=looksLikeBankSlip(ocrText);
+            const amountOk=Number.isFinite(amountRead) && Math.abs(Number(amountRead)-Number(amountExpected))<=PAYMENT_AUTO_APPROVE_RULES.amountTolerance;
+            const timeDiffMin=(slipDate && !Number.isNaN(userDate.getTime())) ? Math.abs(slipDate.getTime()-userDate.getTime())/60000 : Infinity;
+            const timeOk=timeDiffMin<=PAYMENT_AUTO_APPROVE_RULES.timeToleranceMinutes;
+            const nameOk=nameScore>=PAYMENT_AUTO_APPROVE_RULES.minNameSimilarity;
+            const duplicate=await isReferenceUsed(reference);
+            const result={
+                autoApproved:false,
+                isRealSlip, amountExpected, amountRead, amountOk,
+                reference, duplicateReference:duplicate,
+                slipTime:slipDate?slipDate.toISOString():'',
+                userPaymentTime:paidAt,
+                timeDiffMinutes:Number.isFinite(timeDiffMin)?Math.round(timeDiffMin):null,
+                timeOk, payerName, nameScore, nameOk,
+                ocrTextPreview:ocrText.slice(0,1200),
+                checkedAt:Date.now()
+            };
+            const reasons=[];
+            if(!isRealSlip) reasons.push('รูปนี้ยังไม่ชัดว่าเป็นสลิปโอนเงินจริง');
+            if(!amountOk) reasons.push(`ยอดเงินไม่ตรงหรืออ่านยอดไม่ได้ (ต้องเป็น ${Number(amountExpected).toLocaleString('th-TH')} บาท)`);
+            if(!reference) reasons.push('อ่านเลขอ้างอิงไม่ได้');
+            if(reference && duplicate) reasons.push('เลขอ้างอิงนี้เคยถูกใช้แล้ว');
+            if(!timeOk) reasons.push('เวลาบนสลิปไม่ตรงหรือห่างจากเวลาที่แจ้งเกิน 30 นาที');
+            if(!nameOk) reasons.push('ชื่อผู้ชำระเงินไม่ตรงหรือไม่ใกล้เคียงพอ');
+            result.autoApproved = reasons.length===0;
+            currentSlipVerification=result;
+            const details={
+                'ยอดที่อ่านได้': amountRead!=null ? `${amountRead} บาท` : 'อ่านไม่ได้',
+                'ยอดที่ต้องชำระ': `${amountExpected} บาท`,
+                'เลขอ้างอิง': reference || 'อ่านไม่ได้',
+                'ส่วนต่างเวลา': result.timeDiffMinutes!=null ? `${result.timeDiffMinutes} นาที` : 'อ่านเวลาไม่ได้',
+                'ความใกล้เคียงชื่อ': `${Math.round(nameScore*100)}%`,
+                'ผลอนุมัติอัตโนมัติ': result.autoApproved ? 'ผ่าน' : 'ไม่ผ่าน'
+            };
+            if(result.autoApproved){
+                setSlipCheckBox('pass','ตรวจสอบผ่าน พร้อมอนุมัติอัตโนมัติ','ข้อมูลสลิปถูกต้องครบ: เป็นสลิปจริง ยอดเงินตรง เลขอ้างอิงไม่ซ้ำ ชื่อใกล้เคียง และเวลาตรง/ใกล้เคียง',details);
+            }else{
+                setSlipCheckBox('fail','ยังไม่อนุมัติอัตโนมัติ',`ระบบจะส่งให้แอดมินตรวจสอบ เพราะ:\n- ${reasons.join('\n- ')}`,details);
+            }
+            return result;
+        }
+        async function autoApproveVerifiedPlanRequest(reqId,payload,verification){
+            const now=Date.now();
+            await setDoc(getPlanRequestDocRef(reqId),{
+                status:'approved',
+                autoApproved:true,
+                approvedAt:now,
+                approvedBy:'slip-verification-system',
+                updatedAt:now,
+                slipVerification:verification,
+                paymentReference:verification.reference,
+                slipReference:verification.reference
+            },{merge:true});
+            await setDoc(doc(db,getPublicPath(),payload.uid),{
+                uid:payload.uid,email:payload.email||'',userKey:payload.userKey||payload.email||payload.uid,
+                name:payload.name||payload.email||'',role:'user',status:'active',
+                planId:payload.planId,planName:payload.planName,planPrice:payload.planPrice,
+                planApprovedAt:now,planStartAt:now,
+                requestedPlanId:null,requestedPlanName:null,
+                lastAutoApprovedPaymentRef:verification.reference
+            },{merge:true});
+            await setDoc(doc(db,'users_status',payload.userKey||payload.email||payload.uid),{
+                status:'active',planId:payload.planId,planName:payload.planName,planPrice:payload.planPrice,
+                planApprovedAt:now,planStartAt:now,deletedAt:null,
+                lastAutoApprovedPaymentRef:verification.reference
+            },{merge:true});
+            rememberUsedReference(verification.reference);
+        }
+
         window.openPlanPaymentModal=(planId)=>{
             const plan=(subscriptionPlans||getDefaultPlans()).find(p=>p.id===planId);
             if(!plan)return showCustomAlert('ไม่พบแผน','กรุณาเลือกแผนอีกครั้ง',true);
@@ -2491,11 +2765,22 @@
 
         // Slip preview handler
         window.previewPaymentSlip = (event) => {
+            currentSlipVerification = null;
             const file = event?.target?.files?.[0];
             const wrap = document.getElementById('payment-slip-preview-wrap');
             const img  = document.getElementById('payment-slip-preview-img');
-            if(!file){ wrap.classList.add('hidden'); img.src=''; return; }
-            if(!file.type.startsWith('image/')){ showCustomAlert('ไฟล์ไม่ถูกต้อง','กรุณาอัปโหลดรูปภาพเท่านั้น',true); event.target.value=''; return; }
+            if(!file){
+                wrap.classList.add('hidden'); img.src='';
+                setSlipCheckBox('idle','รอตรวจสอบสลิป','เลือกไฟล์สลิปเพื่อให้ระบบตรวจสอบ');
+                return;
+            }
+            if(!file.type.startsWith('image/')){
+                showCustomAlert('ไฟล์ไม่ถูกต้อง','กรุณาอัปโหลดรูปภาพเท่านั้น',true);
+                event.target.value='';
+                setSlipCheckBox('fail','ไฟล์ไม่ถูกต้อง','ต้องอัปโหลดเป็นรูปภาพสลิปเท่านั้น');
+                return;
+            }
+            setSlipCheckBox('idle','พร้อมตรวจสอบสลิป','เมื่อกดส่ง ระบบจะอ่านสลิปและตรวจข้อมูลก่อนอนุมัติอัตโนมัติ');
             const reader=new FileReader();
             reader.onload=e=>{ img.src=e.target.result; wrap.classList.remove('hidden'); };
             reader.readAsDataURL(file);
@@ -2515,6 +2800,17 @@
             if(!payerName||!paidAt||!proofFile)return showCustomAlert('ข้อมูลไม่ครบ','กรุณากรอกชื่อ เวลา และอัปโหลดสลิปให้ครบ',true);
             if(!proofFile.type.startsWith('image/'))return showCustomAlert('ไฟล์ไม่ถูกต้อง','กรุณาอัปโหลดไฟล์รูปภาพเท่านั้น',true);
             toggleLoader(true);
+            let verification=null;
+            try{
+                verification=await verifySlipBeforeSubmit({file:proofFile,plan,payerName,paidAt});
+            }catch(verifyError){
+                verification={
+                    autoApproved:false,
+                    verificationError:verifyError?.message||String(verifyError),
+                    checkedAt:Date.now()
+                };
+                setSlipCheckBox('fail','ตรวจสลิปอัตโนมัติไม่สำเร็จ',`${verification.verificationError}\n\nระบบจะบันทึกเป็น “รอตรวจสอบ” และจะไม่อนุมัติอัตโนมัติจนกว่าข้อมูลจะถูกต้องจริง`,{ 'สถานะ':'รอตรวจสอบโดยแอดมิน' });
+            }
             try{
                 const slipDataUrl=await readFileAsDataURL(proofFile);
                 const userKey=getUserKey(currentUser);
@@ -2527,26 +2823,45 @@
                     planDesc:plan.desc||'',planAmount:extractPlanAmount(plan.price),
                     promptpay:plan.promptpay||'',
                     payerName,
-                    paymentTime:paidAt,        // เวลาที่ผู้ใช้แจ้ง
-                    paidAt,                    // alias เดิม
-                    slipDataUrl,               // รูปสลิป — admin popup อ่านจาก field นี้
+                    paymentTime:paidAt,
+                    paidAt,
+                    slipDataUrl,
                     paymentProofDataUrl:slipDataUrl,
                     paymentProofName:proofFile.name,
                     paymentProofType:proofFile.type,
-                    status:'pending',
+                    slipVerification:verification,
+                    paymentReference:verification?.reference||'',
+                    slipReference:verification?.reference||'',
+                    status:verification?.autoApproved?'approved':'pending',
+                    autoApproved:!!verification?.autoApproved,
                     createdAt:Date.now(),updatedAt:Date.now()
                 };
                 await setDoc(getPlanRequestDocRef(reqId),payload,{merge:true});
-                await setDoc(doc(db,getPublicPath(),currentUser.uid),{
-                    uid:currentUser.uid,email:currentUser.email||'',userKey,
-                    name:currentUser.displayName||userKey,role:'user',
-                    status:'pending_plan',
-                    requestedPlanId:plan.id,requestedPlanName:plan.name||'',
-                    requestedPlanAt:Date.now()
-                },{merge:true});
+                if(verification?.autoApproved){
+                    await autoApproveVerifiedPlanRequest(reqId,payload,verification);
+                    await setDoc(doc(db,getPublicPath(),currentUser.uid),{
+                        uid:currentUser.uid,email:currentUser.email||'',userKey,
+                        name:currentUser.displayName||userKey,role:'user',
+                        status:'active',
+                        requestedPlanId:null,requestedPlanName:null,
+                        requestedPlanAt:null
+                    },{merge:true});
+                }else{
+                    await setDoc(doc(db,getPublicPath(),currentUser.uid),{
+                        uid:currentUser.uid,email:currentUser.email||'',userKey,
+                        name:currentUser.displayName||userKey,role:'user',
+                        status:'pending_plan',
+                        requestedPlanId:plan.id,requestedPlanName:plan.name||'',
+                        requestedPlanAt:Date.now()
+                    },{merge:true});
+                }
                 localStorage.removeItem(PENDING_PLAN_KEY);
                 closePlanPaymentModal();
-                showCustomAlert('ส่งสลิปแล้ว','บันทึกข้อมูลการชำระเงินเรียบร้อย\nรอแอดมินตรวจสอบและอนุมัติ\n\n⏱ รอบการใช้งานจะเริ่มนับตั้งแต่วันที่อนุมัติ');
+                if(verification?.autoApproved){
+                    showCustomAlert('อนุมัติอัตโนมัติแล้ว','ระบบตรวจสลิปผ่านครบทุกเงื่อนไข\n- เป็นสลิปจริง\n- ยอดเงินตรง\n- เลขอ้างอิงไม่ซ้ำ\n- ชื่อผู้ชำระเงินใกล้เคียง\n- เวลาตรงหรือใกล้เคียง\n\nสิทธิ์การใช้งานเริ่มนับทันที');
+                }else{
+                    showCustomAlert('ส่งสลิปแล้ว','บันทึกข้อมูลการชำระเงินเรียบร้อย\nแต่ยังไม่อนุมัติอัตโนมัติ เพราะข้อมูลสลิปยังตรวจไม่ผ่านครบทุกเงื่อนไข\n\nระบบจะรอแอดมินตรวจสอบภายหลัง');
+                }
             }catch(e){
                 showCustomAlert('ส่งข้อมูลไม่ได้',getFirebaseErrorText(e)+'\nโปรดตรวจสอบ Firestore Rules ของ subscription_requests',true);
             }
@@ -3738,10 +4053,10 @@ async function submitPlanRequest(planId){
                 if(tbody){
                     tbody.innerHTML=items.length?items.map(r=>{
                         const isPending=r.status==='pending';
-                        const statusBadge=r.status==='approved'?'<span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold">อนุมัติแล้ว</span>':(r.status==='rejected'?'<span class="bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-xs font-bold">ไม่อนุมัติ</span>':'<span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold animate-pulse">รอตรวจสอบ</span>');
+                        const statusBadge=r.status==='approved'?(r.autoApproved?'<span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold">อนุมัติอัตโนมัติ</span>':'<span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold">อนุมัติแล้ว</span>'):(r.status==='rejected'?'<span class="bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-xs font-bold">ไม่อนุมัติ</span>':'<span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold animate-pulse">รอตรวจสอบ</span>');
                         const when=r.createdAt?new Date(r.createdAt).toLocaleString('th-TH'):'';
                         const actions=isPending?`<button onclick="approvePlanRequest('${r.docId}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl text-sm font-bold"><i class="fas fa-check"></i> อนุมัติ</button><button onclick="rejectPlanRequest('${r.docId}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100 px-3 py-2 rounded-xl text-sm font-bold ml-2"><i class="fas fa-times"></i> ไม่อนุมัติ</button>`:'<span class="text-xs text-slate-400">ดำเนินการแล้ว</span>';
-                        return `<tr><td class="font-bold text-slate-700">${escapeHTML(r.name||'ไม่มีชื่อ')}<br><span class="text-xs font-normal text-slate-400 font-mono">${escapeHTML(r.email||r.userKey||'')}</span><br><span class="text-[11px] text-slate-400">${escapeHTML(when)}</span></td><td><div class="font-bold text-primary">${escapeHTML(r.planName||'-')}</div><div class="text-xs text-slate-500">${escapeHTML(r.planPrice||'')}</div></td><td class="text-center">${statusBadge}</td><td class="text-right whitespace-nowrap">${actions}</td></tr>`;
+                        return `<tr><td class="font-bold text-slate-700">${escapeHTML(r.name||'ไม่มีชื่อ')}<br><span class="text-xs font-normal text-slate-400 font-mono">${escapeHTML(r.email||r.userKey||'')}</span><br><span class="text-[11px] text-slate-400">${escapeHTML(when)}</span></td><td><div class="font-bold text-primary">${escapeHTML(r.planName||'-')}</div><div class="text-xs text-slate-500">${escapeHTML(r.planPrice||'')}</div><div class="text-[11px] text-slate-400 mt-1 font-mono">Ref: ${escapeHTML(r.paymentReference||r.slipReference||'-')}</div></td><td class="text-center">${statusBadge}</td><td class="text-right whitespace-nowrap">${actions}</td></tr>`;
                     }).join(''):'<tr><td colspan="4" class="text-center p-8 text-slate-400">ยังไม่มีคำขอสมัครแผน</td></tr>';
                 }
                 return items;
