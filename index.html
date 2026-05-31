@@ -903,12 +903,17 @@
             #auth-view .auth-card { padding:1.75rem !important; }
             #auth-view .auth-preview-card { display:none; }
         }
+
+        /* SchoolHub popup stacking fix: ทุกป็อปอัพต้องอยู่หน้าสุดเสมอ */
+        #custom-alert, #custom-confirm { z-index: 999999 !important; }
+        #user-profile-modal, #admin-first-setup-modal, #admin-plan-request-popup, #slip-result-popup, #public-announcement-popup, #plan-payment-modal, #course-modal, #student-edit-modal, #grade-criteria-modal, #multi-student-modal, #share-student-modal { z-index: 900000 !important; }
+        #global-loader { z-index: 800000 !important; }
 </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen overflow-hidden selection:bg-indigo-100 selection:text-indigo-900">
 
     <!-- Alerts & Modals -->
-    <div id="custom-alert" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[150] hidden flex items-center justify-center p-4 fade-in">
+    <div id="custom-alert" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[999999] hidden flex items-center justify-center p-4 fade-in">
         <div class="bg-white rounded-3xl w-full max-w-sm p-8 text-center shadow-2xl transform transition-all" id="custom-alert-box">
             <div id="custom-alert-icon" class="text-6xl mb-4"></div>
             <h3 id="custom-alert-title" class="text-2xl font-bold text-slate-800 mb-2">แจ้งเตือน</h3>
@@ -917,7 +922,7 @@
         </div>
     </div>
 
-    <div id="custom-confirm" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[185] hidden flex items-center justify-center p-4 fade-in">
+    <div id="custom-confirm" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[999999] hidden flex items-center justify-center p-4 fade-in">
         <div class="bg-white rounded-3xl w-full max-w-md p-8 text-center shadow-2xl" id="custom-confirm-box">
             <div class="text-6xl mb-4 text-amber-500"><i class="fas fa-exclamation-circle drop-shadow-md"></i></div>
             <h3 id="custom-confirm-title" class="text-2xl font-bold text-slate-800 mb-2">ยืนยัน</h3>
@@ -1347,7 +1352,7 @@
                 <div class="p-6 border-b border-slate-100 bg-indigo-50/60 flex justify-between items-start gap-4">
                     <div>
                         <h3 class="text-2xl font-black text-slate-900"><i class="fas fa-user-circle text-primary mr-2"></i>โปรไฟล์ผู้ใช้งาน</h3>
-                        <p class="text-sm text-slate-500 mt-1">แก้ชื่อที่แสดงในระบบ หรือขอรีเซ็ตรหัสผ่าน</p>
+                        <p class="text-sm text-slate-500 mt-1">แก้ชื่อที่แสดงในระบบ หรือจัดการรหัสผ่าน</p>
                     </div>
                     <button onclick="closeModal('user-profile-modal')" class="w-10 h-10 rounded-xl bg-white text-slate-500 hover:text-rose-500 border"><i class="fas fa-times"></i></button>
                 </div>
@@ -1359,6 +1364,11 @@
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-1.5">อีเมล</label>
                         <input id="profile-email-input" type="text" class="w-full bg-slate-100 border border-slate-200 rounded-2xl px-4 py-3 text-slate-500" readonly>
+                    </div>
+                    <div id="admin-profile-password-wrap" class="hidden bg-rose-50 border border-rose-100 rounded-2xl p-4">
+                        <label class="block text-sm font-bold text-rose-700 mb-1.5">รหัสผ่าน Admin ใหม่</label>
+                        <input id="admin-profile-password-input" type="password" class="w-full bg-white border border-rose-200 rounded-2xl px-4 py-3 outline-none focus:ring-4 focus:ring-rose-100 focus:border-rose-400" placeholder="เว้นว่างไว้ถ้าไม่ต้องการเปลี่ยน">
+                        <p class="text-xs text-rose-500 mt-2">บัญชี Admin สามารถแก้ชื่อและรหัสผ่านได้จากโปรไฟล์นี้โดยตรง</p>
                     </div>
                     <div class="grid grid-cols-1 gap-3 pt-2">
                         <button onclick="saveUserProfileChanges()" class="w-full bg-primary hover:bg-indigo-700 text-white font-black py-3.5 rounded-2xl shadow-lg shadow-indigo-100 transition"><i class="fas fa-save mr-1"></i> บันทึกชื่อ</button>
@@ -1373,7 +1383,7 @@
             <div class="bg-white rounded-[2rem] w-full max-w-md shadow-2xl overflow-hidden">
                 <div class="p-6 border-b border-slate-100 bg-rose-50/70">
                     <h3 class="text-2xl font-black text-slate-900"><i class="fas fa-user-shield text-rose-500 mr-2"></i>ตั้งค่า Admin ครั้งแรก</h3>
-                    <p class="text-sm text-slate-500 mt-1">ครั้งแรกที่เข้า Admin ให้ตั้งชื่อแอดมินและรหัสผ่านใหม่</p>
+                    <p class="text-sm text-slate-500 mt-1">เข้าสู่ระบบครั้งแรกด้วย Admin / Admin123 แล้วต้องเปลี่ยนทันที หลังจากบันทึกแล้วรหัสเริ่มต้นจะใช้ไม่ได้อีก</p>
                 </div>
                 <div class="p-6 space-y-4">
                     <div>
@@ -1382,7 +1392,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-bold text-slate-700 mb-1.5">รหัสผ่าน Admin ใหม่</label>
-                        <input id="admin-setup-password" type="password" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none focus:ring-4 focus:ring-rose-100 focus:border-rose-400" placeholder="อย่างน้อย 6 ตัวอักษร">
+                        <input id="admin-setup-password" type="password" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none focus:ring-4 focus:ring-rose-100 focus:border-rose-400" placeholder="อย่างน้อย 6 ตัวอักษร ห้ามใช้ Admin123">
                     </div>
                     <button onclick="saveAdminFirstSetup()" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-black py-3.5 rounded-2xl shadow-lg shadow-rose-100 transition"><i class="fas fa-check mr-1"></i> บันทึกและใช้งาน Admin</button>
                 </div>
@@ -3238,7 +3248,7 @@ async function submitPlanRequest(planId){
             document.getElementById('custom-alert-title').className = `text-2xl font-bold mb-2 ${isError ? 'text-rose-600' : 'text-emerald-600'}`;
             document.getElementById('custom-alert-message').textContent = message;
             document.getElementById('custom-alert-icon').innerHTML = isError ? '<i class="fas fa-times-circle text-rose-500 drop-shadow-md"></i>' : '<i class="fas fa-check-circle text-emerald-500 drop-shadow-md"></i>';
-            modal.classList.remove('hidden');
+            document.body.appendChild(modal); modal.style.zIndex = '999999'; document.body.appendChild(modal); modal.style.zIndex = '999999'; modal.classList.remove('hidden');
             setTimeout(() => { box.classList.remove('scale-95', 'opacity-0'); box.classList.add('scale-100', 'opacity-100'); }, 10);
         }
         window.closeCustomAlert = () => {
@@ -3279,9 +3289,15 @@ async function submitPlanRequest(planId){
             setTimeout(() => modal.classList.add('hidden'), 200);
         };
 
-        function toggleLoader(show) { const loader = document.getElementById('global-loader'); if (loader) loader.style.display = show ? 'flex' : 'none'; }
+        function ensureSchoolHubPopupStacking(){
+            ['custom-alert','custom-confirm'].forEach(id=>{const el=document.getElementById(id); if(el){el.style.zIndex='999999'; document.body.appendChild(el);}});
+        }
+        function toggleLoader(show) { const loader = document.getElementById('global-loader'); if (loader) { loader.style.zIndex = '800000'; loader.style.display = show ? 'flex' : 'none'; } }
         window.openModal = (id) => {
-            const m = document.getElementById(id); m.classList.remove('hidden');
+            const m = document.getElementById(id); if(!m) return;
+            document.body.appendChild(m);
+            m.style.zIndex = '900000';
+            m.classList.remove('hidden');
             const box = m.children[0]; if(box) { box.classList.add('scale-95', 'opacity-0'); setTimeout(()=>{box.classList.remove('scale-95', 'opacity-0'); box.classList.add('transition-all','duration-300');}, 10); }
         };
         window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
@@ -3337,13 +3353,26 @@ async function submitPlanRequest(planId){
             const email = document.getElementById('login-email').value.trim();
             const pass = document.getElementById('login-pass').value;
 
-            // Admin shortcut: กรอกอีเมลว่า Admin เพื่อเข้าโหมดแอดมิน
-            // ครั้งแรกเข้าได้ทันที แล้วระบบจะบังคับตั้งชื่อและรหัสผ่านใหม่
+            // Admin shortcut: ครั้งแรกเท่านั้นใช้ Admin / Admin123
+            // หลังตั้งรหัสใหม่แล้ว ระบบจะปิดรหัสเริ่มต้นถาวรในเครื่องนี้ และต้องใช้รหัสที่ตั้งไว้เท่านั้น
             if(email.toLowerCase() === 'admin') {
+                const ADMIN_DEFAULT_PASSWORD = 'Admin123';
                 const savedAdminPass = localStorage.getItem('schoolhub_admin_password') || '';
-                if(savedAdminPass && pass !== savedAdminPass) {
-                    return showCustomAlert("รหัสผ่าน Admin ไม่ถูกต้อง", "กรุณากรอกรหัสผ่าน Admin ที่ตั้งไว้", true);
+                const defaultDisabled = localStorage.getItem('schoolhub_admin_default_disabled') === 'true';
+
+                if(savedAdminPass) {
+                    if(pass !== savedAdminPass) {
+                        return showCustomAlert("รหัสผ่าน Admin ไม่ถูกต้อง", "รหัสเริ่มต้น Admin123 ถูกปิดแล้ว กรุณาใช้รหัสผ่าน Admin ที่ตั้งไว้ล่าสุด", true);
+                    }
+                } else {
+                    if(defaultDisabled) {
+                        return showCustomAlert("Admin เริ่มต้นถูกปิดแล้ว", "ไม่สามารถใช้ Admin / Admin123 ได้อีก กรุณาใช้รหัสผ่าน Admin ที่ตั้งไว้ หรือรีเซ็ตข้อมูล Admin โดยผู้ดูแลระบบ", true);
+                    }
+                    if(pass !== ADMIN_DEFAULT_PASSWORD) {
+                        return showCustomAlert("รหัสผ่าน Admin ไม่ถูกต้อง", "ครั้งแรกให้เข้าโดยกรอกอีเมล Admin และรหัสผ่าน Admin123", true);
+                    }
                 }
+
                 localStorage.setItem('schoolhub_admin_bypass', 'true');
                 await enterAdminMode();
                 if(!savedAdminPass) setTimeout(() => openAdminFirstSetupModal(), 300);
@@ -3541,11 +3570,21 @@ async function submitPlanRequest(planId){
 
         window.openUserProfileSettings = () => {
             if (!currentUser) return showCustomAlert('ยังไม่ได้เข้าสู่ระบบ', 'กรุณาเข้าสู่ระบบก่อนใช้งานโปรไฟล์', true);
+            const isAdminBypass = currentUser?.uid === 'admin-bypass';
             const nameInput = document.getElementById('profile-display-name-input');
             const emailInput = document.getElementById('profile-email-input');
+            const adminPassWrap = document.getElementById('admin-profile-password-wrap');
+            const adminPassInput = document.getElementById('admin-profile-password-input');
             if (nameInput) nameInput.value = currentUser.displayName || localStorage.getItem('schoolhub_admin_name') || '';
             if (emailInput) emailInput.value = currentUser.email || 'Admin';
-            document.getElementById('user-profile-modal')?.classList.remove('hidden');
+            if (adminPassWrap) adminPassWrap.classList.toggle('hidden', !isAdminBypass);
+            if (adminPassInput) adminPassInput.value = '';
+            const resetBtn = document.querySelector('#user-profile-modal button[onclick="requestOwnPasswordReset()"]');
+            if (resetBtn) {
+                resetBtn.classList.toggle('hidden', isAdminBypass);
+                resetBtn.innerHTML = '<i class="fas fa-key mr-1"></i> ขอรีเซ็ตรหัสผ่าน';
+            }
+            openModal('user-profile-modal');
         };
 
         window.saveUserProfileChanges = async () => {
@@ -3554,7 +3593,20 @@ async function submitPlanRequest(planId){
             try {
                 toggleLoader(true);
                 if (currentUser?.uid === 'admin-bypass') {
+                    const newAdminPass = (document.getElementById('admin-profile-password-input')?.value || '').trim();
+                    if (newAdminPass && newAdminPass.length < 6) {
+                        toggleLoader(false);
+                        return showCustomAlert('รหัสผ่านสั้นเกินไป', 'รหัสผ่าน Admin ต้องมีอย่างน้อย 6 ตัวอักษร', true);
+                    }
+                    if (newAdminPass && newAdminPass === 'Admin123') {
+                        toggleLoader(false);
+                        return showCustomAlert('ห้ามใช้รหัสเริ่มต้น', 'เพื่อความปลอดภัย รหัส Admin123 ใช้ได้เฉพาะครั้งแรกก่อนตั้งค่าเท่านั้น', true);
+                    }
                     localStorage.setItem('schoolhub_admin_name', newName);
+                    if (newAdminPass) {
+                        localStorage.setItem('schoolhub_admin_password', newAdminPass);
+                        localStorage.setItem('schoolhub_admin_default_disabled', 'true');
+                    }
                     currentUser.displayName = newName;
                 } else if (auth.currentUser) {
                     await updateProfile(auth.currentUser, { displayName: newName });
@@ -3574,7 +3626,7 @@ async function submitPlanRequest(planId){
 
         window.requestOwnPasswordReset = async () => {
             if (!currentUser || currentUser.uid === 'admin-bypass') {
-                return showCustomAlert('ไม่สามารถรีเซ็ตผ่านอีเมลได้', 'บัญชี Admin แบบพิเศษให้เปลี่ยนรหัสผ่านในหน้าตั้งค่า Admin ครั้งแรก/ตั้งค่าใหม่ในเครื่องนี้', true);
+                return showCustomAlert('Admin เปลี่ยนรหัสได้ในโปรไฟล์', 'กรุณากรอกรหัสผ่าน Admin ใหม่ในหน้าต่างโปรไฟล์ แล้วกดบันทึกชื่อ', false);
             }
             const email = currentUser.email || '';
             if (!email) return showCustomAlert('ไม่พบอีเมล', 'บัญชีนี้ไม่มีอีเมลสำหรับรีเซ็ตรหัสผ่าน', true);
@@ -3595,7 +3647,7 @@ async function submitPlanRequest(planId){
 กรุณากดลิงก์ด้านล่างเพื่อรีเซ็ตรหัสผ่าน:
 ${resetUrl.toString()}
 
-ลิงก์หมดอายุใน 1 ชั่วโมง
+ลิงก์หมดอายุใน 20 นาที
 
 — SchoolHub`,
                     extra: { link: resetUrl.toString(), token }
@@ -3612,7 +3664,7 @@ ${resetUrl.toString()}
             if (!modal) return;
             document.getElementById('admin-setup-name').value = localStorage.getItem('schoolhub_admin_name') || 'Administrator';
             document.getElementById('admin-setup-password').value = '';
-            modal.classList.remove('hidden');
+            openModal('admin-first-setup-modal');
         };
 
         window.saveAdminFirstSetup = () => {
@@ -3620,8 +3672,10 @@ ${resetUrl.toString()}
             const pass = document.getElementById('admin-setup-password')?.value || '';
             if (!name) return showCustomAlert('กรุณากรอกชื่อแอดมิน', 'ชื่อแอดมินห้ามว่าง', true);
             if (!pass || pass.length < 6) return showCustomAlert('รหัสผ่านสั้นเกินไป', 'รหัสผ่าน Admin ต้องมีอย่างน้อย 6 ตัวอักษร', true);
+            if (pass === 'Admin123') return showCustomAlert('ห้ามใช้รหัสเริ่มต้น', 'เพื่อความปลอดภัย กรุณาตั้งรหัสผ่านใหม่ที่ไม่ใช่ Admin123', true);
             localStorage.setItem('schoolhub_admin_name', name);
             localStorage.setItem('schoolhub_admin_password', pass);
+            localStorage.setItem('schoolhub_admin_default_disabled', 'true');
             if (currentUser?.uid === 'admin-bypass') currentUser.displayName = name;
             const nameEl = document.getElementById('user-display-name');
             const emailEl = document.getElementById('user-display-email');
