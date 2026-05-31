@@ -3597,30 +3597,78 @@ async function submitPlanRequest(planId){
             const email = document.getElementById('login-email').value.trim();
             const pass = document.getElementById('login-pass').value;
 
-            // Admin shortcut: ครั้งแรกเท่านั้นใช้ Admin / Admin123
-            // หลังตั้งรหัสใหม่แล้ว ระบบจะปิดรหัสเริ่มต้นถาวรในเครื่องนี้ และต้องใช้รหัสที่ตั้งไว้เท่านั้น
-            if(email.toLowerCase() === 'admin') {
-                const ADMIN_DEFAULT_PASSWORD = 'Admin123';
-                const savedAdminPass = localStorage.getItem('schoolhub_admin_password') || '';
-                const defaultDisabled = localStorage.getItem('schoolhub_admin_default_disabled') === 'true';
+            // Admin shortcut: ใช้จาก Firebase เท่านั้น
+            // admin_settings/credentials = { username, email, password }
+            {
+                const loginValue = email.trim();
+                const loginLower = loginValue.toLowerCase();
 
-                if(savedAdminPass) {
-                    if(pass !== savedAdminPass) {
-                        return showCustomAlert("รหัสผ่าน Admin ไม่ถูกต้อง", "รหัสเริ่มต้น Admin123 ถูกปิดแล้ว กรุณาใช้รหัสผ่าน Admin ที่ตั้งไว้ล่าสุด", true);
+                try {
+                    let credSnap = await withTimeout(getDoc(doc(db, 'admin_settings', 'credentials')), 8000, 'getAdminCredentials');
+                    let secSnap = await withTimeout(getDoc(doc(db, 'admin_settings', 'security')), 8000, 'getAdminSecurity');
+
+                    if (!credSnap.exists()) {
+                        await setDoc(doc(db, 'admin_settings', 'credentials'), {
+                            username: 'Admin',
+                            email: '',
+                            password: 'Admin123',
+                            updatedAt: serverTimestamp(),
+                            updatedBy: 'system'
+                        }, { merge: true });
+
+                        credSnap = await getDoc(doc(db, 'admin_settings', 'credentials'));
+                    } else if (!('email' in (credSnap.data() || {}))) {
+                        await setDoc(doc(db, 'admin_settings', 'credentials'), { email: '' }, { merge: true });
+                        credSnap = await getDoc(doc(db, 'admin_settings', 'credentials'));
                     }
-                } else {
-                    if(defaultDisabled) {
-                        return showCustomAlert("Admin เริ่มต้นถูกปิดแล้ว", "ไม่สามารถใช้ Admin / Admin123 ได้อีก กรุณาใช้รหัสผ่าน Admin ที่ตั้งไว้ หรือรีเซ็ตข้อมูล Admin โดยผู้ดูแลระบบ", true);
+
+                    if (!secSnap.exists()) {
+                        await setDoc(doc(db, 'admin_settings', 'security'), {
+                            requirePasswordChange: true,
+                            lastPasswordChange: 0,
+                            updatedAt: serverTimestamp()
+                        }, { merge: true });
+
+                        secSnap = await getDoc(doc(db, 'admin_settings', 'security'));
                     }
-                    if(pass !== ADMIN_DEFAULT_PASSWORD) {
-                        return showCustomAlert("รหัสผ่าน Admin ไม่ถูกต้อง", "ครั้งแรกให้เข้าโดยกรอกอีเมล Admin และรหัสผ่าน Admin123", true);
+
+                    const adminData = credSnap.data() || {};
+                    const securityData = secSnap.exists() ? (secSnap.data() || {}) : {};
+
+                    const adminUsername = String(adminData.username || 'Admin').trim();
+                    const adminEmail = String(adminData.email || '').trim().toLowerCase();
+                    const adminPassword = String(adminData.password || 'Admin123').trim();
+
+                    const matchedAdmin =
+                        loginValue === adminUsername ||
+                        (adminEmail && loginLower === adminEmail);
+
+                    if (matchedAdmin) {
+                        if (pass !== adminPassword) {
+                            return showCustomAlert("รหัสผ่าน Admin ไม่ถูกต้อง", "กรุณาใช้รหัสผ่าน Admin จาก Firebase", true);
+                        }
+
+                        localStorage.removeItem('schoolhub_admin_password');
+                        localStorage.removeItem('schoolhub_admin_default_disabled');
+                        localStorage.removeItem('schoolhub_admin_bypass');
+
+                        await enterAdminMode();
+
+                        const isDefaultAdmin =
+                            loginValue === 'Admin' &&
+                            pass === 'Admin123' &&
+                            securityData.requirePasswordChange !== false;
+
+                        if (isDefaultAdmin && typeof openAdminFirstSetupModal === 'function') {
+                            setTimeout(() => openAdminFirstSetupModal(), 300);
+                        }
+
+                        return;
                     }
+                } catch (adminErr) {
+                    console.error('Admin Firebase login error:', adminErr);
+                    return showCustomAlert("ตรวจสอบ Admin ไม่สำเร็จ", "ไม่สามารถอ่าน admin_settings/credentials จาก Firebase ได้", true);
                 }
-
-                localStorage.setItem('schoolhub_admin_bypass', 'true');
-                await enterAdminMode();
-                if(!savedAdminPass) setTimeout(() => openAdminFirstSetupModal(), 300);
-                return;
             }
 
             if(!email || !pass) return showCustomAlert("ผิดพลาด", "กรุณากรอกอีเมลและรหัสผ่าน", true);
@@ -3853,7 +3901,7 @@ async function submitPlanRequest(planId){
                     localStorage.setItem('schoolhub_admin_name', newName);
                     if (newAdminPass) {
                         localStorage.setItem('schoolhub_admin_password', newAdminPass);
-                        localStorage.setItem('schoolhub_admin_default_disabled', 'true');
+                        localStorage.removeItem('schoolhub_admin_default_disabled');
                     }
                     currentUser.displayName = newName;
                 } else if (auth.currentUser) {
@@ -3922,8 +3970,8 @@ ${resetUrl.toString()}
             if (!pass || pass.length < 6) return showCustomAlert('รหัสผ่านสั้นเกินไป', 'รหัสผ่าน Admin ต้องมีอย่างน้อย 6 ตัวอักษร', true);
             if (pass === 'Admin123') return showCustomAlert('ห้ามใช้รหัสเริ่มต้น', 'เพื่อความปลอดภัย กรุณาตั้งรหัสผ่านใหม่ที่ไม่ใช่ Admin123', true);
             localStorage.setItem('schoolhub_admin_name', name);
-            localStorage.setItem('schoolhub_admin_password', pass);
-            localStorage.setItem('schoolhub_admin_default_disabled', 'true');
+            /* disabled: admin password saved to Firebase only */
+            localStorage.removeItem('schoolhub_admin_default_disabled');
             if (currentUser?.uid === 'admin-bypass') currentUser.displayName = name;
             const nameEl = document.getElementById('user-display-name');
             const emailEl = document.getElementById('user-display-email');
@@ -5653,8 +5701,8 @@ ${resetUrl.toString()}
     try{
       await setSystemAdminConfig_({name, password:pass, defaultDisabled:true});
       localStorage.setItem('schoolhub_admin_name', name);
-      localStorage.setItem('schoolhub_admin_password', pass);
-      localStorage.setItem('schoolhub_admin_default_disabled', 'true');
+      /* disabled: admin password saved to Firebase only */
+      localStorage.removeItem('schoolhub_admin_default_disabled');
       if (currentUser?.uid === 'admin-bypass') currentUser.displayName = name;
       const nameEl = document.getElementById('user-display-name');
       const emailEl = document.getElementById('user-display-email');
@@ -9566,6 +9614,102 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 setInterval(clearLocalAdminCredentials, 3000);
+</script>
+
+
+<script type="module">
+/* SchoolHub Admin Direct Firebase Login Final Patch */
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const finalAdminConfig = {
+    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
+    authDomain: "schoolhub-5677d.firebaseapp.com",
+    projectId: "schoolhub-5677d",
+    storageBucket: "schoolhub-5677d.firebasestorage.app",
+    messagingSenderId: "803574136389",
+    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
+    measurementId: "G-ME7E38XNX6"
+};
+
+const finalAdminApp = getApps().length ? getApp() : initializeApp(finalAdminConfig);
+const finalAdminDb = getFirestore(finalAdminApp);
+
+function clearOldAdminLocal() {
+    try {
+        [
+            'schoolhub_admin_password',
+            'schoolhub_admin_default_disabled',
+            'schoolhub_admin_bypass',
+            'adminUsername',
+            'adminPassword',
+            'admin_credentials',
+            'adminCredentials'
+        ].forEach(k => {
+            localStorage.removeItem(k);
+            sessionStorage.removeItem(k);
+        });
+    } catch(e) {}
+}
+
+async function ensureFinalAdminDocs() {
+    const credRef = doc(finalAdminDb, 'admin_settings', 'credentials');
+    const secRef = doc(finalAdminDb, 'admin_settings', 'security');
+
+    const credSnap = await getDoc(credRef);
+    const secSnap = await getDoc(secRef);
+
+    if (!credSnap.exists()) {
+        await setDoc(credRef, {
+            username: 'Admin',
+            email: '',
+            password: 'Admin123',
+            updatedAt: serverTimestamp(),
+            updatedBy: 'system'
+        }, { merge: true });
+    } else if (!('email' in (credSnap.data() || {}))) {
+        await setDoc(credRef, { email: '' }, { merge: true });
+    }
+
+    if (!secSnap.exists()) {
+        await setDoc(secRef, {
+            requirePasswordChange: true,
+            lastPasswordChange: 0,
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+    }
+}
+
+window.saveAdminCredentialsToFirebaseOnly = async function(username, email, password) {
+    username = String(username || '').trim();
+    email = String(email || '').trim().toLowerCase();
+    password = String(password || '').trim();
+
+    if (!username) throw new Error('กรุณากรอกชื่อผู้ใช้ Admin');
+    if (password.length < 6) throw new Error('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+
+    await setDoc(doc(finalAdminDb, 'admin_settings', 'credentials'), {
+        username,
+        email,
+        password,
+        updatedAt: serverTimestamp(),
+        updatedBy: 'admin'
+    }, { merge: true });
+
+    await setDoc(doc(finalAdminDb, 'admin_settings', 'security'), {
+        requirePasswordChange: false,
+        lastPasswordChange: serverTimestamp(),
+        updatedAt: serverTimestamp()
+    }, { merge: true });
+
+    clearOldAdminLocal();
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    clearOldAdminLocal();
+    ensureFinalAdminDocs().catch(console.error);
+    setInterval(clearOldAdminLocal, 3000);
+});
 </script>
 
 </body>
