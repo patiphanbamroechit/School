@@ -3257,9 +3257,10 @@ async function submitPlanRequest(planId){
                                 await sendEmailVerification(tmpCred.user, { url: window.location.href });
                                 sendMailViaWebApp({
                                     to: email,
-                                    type: 'resend_verify',
+                                    type: 'verify',
                                     subject: 'ส่งลิงก์ยืนยัน SchoolHub ใหม่แล้ว',
-                                    message: `ระบบส่งลิงก์ยืนยันอีเมลใหม่ให้ ${email} แล้ว กรุณาตรวจสอบอีเมลและกดลิงก์ยืนยันก่อนเข้าสู่ระบบ`
+                                    message: `ระบบส่งลิงก์ยืนยันอีเมลใหม่ให้ ${email} แล้ว กรุณาตรวจสอบอีเมลและกดลิงก์ยืนยันก่อนเข้าสู่ระบบ`,
+                                    extra: { link: window.location.href }
                                 });
                                 await signOut(auth);
                                 showCustomAlert("ส่งลิงก์ใหม่แล้ว", "ตรวจสอบอีเมล " + email + " แล้วกดลิงก์ยืนยัน");
@@ -3308,9 +3309,10 @@ async function submitPlanRequest(planId){
                     sendMailViaWebApp({
                         to: email,
                         name: name,
-                        type: 'register_verify',
+                        type: 'verify',
                         subject: 'ยืนยันการสมัครสมาชิก SchoolHub',
-                        message: `สวัสดี ${name || email}\n\nระบบได้รับการสมัครสมาชิก SchoolHub แล้ว กรุณาตรวจสอบอีเมลจาก Firebase และกดลิงก์ยืนยันอีเมลก่อนเข้าสู่ระบบ\n\nอีเมล: ${email}`
+                        message: `สวัสดี ${name || email}\n\nระบบได้รับการสมัครสมาชิก SchoolHub แล้ว กรุณาตรวจสอบอีเมลจาก Firebase และกดลิงก์ยืนยันอีเมลก่อนเข้าสู่ระบบ\n\nอีเมล: ${email}`,
+                        extra: { link: window.location.href }
                     });
                 } catch(verifyErr) { console.warn('sendEmailVerification failed:', verifyErr); }
                 // Sign out แล้วแจ้งให้ยืนยันเมลก่อน
