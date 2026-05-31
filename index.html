@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -902,9 +903,9 @@
             #auth-view .auth-card { padding:1.75rem !important; }
             #auth-view .auth-preview-card { display:none; }
         }
-        /* Desktop 90% scale */
+        /* Desktop 100% scale */
         @media (min-width: 1024px) {
-            #auth-view .auth-modern-container { zoom: 0.9; }
+            #auth-view .auth-modern-container { zoom: 1.0; }
         }
 
         /* SchoolHub popup stacking fix: ทุกป็อปอัพต้องอยู่หน้าสุดเสมอ */
@@ -1095,7 +1096,22 @@
                         <div class="absolute -right-12 -top-12 w-40 h-40 bg-indigo-100 rounded-full blur-2xl"></div>
                         <div class="relative bg-slate-950 rounded-[1.7rem] p-5 text-white mb-4">
                             <div class="flex justify-between items-start mb-6"><div><p class="text-slate-400 text-sm">SchoolHub Dashboard</p><h3 class="text-2xl font-black mt-1" id="stat-landing-title">ภาพรวมวันนี้</h3></div><div class="w-11 h-11 rounded-2xl bg-white/10 flex items-center justify-center"><i class="fas fa-chart-simple text-indigo-200"></i></div></div>
-                            <div class="grid grid-cols-3 gap-2 text-center"><div class="bg-white/10 rounded-2xl p-3"><div id="stat-landing-courses" class="text-xl font-black">—</div><div class="text-[11px] text-slate-300">วิชา</div></div><div class="bg-white/10 rounded-2xl p-3"><div id="stat-landing-students" class="text-xl font-black">—</div><div class="text-[11px] text-slate-300">นักเรียน</div></div><div class="bg-white/10 rounded-2xl p-3"><div id="stat-landing-attend" class="text-xl font-black">—</div><div class="text-[11px] text-slate-300">เช็คชื่อวันนี้</div></div></div>
+                            
+<div class="grid grid-cols-3 gap-2 text-center">
+    <div class="bg-white/10 rounded-2xl p-3">
+        <div id="stat-landing-teachers" class="text-xl font-black">—</div>
+        <div class="text-[11px] text-slate-300">คุณครู</div>
+    </div>
+    <div class="bg-white/10 rounded-2xl p-3">
+        <div id="stat-landing-courses" class="text-xl font-black">—</div>
+        <div class="text-[11px] text-slate-300">วิชา</div>
+    </div>
+    <div class="bg-white/10 rounded-2xl p-3">
+        <div id="stat-landing-students" class="text-xl font-black">—</div>
+        <div class="text-[11px] text-slate-300">นักเรียน</div>
+    </div>
+</div>
+
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div class="bg-indigo-50 rounded-3xl p-5 border border-indigo-100"><i class="fas fa-book text-primary text-2xl mb-3"></i><h3 class="font-bold text-slate-800">จัดการวิชา</h3><p class="text-xs text-slate-500 mt-1">เพิ่มรายวิชาและงาน</p></div>
@@ -6132,142 +6148,289 @@ ${resetUrl.toString()}
 
   // ── 6. loadGlobalSiteStats — สถิติจริงจาก Firestore ─────
   async function loadGlobalSiteStats(){
-    try {
-      const pubSnap = await window.getDocs(window.collection(window.db, window.getPublicPath()));
-      let totalCourses = 0, totalStudents = 0, totalUsers = 0;
-      pubSnap.forEach(d => {
-        const u = d.data()||{};
-        if(u.role === 'admin') return;
-        totalUsers++;
-        // ถ้ามี courseCount/studentCount เก็บไว้ใน directory ใช้เลย
-        totalCourses  += Number(u.courseCount||0);
-        totalStudents += Number(u.studentCount||0);
-      });
-      // อัปเดต landing hero
-      const setEl = (id, v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
-      setEl('stat-landing-courses',  totalCourses  || '—');
-      setEl('stat-landing-students', totalStudents || '—');
-      setEl('stat-landing-attend',   totalUsers    || '—');
-      // อัปเดต auth hero
-      setEl('stat-auth-courses',  totalCourses  || '—');
-      setEl('stat-auth-students', totalStudents || '—');
-      setEl('stat-auth-users',    totalUsers    || '—');
-    } catch(e){ console.warn('loadGlobalSiteStats:', e); }
-  }
-
-  // โหลดสถิติทันทีที่หน้า load
-  if(window.db && window.getDocs && window.collection && window.getPublicPath){
-    loadGlobalSiteStats();
-  } else {
-    window.addEventListener('schoolhub-ready', loadGlobalSiteStats, {once:true});
-    setTimeout(loadGlobalSiteStats, 3000); // fallback
-  }
-
-  // ── 7. master block check ทุก 5 วิ ───────────────────────
-  let _blkBusy = false;
-  async function masterBlockCheck5s(){
-    if(_blkBusy) return;
-    if(!window.auth?.currentUser || window.currentUser?.uid==='admin-bypass') return;
-    _blkBusy = true;
-    try{
-      const u = window.auth.currentUser;
-      const key = u.email || (typeof getUserKey==='function'?getUserKey(u):u.uid);
-      const [sSnap, pSnap] = await Promise.all([
-        window.getDoc(window.doc(window.db,'users_status',key)),
-        window.getDoc(window.doc(window.db, window.getPublicPath(), u.uid))
-      ]);
-      const sd = sSnap.exists ? sSnap.exists() ? sSnap.data() : {} : {};
-      const pd = pSnap.exists ? pSnap.exists() ? pSnap.data() : {} : {};
-      const isBlocked = ['blocked','deleted'].includes(sd.status||'')||sd.blocked===true
-                     || ['blocked','deleted'].includes(pd.status||'')||pd.blocked===true;
-      if(isBlocked){
-        // ซ่อน nav ทั้งหมด
-        ['nav-main-label','nav-dashboard','nav-students','nav-user-plans',
-         'course-context-menu','mobile-nav-dashboard','mobile-nav-students','mobile-nav-user-plans'
-        ].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
-        await window.signOut(window.auth);
-        window.currentUser = null; window.isAdmin = false;
-        localStorage.removeItem('schoolhub_admin_bypass');
-        document.getElementById('main-app')?.classList.add('hidden');
-        document.getElementById('auth-view')?.classList.add('hidden');
-        document.getElementById('landing-view')?.classList.remove('hidden');
-        if(typeof showCustomAlert==='function')
-          showCustomAlert('บัญชีถูกบล็อก',
-            'บัญชีนี้ถูกบล็อกโดยผู้ดูแลระบบ\nกรุณาติดต่อแอดมินเพื่อขอปลดบล็อก', true);
-      }
-    }catch(e){ console.warn('masterBlockCheck5s:', e); }
-    finally{ _blkBusy = false; }
-  }
-  setInterval(masterBlockCheck5s, 5000);
-
-  // ── 8. เพิ่ม blocked users section ใน view-admin-permissions ─
-  function injectBlockedUsersInPermissions(){
-    const perm = document.getElementById('view-admin-permissions');
-    if(!perm || perm.querySelector('#blocked-inline-section')) return;
-    const section = document.createElement('div');
-    section.id = 'blocked-inline-section';
-    section.className = 'mt-6 bg-white rounded-3xl border border-rose-100 shadow-sm overflow-hidden';
-    section.innerHTML = `
-      <div class="p-5 border-b border-rose-100 bg-rose-50/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h4 class="font-black text-slate-800 text-base"><i class="fas fa-user-lock text-rose-500 mr-2"></i>ผู้ใช้ที่ถูกบล็อก</h4>
-          <p class="text-xs text-slate-500 mt-0.5">ข้อมูลทั้งหมดยังอยู่ครบ กดปลดบล็อกเพื่อคืนสิทธิ์</p>
-        </div>
-        <button onclick="typeof renderBlockedUsersList==='function'&&renderBlockedUsersList()" class="bg-white border border-rose-200 text-rose-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-rose-50">
-          <i class="fas fa-sync-alt mr-1"></i> รีเฟรช
-        </button>
-      </div>
-      <div id="blocked-users-card-list-inline" class="p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        <div class="col-span-full text-center py-8 text-slate-400 text-sm">กำลังโหลด...</div>
-      </div>`;
-    perm.appendChild(section);
-
-    // override renderBlockedUsersList เพื่อ render ใน inline section ด้วย
-    const _origRenderBlocked = window.renderBlockedUsersList;
-    window.renderBlockedUsersList = async function(){
-      if(typeof _origRenderBlocked==='function') await _origRenderBlocked();
-      // sync inline
-      const src  = document.getElementById('blocked-users-card-list');
-      const dest = document.getElementById('blocked-users-card-list-inline');
-      if(src && dest) dest.innerHTML = src.innerHTML || '<div class="col-span-full text-center py-8 text-slate-400 text-sm">ไม่มีผู้ใช้ถูกบล็อก</div>';
-    };
-  }
-
-  // inject เมื่อ DOM พร้อม
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded', injectBlockedUsersInPermissions);
-  } else {
-    injectBlockedUsersInPermissions();
-  }
-
-  // ── 9. updateGlobalViews override — อัปเดต stat จริง ─────
-  const _origUpdate = window.updateGlobalViews;
-  window.updateGlobalViews = function(){
-    if(typeof _origUpdate === 'function') _origUpdate();
-    // อัปเดต landing stats จากข้อมูล state ปัจจุบัน (ถ้ามี)
-    if(window.state){
-      const el1 = document.getElementById('stat-landing-courses');
-      const el2 = document.getElementById('stat-landing-students');
-      if(el1) el1.textContent = (window.state.courses||[]).length || '—';
-      if(el2) el2.textContent = (window.state.students||[]).length || '—';
+    if (typeof window.__schoolhubGlobalStatsRefresh === 'function') {
+        return window.__schoolhubGlobalStatsRefresh();
     }
-  };
+}
 
-  // render plan cards เมื่อ loadAdminData เสร็จ
-  const _origLAD = window.loadAdminData;
-  if(typeof _origLAD === 'function'){
-    window.loadAdminData = async function(){
-      await _origLAD.apply(this,arguments);
-      renderAdminPlanCards();
-      // render blocked inline ถ้าอยู่ใน permissions view
-      if(typeof renderBlockedUsersList==='function' &&
-         document.getElementById('blocked-inline-section')){
-        renderBlockedUsersList();
-      }
+
+</script>
+
+
+
+<div id="admin-global-stats-panel" class="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6 mb-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
+        <div>
+            <h3 class="text-2xl font-black text-slate-900"><i class="fas fa-chart-pie text-primary mr-2"></i>สถิติรวมทั้งระบบ</h3>
+            <p class="text-sm text-slate-500 mt-1">ดึงจากเอกสารกลาง global_stats/summary และรวบรวมจาก user_stats ของแต่ละบัญชี</p>
+        </div>
+        <button onclick="window.__schoolhubCentralStatsRebuild && window.__schoolhubCentralStatsRebuild()" class="bg-primary hover:bg-indigo-700 text-white font-bold px-5 py-3 rounded-2xl shadow-lg shadow-indigo-100">
+            <i class="fas fa-rotate mr-2"></i>อัปเดตสถิติ
+        </button>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+        <div class="rounded-3xl bg-indigo-50 border border-indigo-100 p-4"><div id="admin-stat-teachers" class="text-3xl font-black text-primary">0</div><div class="text-xs font-bold text-slate-500 mt-1">ครู/ผู้ใช้งาน</div></div>
+        <div class="rounded-3xl bg-sky-50 border border-sky-100 p-4"><div id="admin-stat-courses" class="text-3xl font-black text-sky-600">0</div><div class="text-xs font-bold text-slate-500 mt-1">วิชา</div></div>
+        <div class="rounded-3xl bg-emerald-50 border border-emerald-100 p-4"><div id="admin-stat-students" class="text-3xl font-black text-emerald-600">0</div><div class="text-xs font-bold text-slate-500 mt-1">นักเรียน</div></div>
+        <div class="rounded-3xl bg-amber-50 border border-amber-100 p-4"><div id="admin-stat-attendance" class="text-3xl font-black text-amber-600">0</div><div class="text-xs font-bold text-slate-500 mt-1">การเช็คชื่อ</div></div>
+        <div class="rounded-3xl bg-rose-50 border border-rose-100 p-4"><div id="admin-stat-assignments" class="text-3xl font-black text-rose-600">0</div><div class="text-xs font-bold text-slate-500 mt-1">งาน/กิจกรรม</div></div>
+        <div class="rounded-3xl bg-violet-50 border border-violet-100 p-4"><div id="admin-stat-scores" class="text-3xl font-black text-violet-600">0</div><div class="text-xs font-bold text-slate-500 mt-1">รายการคะแนน</div></div>
+    </div>
+    <p id="admin-stat-updated" class="text-xs text-slate-400 mt-4">อัปเดตล่าสุด: —</p>
+</div>
+
+
+<script type="module">
+/* ============================================================
+   SchoolHub Central Global Stats System
+   ใช้ Firebase เดิม ไม่ต้องสร้าง Firebase ใหม่
+   เขียน/อ่านเอกสารกลาง: global_stats/summary
+   เก็บสถิติรายบัญชี: user_stats/{uid หรือ email}
+   ============================================================ */
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getFirestore, collection, getDocs, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+const centralStatsFirebaseConfig = {
+    apiKey: "AIzaSyB6u1U_8jNWHd8fUWu6sZ9BAup_u4u-EGg",
+    authDomain: "schoolhub-5677d.firebaseapp.com",
+    projectId: "schoolhub-5677d",
+    storageBucket: "schoolhub-5677d.firebasestorage.app",
+    messagingSenderId: "803574136389",
+    appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
+    measurementId: "G-ME7E38XNX6"
+};
+
+const app = getApps().length ? getApp() : initializeApp(centralStatsFirebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+let currentAuthUser = null;
+
+function num(v) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+}
+
+function setText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(num(value));
+}
+
+function getState() {
+    return window.state || window.appState || window.schoolhubState || {};
+}
+
+function arrCount(v) {
+    return Array.isArray(v) ? v.length : 0;
+}
+
+function objCount(v) {
+    return v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v).length : 0;
+}
+
+function countLocalStats() {
+    const state = getState();
+    const courses = arrCount(state.courses) || arrCount(state.courseList) || objCount(state.coursesMap);
+    const students = arrCount(state.students) || arrCount(state.studentList) || arrCount(state.masterStudents) || objCount(state.studentsMap);
+
+    let attendanceRecords = arrCount(state.attendanceRecords) + arrCount(state.attendances) + arrCount(state.checkIns) + arrCount(state.checkins);
+    let assignments = arrCount(state.assignments) + arrCount(state.works) + arrCount(state.tasks);
+    let scoreItems = arrCount(state.scoreItems) + arrCount(state.scores) + arrCount(state.scoreRecords);
+
+    const courseList = Array.isArray(state.courses) ? state.courses : [];
+    for (const c of courseList) {
+        assignments += arrCount(c.assignments) + arrCount(c.works) + arrCount(c.tasks) + arrCount(c.scoreItems);
+        scoreItems += arrCount(c.scores) + arrCount(c.scoreRecords) + arrCount(c.scoreList);
+
+        for (const key of ['attendance','attendanceRecords','attendances','checkIns','checkins']) {
+            attendanceRecords += arrCount(c[key]) + objCount(c[key]);
+        }
+
+        if (Array.isArray(c.weeks)) {
+            for (const w of c.weeks) {
+                assignments += arrCount(w.assignments) + arrCount(w.works) + arrCount(w.tasks);
+                scoreItems += arrCount(w.scores) + arrCount(w.scoreRecords) + arrCount(w.scoreList);
+                for (const key of ['attendance','attendanceRecords','attendances','checkIns','checkins']) {
+                    attendanceRecords += arrCount(w[key]) + objCount(w[key]);
+                }
+            }
+        }
+    }
+
+    return {
+        courses: num(courses),
+        students: num(students),
+        attendanceRecords: num(attendanceRecords),
+        assignments: num(assignments),
+        scoreItems: num(scoreItems)
     };
-  }
+}
 
-})();
+function userKey() {
+    const u = currentAuthUser || auth.currentUser || window.currentUser || {};
+    return u.uid || u.email || window.currentUserEmail || window.userEmail || null;
+}
+
+async function syncMyStatsToCenter() {
+    const key = userKey();
+    if (!key) return;
+
+    const u = currentAuthUser || auth.currentUser || window.currentUser || {};
+    const local = countLocalStats();
+
+    try {
+        await setDoc(doc(db, 'user_stats', String(key)), {
+            uid: u.uid || '',
+            email: u.email || window.currentUserEmail || '',
+            displayName: u.displayName || window.currentUserName || '',
+            role: window.currentUserRole || window.userRole || 'teacher',
+            status: window.currentUserStatus || 'active',
+            courses: local.courses,
+            students: local.students,
+            attendanceRecords: local.attendanceRecords,
+            assignments: local.assignments,
+            scoreItems: local.scoreItems,
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+    } catch (err) {
+        console.warn('SchoolHub: sync user_stats ไม่สำเร็จ', err);
+    }
+}
+
+async function rebuildCentralStats() {
+    await syncMyStatsToCenter();
+
+    let totalTeachers = 0;
+    let totalUsers = 0;
+    let totalCourses = 0;
+    let totalStudents = 0;
+    let totalAttendanceRecords = 0;
+    let totalAssignments = 0;
+    let totalScoreItems = 0;
+
+    try {
+        const publicUsersSnap = await getDocs(collection(db, 'public_users_directory'));
+        publicUsersSnap.forEach(d => {
+            const u = d.data() || {};
+            const role = String(u.role || '').toLowerCase();
+            const status = String(u.status || '').toLowerCase();
+            if (status === 'blocked' || status === 'deleted' || u.blocked === true) return;
+            totalUsers += 1;
+            if (role !== 'admin') totalTeachers += 1;
+        });
+    } catch (err) {
+        console.warn('SchoolHub: อ่าน public_users_directory ไม่สำเร็จ', err);
+    }
+
+    try {
+        const userStatsSnap = await getDocs(collection(db, 'user_stats'));
+
+        if (!totalUsers) {
+            userStatsSnap.forEach(d => {
+                const s = d.data() || {};
+                const role = String(s.role || '').toLowerCase();
+                const status = String(s.status || '').toLowerCase();
+                if (status === 'blocked' || status === 'deleted' || s.blocked === true) return;
+                totalUsers += 1;
+                if (role !== 'admin') totalTeachers += 1;
+            });
+        }
+
+        userStatsSnap.forEach(d => {
+            const s = d.data() || {};
+            const status = String(s.status || '').toLowerCase();
+            if (status === 'blocked' || status === 'deleted' || s.blocked === true) return;
+
+            totalCourses += num(s.courses || s.courseCount || s.totalCourses);
+            totalStudents += num(s.students || s.studentCount || s.totalStudents);
+            totalAttendanceRecords += num(s.attendanceRecords || s.attendanceCount || s.totalAttendanceRecords);
+            totalAssignments += num(s.assignments || s.assignmentCount || s.totalAssignments);
+            totalScoreItems += num(s.scoreItems || s.scoreCount || s.totalScoreItems);
+        });
+    } catch (err) {
+        console.warn('SchoolHub: อ่าน user_stats ไม่สำเร็จ', err);
+    }
+
+    const summary = {
+        totalTeachers,
+        totalUsers,
+        totalCourses,
+        totalStudents,
+        totalAttendanceRecords,
+        totalAssignments,
+        totalScoreItems,
+        updatedAt: serverTimestamp()
+    };
+
+    try {
+        await setDoc(doc(db, 'global_stats', 'summary'), summary, { merge: true });
+    } catch (err) {
+        console.warn('SchoolHub: เขียน global_stats/summary ไม่สำเร็จ', err);
+    }
+
+    renderCentralStats(summary);
+    return summary;
+}
+
+async function loadCentralStats() {
+    try {
+        const snap = await getDoc(doc(db, 'global_stats', 'summary'));
+        if (snap.exists()) {
+            renderCentralStats(snap.data() || {});
+        } else {
+            await rebuildCentralStats();
+        }
+    } catch (err) {
+        console.warn('SchoolHub: อ่าน global_stats/summary ไม่สำเร็จ จะ rebuild ใหม่', err);
+        await rebuildCentralStats();
+    }
+}
+
+function renderCentralStats(s) {
+    setText('stat-landing-teachers', s.totalTeachers || s.totalUsers);
+    setText('stat-landing-courses', s.totalCourses);
+    setText('stat-landing-students', s.totalStudents);
+
+    setText('stat-auth-users', s.totalTeachers || s.totalUsers);
+    setText('stat-auth-courses', s.totalCourses);
+    setText('stat-auth-students', s.totalStudents);
+
+    setText('admin-stat-teachers', s.totalTeachers || s.totalUsers);
+    setText('admin-stat-courses', s.totalCourses);
+    setText('admin-stat-students', s.totalStudents);
+    setText('admin-stat-attendance', s.totalAttendanceRecords);
+    setText('admin-stat-assignments', s.totalAssignments);
+    setText('admin-stat-scores', s.totalScoreItems);
+
+    const updated = document.getElementById('admin-stat-updated');
+    if (updated) updated.textContent = 'อัปเดตล่าสุด: ' + new Date().toLocaleString('th-TH');
+}
+
+window.loadGlobalSiteStats = loadCentralStats;
+window.__schoolhubCentralStatsRefresh = loadCentralStats;
+window.__schoolhubCentralStatsRebuild = rebuildCentralStats;
+window.__schoolhubCentralStatsSyncMine = syncMyStatsToCenter;
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadCentralStats();
+    setTimeout(loadCentralStats, 1200);
+    setTimeout(rebuildCentralStats, 3000);
+    setInterval(() => {
+        syncMyStatsToCenter();
+        loadCentralStats();
+    }, 60000);
+});
+
+onAuthStateChanged(auth, user => {
+    currentAuthUser = user;
+    if (user) {
+        setTimeout(syncMyStatsToCenter, 1000);
+        setTimeout(rebuildCentralStats, 2500);
+    } else {
+        loadCentralStats();
+    }
+});
 </script>
 
 </body>
