@@ -2031,32 +2031,69 @@
         const db = getFirestore(app);
 
         // --- ระบบส่งเมลผ่าน Google Apps Script Web App ---
-        // ใช้แบบ POST + no-cors เพื่อให้เรียกจากไฟล์ HTML ได้โดยไม่ติด CORS
+        // ส่งผ่าน hidden iframe เพื่อให้รับผลลัพธ์จริงจาก Apps Script ได้ (ไม่ใช้ no-cors)
         const MAIL_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx6vgxxjJBy0JPFPVjhCOEAn5aCCXXPjE0nBHEt7xkoXfYHeIZ5yGuM8dzcSWW0nsk8jg/exec';
-        async function sendMailViaWebApp({ to, subject, message, htmlBody, type = 'schoolhub', name = '', extra = {} } = {}) {
-            const target = String(to || '').trim();
-            if (!target || !MAIL_WEB_APP_URL) return false;
-            try {
-                const payload = {
-                type: String(type || ''),
-                email: target,
-                name: String(name || ''),
-                link: String((extra && (extra.link || extra.actionLink)) || ''),
-                subject: String(subject || ''),
-                message: String(message || ''),
-                htmlBody: String(htmlBody || '')
-            };
-            await fetch(MAIL_WEB_APP_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(payload)
+        function sendMailViaWebApp(payload = {}) {
+            return new Promise((resolve, reject) => {
+                const targetEmail = String(payload.to || payload.email || '').trim();
+                if (!targetEmail) return reject(new Error('ไม่พบอีเมลผู้รับ'));
+                if (!MAIL_WEB_APP_URL) return reject(new Error('ยังไม่ได้ตั้งค่า MAIL_WEB_APP_URL'));
+
+                const requestId = 'mail_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+                const iframeName = 'mail_iframe_' + requestId;
+                const iframe = document.createElement('iframe');
+                iframe.name = iframeName;
+                iframe.style.display = 'none';
+
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = MAIL_WEB_APP_URL;
+                form.target = iframeName;
+                form.style.display = 'none';
+
+                const normalizedPayload = {
+                    requestId,
+                    type: String(payload.type || ''),
+                    email: targetEmail,
+                    name: String(payload.name || ''),
+                    link: String((payload.extra && (payload.extra.link || payload.extra.actionLink || payload.extra.returnUrl)) || payload.link || ''),
+                    continueUrl: String((payload.extra && (payload.extra.continueUrl || payload.extra.returnUrl || payload.extra.link)) || payload.continueUrl || window.location.href),
+                    idToken: String((payload.extra && payload.extra.idToken) || payload.idToken || ''),
+                    subject: String(payload.subject || ''),
+                    message: String(payload.message || ''),
+                    htmlBody: String(payload.htmlBody || '')
+                };
+
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'payload';
+                input.value = JSON.stringify(normalizedPayload);
+                form.appendChild(input);
+
+                const cleanup = () => {
+                    window.removeEventListener('message', onMessage);
+                    clearTimeout(timer);
+                    setTimeout(() => { iframe.remove(); form.remove(); }, 100);
+                };
+
+                const timer = setTimeout(() => {
+                    cleanup();
+                    reject(new Error('ยังไม่ได้รับผลยืนยันจาก Apps Script กรุณาเช็กว่า Deploy เป็นเวอร์ชันล่าสุดและตั้ง Anyone แล้ว'));
+                }, 20000);
+
+                function onMessage(event) {
+                    const data = event.data || {};
+                    if (!data || data.requestId !== requestId) return;
+                    cleanup();
+                    if (data.ok === true) resolve(data);
+                    else reject(new Error(data.error || 'Apps Script ส่งอีเมลไม่สำเร็จ'));
+                }
+
+                window.addEventListener('message', onMessage);
+                document.body.appendChild(iframe);
+                document.body.appendChild(form);
+                form.submit();
             });
-                return true;
-            } catch (err) {
-                console.warn('sendMailViaWebApp failed:', err);
-                return false;
-            }
         }
         window.sendMailViaWebApp = sendMailViaWebApp;
 
@@ -3254,13 +3291,13 @@ async function submitPlanRequest(planId){
                             try {
                                 const tmpCred = await signInWithEmailAndPassword(auth, email, pass);
                                 const { sendEmailVerification } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
-                                await sendEmailVerification(tmpCred.user, { url: window.location.href });
-                                sendMailViaWebApp({
+                                const idToken = await tmpCred.user.getIdToken(true);
+                                await sendMailViaWebApp({
                                     to: email,
                                     type: 'verify',
                                     subject: 'ส่งลิงก์ยืนยัน SchoolHub ใหม่แล้ว',
                                     message: `ระบบส่งลิงก์ยืนยันอีเมลใหม่ให้ ${email} แล้ว กรุณาตรวจสอบอีเมลและกดลิงก์ยืนยันก่อนเข้าสู่ระบบ`,
-                                    extra: { link: window.location.href }
+                                    extra: { idToken, continueUrl: window.location.href }
                                 });
                                 await signOut(auth);
                                 showCustomAlert("ส่งลิงก์ใหม่แล้ว", "ตรวจสอบอีเมล " + email + " แล้วกดลิงก์ยืนยัน");
@@ -3305,16 +3342,16 @@ async function submitPlanRequest(planId){
                         url: window.location.href,
                         handleCodeInApp: false
                     };
-                    await sendEmailVerification(userCred.user, actionCodeSettings);
-                    sendMailViaWebApp({
+                    const idToken = await userCred.user.getIdToken(true);
+                    await sendMailViaWebApp({
                         to: email,
                         name: name,
                         type: 'verify',
                         subject: 'ยืนยันการสมัครสมาชิก SchoolHub',
-                        message: `สวัสดี ${name || email}\n\nระบบได้รับการสมัครสมาชิก SchoolHub แล้ว กรุณาตรวจสอบอีเมลจาก Firebase และกดลิงก์ยืนยันอีเมลก่อนเข้าสู่ระบบ\n\nอีเมล: ${email}`,
-                        extra: { link: window.location.href }
+                        message: `สวัสดี ${name || email}\n\nระบบได้รับการสมัครสมาชิก SchoolHub แล้ว กรุณากดลิงก์ยืนยันอีเมลก่อนเข้าสู่ระบบ\n\nอีเมล: ${email}`,
+                        extra: { idToken, continueUrl: window.location.href }
                     });
-                } catch(verifyErr) { console.warn('sendEmailVerification failed:', verifyErr); }
+                } catch(verifyErr) { throw verifyErr; }
                 // Sign out แล้วแจ้งให้ยืนยันเมลก่อน
                 await signOut(auth);
                 toggleLoader(false);
