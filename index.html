@@ -6527,7 +6527,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadGlobalSummary();
     setTimeout(loadGlobalSummary, 700);
     setTimeout(hookSaveFunctions, 1500);
-    setTimeout(syncAndRebuildStats, 2800);
+    setTimeout(syncAndRebuildStats, 6500);
     setInterval(hookSaveFunctions, 5000);
 });
 
@@ -6536,7 +6536,7 @@ onAuthStateChanged(auth, user => {
     loadGlobalSummary();
     if (user) {
         setTimeout(hookSaveFunctions, 800);
-        setTimeout(syncAndRebuildStats, 1800);
+        setTimeout(syncAndRebuildStats, 4500);
     }
 });
 </script>
@@ -6821,6 +6821,193 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(injectAdminCredentialButton, 2500);
     setInterval(injectAdminCredentialButton, 5000);
 });
+</script>
+
+
+<script>
+/* ============================================================
+   SchoolHub Google Login Loader Unstuck Patch
+   แก้ปัญหา Login ด้วย Google แล้วขึ้น "กำลังเชื่อมต่อ..." ค้าง
+   - ไม่ยุ่งกับระบบ Login เดิม
+   - ถ้ามีผู้ใช้ login แล้ว แต่ loader ยังบังจอ จะปล่อยหน้าเว็บออก
+   - ทำให้ระบบสถิติ/แอดมินที่โหลดช้าไม่บล็อกการเข้าหน้าหลัก
+   ============================================================ */
+(function () {
+    let lastAuthSuccessAt = 0;
+    let releasedOnce = false;
+
+    function isVisible(el) {
+        if (!el) return false;
+        const style = window.getComputedStyle(el);
+        return style.display !== 'none' && style.visibility !== 'hidden' && !el.classList.contains('hidden');
+    }
+
+    function hideLoader() {
+        const loader = document.getElementById('global-loader');
+        if (loader) {
+            loader.classList.add('hidden');
+            loader.style.display = 'none';
+            loader.style.pointerEvents = 'none';
+        }
+    }
+
+    function showMainAppIfPossible() {
+        const app = document.getElementById('main-app');
+        const auth = document.getElementById('auth-view');
+        const landing = document.getElementById('landing-view');
+
+        // ถ้า main-app ถูกสร้างไว้แล้ว ให้โชว์ main-app เป็นหลัก
+        if (app) {
+            app.classList.remove('hidden');
+            app.style.display = '';
+            if (auth) auth.classList.add('hidden');
+            if (landing) landing.classList.add('hidden');
+            return true;
+        }
+
+        return false;
+    }
+
+    function releaseStuckLoader(reason) {
+        const loader = document.getElementById('global-loader');
+        if (!loader || !isVisible(loader)) return;
+
+        hideLoader();
+        showMainAppIfPossible();
+
+        if (!releasedOnce) {
+            releasedOnce = true;
+            console.warn('SchoolHub: released stuck loader after Google login:', reason);
+        }
+    }
+
+    function markAuthSuccess(reason) {
+        lastAuthSuccessAt = Date.now();
+
+        // ปล่อย loader แบบหน่วงนิดหนึ่ง เพื่อให้โค้ดเดิมมีโอกาสโหลดข้อมูลก่อน
+        setTimeout(() => releaseStuckLoader(reason + ' / 2s'), 2000);
+        setTimeout(() => releaseStuckLoader(reason + ' / 5s'), 5000);
+        setTimeout(() => releaseStuckLoader(reason + ' / 8s'), 8000);
+    }
+
+    // ดัก Firebase Auth callbacks จากโค้ดเดิม
+    function hookAuthFunctions() {
+        const candidates = [
+            'handleSocialLogin',
+            'loginWithGoogle',
+            'signInWithGoogle',
+            'googleLogin',
+            'handleGoogleLogin'
+        ];
+
+        candidates.forEach(function (name) {
+            const fn = window[name];
+            if (typeof fn !== 'function' || fn.__loaderUnstuckHooked) return;
+
+            const wrapped = async function () {
+                try {
+                    const result = fn.apply(this, arguments);
+                    if (result && typeof result.then === 'function') {
+                        const awaited = await result;
+                        markAuthSuccess(name);
+                        return awaited;
+                    }
+                    markAuthSuccess(name);
+                    return result;
+                } catch (error) {
+                    hideLoader();
+                    console.error('Google login function error:', error);
+                    throw error;
+                }
+            };
+
+            wrapped.__loaderUnstuckHooked = true;
+            window[name] = wrapped;
+        });
+    }
+
+    // ดักคลิกปุ่ม Google เผื่อฟังก์ชันอยู่ inline หรือชื่อไม่ตรง
+    document.addEventListener('click', function (event) {
+        const target = event.target && event.target.closest ? event.target.closest('button, a, div') : event.target;
+        if (!target) return;
+
+        const txt = (target.innerText || target.textContent || target.getAttribute?.('onclick') || '').toString().toLowerCase();
+        const cls = (target.className || '').toString().toLowerCase();
+
+        if (txt.includes('google') || txt.includes('กูเกิล') || cls.includes('google')) {
+            markAuthSuccess('google button click');
+        }
+    }, true);
+
+    // ถ้า Firebase auth currentUser มีแล้ว แต่ loader ยังบังจอ ให้ปล่อย
+    function checkKnownLoggedInState() {
+        try {
+            const hasFirebaseUser =
+                (window.auth && window.auth.currentUser) ||
+                (window.firebaseAuth && window.firebaseAuth.currentUser) ||
+                window.currentUser ||
+                window.currentUserEmail ||
+                localStorage.getItem('schoolhub_user') ||
+                localStorage.getItem('schoolhub_current_user') ||
+                localStorage.getItem('schoolhub_user_email');
+
+            if (hasFirebaseUser) {
+                markAuthSuccess('known logged-in state');
+            }
+        } catch (e) {}
+    }
+
+    // กัน Promise error หลัง login แล้ว loader ค้าง
+    window.addEventListener('unhandledrejection', function (event) {
+        const msg = String(event.reason && (event.reason.message || event.reason) || '');
+        if (
+            msg.includes('Firebase') ||
+            msg.includes('Firestore') ||
+            msg.includes('permission') ||
+            msg.includes('auth') ||
+            msg.includes('INTERNAL ASSERTION')
+        ) {
+            console.warn('SchoolHub: non-blocking async error after login:', event.reason);
+            if (Date.now() - lastAuthSuccessAt < 15000) {
+                hideLoader();
+                showMainAppIfPossible();
+            }
+        }
+    });
+
+    window.addEventListener('error', function (event) {
+        const msg = String(event.message || '');
+        if (
+            msg.includes('Firebase') ||
+            msg.includes('Firestore') ||
+            msg.includes('INTERNAL ASSERTION')
+        ) {
+            console.warn('SchoolHub: non-blocking runtime error after login:', event.error || event.message);
+            if (Date.now() - lastAuthSuccessAt < 15000) {
+                hideLoader();
+                showMainAppIfPossible();
+            }
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        hookAuthFunctions();
+        checkKnownLoggedInState();
+
+        setTimeout(hookAuthFunctions, 1000);
+        setTimeout(hookAuthFunctions, 3000);
+        setInterval(hookAuthFunctions, 5000);
+
+        // fallback: ถ้า loader ค้างนานเกินไปและมีหน้าจอหลักอยู่แล้ว ให้ปล่อย
+        setTimeout(function () {
+            const loader = document.getElementById('global-loader');
+            const app = document.getElementById('main-app');
+            if (loader && isVisible(loader) && app) {
+                releaseStuckLoader('hard fallback 9s');
+            }
+        }, 9000);
+    });
+})();
 </script>
 
 </body>
