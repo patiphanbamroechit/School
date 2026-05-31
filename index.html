@@ -902,6 +902,10 @@
             #auth-view .auth-card { padding:1.75rem !important; }
             #auth-view .auth-preview-card { display:none; }
         }
+        /* Desktop 90% scale */
+        @media (min-width: 1024px) {
+            #auth-view .auth-modern-container { zoom: 0.9; }
+        }
 
         /* SchoolHub popup stacking fix: ทุกป็อปอัพต้องอยู่หน้าสุดเสมอ */
         #custom-alert, #custom-confirm { z-index: 999999 !important; }
@@ -1090,8 +1094,8 @@
                     <div class="landing-card rounded-[2rem] p-4 md:p-6 shadow-2xl shadow-indigo-100 relative overflow-hidden">
                         <div class="absolute -right-12 -top-12 w-40 h-40 bg-indigo-100 rounded-full blur-2xl"></div>
                         <div class="relative bg-slate-950 rounded-[1.7rem] p-5 text-white mb-4">
-                            <div class="flex justify-between items-start mb-6"><div><p class="text-slate-400 text-sm">SchoolHub Dashboard</p><h3 class="text-2xl font-black mt-1">ภาพรวมวันนี้</h3></div><div class="w-11 h-11 rounded-2xl bg-white/10 flex items-center justify-center"><i class="fas fa-chart-simple text-indigo-200"></i></div></div>
-                            <div class="grid grid-cols-3 gap-2 text-center"><div class="bg-white/10 rounded-2xl p-3"><div class="text-xl font-black">8</div><div class="text-[11px] text-slate-300">วิชา</div></div><div class="bg-white/10 rounded-2xl p-3"><div class="text-xl font-black">240</div><div class="text-[11px] text-slate-300">นักเรียน</div></div><div class="bg-white/10 rounded-2xl p-3"><div class="text-xl font-black">92%</div><div class="text-[11px] text-slate-300">เข้าเรียน</div></div></div>
+                            <div class="flex justify-between items-start mb-6"><div><p class="text-slate-400 text-sm">SchoolHub Dashboard</p><h3 class="text-2xl font-black mt-1" id="stat-landing-title">ภาพรวมวันนี้</h3></div><div class="w-11 h-11 rounded-2xl bg-white/10 flex items-center justify-center"><i class="fas fa-chart-simple text-indigo-200"></i></div></div>
+                            <div class="grid grid-cols-3 gap-2 text-center"><div class="bg-white/10 rounded-2xl p-3"><div id="stat-landing-courses" class="text-xl font-black">—</div><div class="text-[11px] text-slate-300">วิชา</div></div><div class="bg-white/10 rounded-2xl p-3"><div id="stat-landing-students" class="text-xl font-black">—</div><div class="text-[11px] text-slate-300">นักเรียน</div></div><div class="bg-white/10 rounded-2xl p-3"><div id="stat-landing-attend" class="text-xl font-black">—</div><div class="text-[11px] text-slate-300">เช็คชื่อวันนี้</div></div></div>
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div class="bg-indigo-50 rounded-3xl p-5 border border-indigo-100"><i class="fas fa-book text-primary text-2xl mb-3"></i><h3 class="font-bold text-slate-800">จัดการวิชา</h3><p class="text-xs text-slate-500 mt-1">เพิ่มรายวิชาและงาน</p></div>
@@ -1167,15 +1171,15 @@
                             <div class="absolute -right-8 -top-8 w-32 h-32 bg-indigo-500/30 rounded-full blur-2xl"></div>
                             <div class="relative flex items-start justify-between mb-5">
                                 <div>
-                                    <p class="text-slate-400 text-sm font-semibold">SchoolHub Overview</p>
-                                    <h3 class="text-2xl font-black mt-1">พร้อมเริ่มสอนวันนี้</h3>
+                                    <p class="text-slate-400 text-sm font-semibold">SchoolHub Dashboard</p>
+                                    <h3 class="text-2xl font-black mt-1">ภาพรวมวันนี้</h3>
                                 </div>
                                 <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-indigo-200"><i class="fas fa-chart-line text-xl"></i></div>
                             </div>
                             <div class="relative grid grid-cols-3 gap-3">
-                                <div class="auth-stat-card"><b>12</b><span>รายวิชา</span></div>
-                                <div class="auth-stat-card"><b>320</b><span>นักเรียน</span></div>
-                                <div class="auth-stat-card"><b>96%</b><span>เข้าเรียน</span></div>
+                                <div class="auth-stat-card"><b id="stat-auth-courses">—</b><span>รายวิชา</span></div>
+                                <div class="auth-stat-card"><b id="stat-auth-students">—</b><span>นักเรียน</span></div>
+                                <div class="auth-stat-card"><b id="stat-auth-users">—</b><span>ผู้ใช้งาน</span></div>
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-3 mt-3">
@@ -1803,47 +1807,129 @@
                     </div>
                 </div>
 
-                <!-- Admin Plans View -->
-                <div id="view-admin-plans" class="view-section hidden fade-in">
-                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
-                        <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 xl:sticky xl:top-0">
-                            <h3 class="text-xl font-black text-slate-800 mb-1"><i class="fas fa-layer-group text-emerald-600 mr-2"></i>ตั้งค่าแผนการใช้งาน</h3>
-                            <p class="text-sm text-slate-500 mb-5">แอดมินกำหนดราคา สิทธิ์ และรายละเอียดได้เองทั้งหมด</p>
-                            <form onsubmit="event.preventDefault(); saveAdminPlanForm();" class="space-y-4">
-                                <input type="hidden" id="plan-sub-edit-id">
-                                <div><label class="block text-sm font-semibold text-slate-600 mb-1">ชื่อระดับ</label><input id="plan-sub-name" required class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="เช่น ฟรี / Pro / School"></div>
-                                <div><label class="block text-sm font-semibold text-slate-600 mb-1">ราคา</label><input id="plan-sub-price" required class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="เช่น 0 บาท / 199 บาทต่อเดือน"></div>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div><label class="block text-sm font-semibold text-slate-600 mb-1">รอบเก็บเงิน</label><select id="plan-sub-billing-cycle" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none"><option value="monthly">รายเดือน</option><option value="yearly">รายปี</option><option value="forever">ฟรีตลอด</option></select></div>
-                                    <div><label class="block text-sm font-semibold text-slate-600 mb-1">เพิ่มรายวิชาได้กี่วิชา</label><input id="plan-sub-course-limit" type="number" min="0" value="1" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="0 = ไม่จำกัด"></div>
-                                </div>
-                                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
-                                    <div class="font-black text-slate-700 text-sm"><i class="fas fa-sliders text-primary mr-1"></i> สิทธิ์การใช้งานในแผน</div>
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <div><label class="block text-sm font-semibold text-slate-600 mb-1">จำนวนสัปดาห์ใช้งาน</label><input id="plan-sub-week-limit" type="number" min="1" value="20" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="เช่น 20"></div>
-                                        <div><label class="block text-sm font-semibold text-slate-600 mb-1">จำนวนนักเรียนสูงสุด</label><input id="plan-sub-student-limit" type="number" min="0" value="0" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="0 = ไม่จำกัด"></div>
-                                        <div><label class="block text-sm font-semibold text-slate-600 mb-1">จำนวนสมาชิกทีมที่ใช้ร่วมกันได้</label><input id="plan-sub-team-limit" type="number" min="1" value="1" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="เช่น 5 = ใช้ร่วมกัน 5 คน"></div>
-                                    </div>
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <label class="flex items-center gap-2 bg-white px-4 py-3 rounded-xl border text-sm font-semibold text-slate-600"><input id="plan-sub-allow-attendance" type="checkbox" checked class="w-4 h-4 text-primary rounded"> ใช้งานเช็คชื่อได้</label>
-                                        <label class="flex items-center gap-2 bg-white px-4 py-3 rounded-xl border text-sm font-semibold text-slate-600"><input id="plan-sub-allow-export" type="checkbox" checked class="w-4 h-4 text-primary rounded"> Export ไฟล์ได้</label>
-                                        <label class="flex items-center gap-2 bg-white px-4 py-3 rounded-xl border text-sm font-semibold text-slate-600"><input id="plan-sub-allow-team" type="checkbox" class="w-4 h-4 text-primary rounded"> ใช้งานแบบทีมได้</label>
-                                    </div>
-                                </div>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div><label class="block text-sm font-semibold text-slate-600 mb-1">ราคารายเดือน</label><input id="plan-sub-monthly-price" type="number" min="0" value="0" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="เช่น 199"></div>
-                                    <div><label class="block text-sm font-semibold text-slate-600 mb-1">ราคารายปี</label><input id="plan-sub-yearly-price" type="number" min="0" value="0" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="เช่น 1990"></div>
-                                </div>
-                                <label class="flex items-center gap-2 bg-indigo-50 px-4 py-3 rounded-xl border border-indigo-100 text-sm font-semibold text-indigo-700"><input id="plan-sub-free-first-month" type="checkbox" class="w-4 h-4 text-primary rounded"> ฟรีเดือนแรก แล้วเก็บเงินรอบถัดไป</label>
-                                <div><label class="block text-sm font-semibold text-slate-600 mb-1">เบอร์พร้อมเพย์สำหรับรับเงิน</label><input id="plan-sub-promptpay" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="เช่น 0812345678 หรือเลขบัตรประชาชน"></div>
-                                <div><label class="block text-sm font-semibold text-slate-600 mb-1">คำอธิบายสั้น</label><input id="plan-sub-desc" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="เหมาะสำหรับทดลองใช้งาน"></div>
-                                <div><label class="block text-sm font-semibold text-slate-600 mb-1">สิ่งที่ทำได้ <span class="text-xs text-slate-400">(บรรทัดละ 1 รายการ)</span></label><textarea id="plan-sub-features" rows="5" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="สร้างรายวิชาได้ 1 วิชา&#10;เช็คชื่อได้&#10;บันทึกคะแนนได้"></textarea></div>
-                                <div class="grid grid-cols-2 gap-3"><div><label class="block text-sm font-semibold text-slate-600 mb-1">ลำดับ</label><input id="plan-sub-order" type="number" value="1" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3"></div><label class="flex items-center gap-2 bg-slate-50 px-4 py-3 rounded-xl border text-sm font-semibold text-slate-600 mt-6"><input id="plan-sub-featured" type="checkbox" class="w-4 h-4 text-primary rounded"> แนะนำ</label></div>
-                                <label class="flex items-center gap-2 bg-slate-50 px-4 py-3 rounded-xl border text-sm font-semibold text-slate-600"><input id="plan-sub-active" type="checkbox" checked class="w-4 h-4 text-primary rounded"> แสดงหน้าแรก</label>
-                                <div class="flex gap-3 pt-2"><button type="button" onclick="resetAdminPlanForm()" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl">ล้าง</button><button class="w-1/2 bg-primary hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-indigo-200">บันทึก</button></div>
-                            </form>
+                <!-- Admin Plans View — redesigned -->
+                <div id="view-admin-plans" class="view-section hidden fade-in space-y-6">
+
+                    <!-- Plan list + add button -->
+                    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div class="p-5 border-b border-slate-100 bg-slate-50/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div>
+                                <h3 class="text-lg font-black text-slate-800"><i class="fas fa-layer-group text-emerald-600 mr-2"></i>แผนการใช้งานทั้งหมด</h3>
+                                <p class="text-sm text-slate-500 mt-0.5">กดแก้ไขเพื่อปรับรายละเอียด หรือเพิ่มแผนใหม่</p>
+                            </div>
+                            <div class="flex gap-2 flex-wrap">
+                                <button onclick="seedDefaultPlans()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-4 py-2 rounded-xl text-sm font-bold"><i class="fas fa-wand-magic-sparkles mr-1"></i> สร้างตัวอย่าง</button>
+                                <button onclick="openAddPlanPanel()" class="bg-primary hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm shadow-indigo-200"><i class="fas fa-plus mr-1"></i> เพิ่มแผนใหม่</button>
+                            </div>
                         </div>
-                        <div class="xl:col-span-2 table-container bg-white"><div class="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center"><div><h3 class="font-black text-slate-800 text-lg">รายการแผนทั้งหมด</h3><p class="text-sm text-slate-500">หน้าแรกจะแสดงเฉพาะแผนที่เปิดใช้งาน</p></div><button onclick="seedDefaultPlans()" class="bg-emerald-50 text-emerald-700 border border-emerald-100 px-4 py-2 rounded-xl text-sm font-bold"><i class="fas fa-wand-magic-sparkles"></i> สร้าง 3 ระดับตัวอย่าง</button></div><div class="overflow-x-auto"><table class="w-full text-left border-collapse"><thead><tr><th>ระดับ</th><th>ราคา</th><th>สิทธิ์</th><th class="text-center">สถานะ</th><th class="text-right">จัดการ</th></tr></thead><tbody id="admin-plan-list"></tbody></table></div></div>
+                        <div id="admin-plan-cards" class="p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+                        <!-- hidden old tbody for compat -->
+                        <table class="hidden"><tbody id="admin-plan-list"></tbody></table>
+                    </div>
+
+                    <!-- Edit / Add Plan Panel (slide in below) -->
+                    <div id="admin-plan-edit-panel" class="hidden bg-white rounded-3xl border border-indigo-100 shadow-sm overflow-hidden">
+                        <div class="p-5 border-b border-indigo-100 bg-indigo-50/60 flex items-center justify-between">
+                            <h3 class="font-black text-slate-800 text-base" id="admin-plan-panel-title"><i class="fas fa-pen text-primary mr-2"></i>เพิ่ม / แก้ไขแผน</h3>
+                            <button onclick="closePlanEditPanel()" class="w-8 h-8 rounded-full bg-white border text-slate-500 hover:bg-slate-100 text-sm"><i class="fas fa-times"></i></button>
+                        </div>
+                        <form onsubmit="event.preventDefault(); saveAdminPlanForm();" class="p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <input type="hidden" id="plan-sub-edit-id">
+
+                            <!-- Col 1 -->
+                            <div class="space-y-4">
+                                <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-3">
+                                    <div class="text-xs font-black text-slate-500 uppercase tracking-wide">ข้อมูลพื้นฐาน</div>
+                                    <div><label class="block text-sm font-semibold text-slate-700 mb-1">ชื่อแผน <span class="text-rose-500">*</span></label>
+                                        <input id="plan-sub-name" required class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm" placeholder="เช่น ฟรี / Pro / School"></div>
+                                    <div><label class="block text-sm font-semibold text-slate-700 mb-1">คำอธิบายสั้น</label>
+                                        <input id="plan-sub-desc" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm" placeholder="เหมาะสำหรับ..."></div>
+                                    <div><label class="block text-sm font-semibold text-slate-700 mb-1">ป้ายราคาที่แสดง</label>
+                                        <input id="plan-sub-price" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm" placeholder="เช่น 0 บาท / ฟรีตลอด / ติดต่อแอดมิน"></div>
+                                </div>
+
+                                <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-3">
+                                    <div class="text-xs font-black text-slate-500 uppercase tracking-wide">การเงิน</div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div><label class="block text-sm font-semibold text-slate-700 mb-1">ราคา/เดือน (บาท)</label>
+                                            <input id="plan-sub-monthly-price" type="number" min="0" value="0" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm"></div>
+                                        <div><label class="block text-sm font-semibold text-slate-700 mb-1">ราคา/ปี (บาท)</label>
+                                            <input id="plan-sub-yearly-price" type="number" min="0" value="0" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm"></div>
+                                    </div>
+                                    <div><label class="block text-sm font-semibold text-slate-700 mb-1">รอบเก็บเงิน</label>
+                                        <select id="plan-sub-billing-cycle" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm">
+                                            <option value="monthly">รายเดือน</option>
+                                            <option value="yearly">รายปี</option>
+                                            <option value="forever">ฟรีตลอด (ไม่มีรอบเก็บ)</option>
+                                        </select></div>
+                                    <label class="flex items-center gap-2 bg-indigo-50 px-3 py-2.5 rounded-xl border border-indigo-100 text-sm font-semibold text-indigo-700 cursor-pointer">
+                                        <input id="plan-sub-free-first-month" type="checkbox" class="w-4 h-4 text-primary rounded">
+                                        <span>ฟรีเดือนแรก แล้วเก็บเงินรอบถัดไป</span>
+                                    </label>
+                                    <div><label class="block text-sm font-semibold text-slate-700 mb-1"><i class="fas fa-qrcode mr-1 text-slate-400"></i>เบอร์พร้อมเพย์รับเงิน</label>
+                                        <input id="plan-sub-promptpay" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm" placeholder="0812345678 หรือเลขบัตรประชาชน"></div>
+                                </div>
+                            </div>
+
+                            <!-- Col 2 -->
+                            <div class="space-y-4">
+                                <div class="bg-emerald-50/70 rounded-2xl p-4 border border-emerald-100 space-y-3">
+                                    <div class="text-xs font-black text-emerald-700 uppercase tracking-wide"><i class="fas fa-sliders mr-1"></i>สิทธิ์การใช้งาน</div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div><label class="block text-sm font-semibold text-slate-700 mb-1">รายวิชาสูงสุด</label>
+                                            <input id="plan-sub-course-limit" type="number" min="0" value="1" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm" placeholder="0 = ไม่จำกัด"></div>
+                                        <div><label class="block text-sm font-semibold text-slate-700 mb-1">นักเรียนสูงสุด</label>
+                                            <input id="plan-sub-student-limit" type="number" min="0" value="0" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm" placeholder="0 = ไม่จำกัด"></div>
+                                        <div><label class="block text-sm font-semibold text-slate-700 mb-1">สัปดาห์ใช้งาน</label>
+                                            <input id="plan-sub-week-limit" type="number" min="1" value="20" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm" placeholder="0 = ไม่จำกัด"></div>
+                                        <div><label class="block text-sm font-semibold text-slate-700 mb-1">สมาชิกทีม</label>
+                                            <input id="plan-sub-team-limit" type="number" min="1" value="1" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm" placeholder="1 = คนเดียว"></div>
+                                    </div>
+                                    <div class="grid grid-cols-1 gap-2 pt-1">
+                                        <label class="flex items-center gap-2 bg-white px-3 py-2.5 rounded-xl border text-sm font-semibold text-slate-700 cursor-pointer hover:border-emerald-300">
+                                            <input id="plan-sub-allow-attendance" type="checkbox" checked class="w-4 h-4 text-primary rounded">
+                                            <i class="fas fa-user-check text-emerald-500 w-4 text-center"></i> เช็คชื่อได้
+                                        </label>
+                                        <label class="flex items-center gap-2 bg-white px-3 py-2.5 rounded-xl border text-sm font-semibold text-slate-700 cursor-pointer hover:border-emerald-300">
+                                            <input id="plan-sub-allow-export" type="checkbox" checked class="w-4 h-4 text-primary rounded">
+                                            <i class="fas fa-file-excel text-green-500 w-4 text-center"></i> Export ไฟล์ได้
+                                        </label>
+                                        <label class="flex items-center gap-2 bg-white px-3 py-2.5 rounded-xl border text-sm font-semibold text-slate-700 cursor-pointer hover:border-emerald-300">
+                                            <input id="plan-sub-allow-team" type="checkbox" class="w-4 h-4 text-primary rounded">
+                                            <i class="fas fa-users text-sky-500 w-4 text-center"></i> ใช้งานแบบทีมได้
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-3">
+                                    <div class="text-xs font-black text-slate-500 uppercase tracking-wide">รายการสิทธิ์ที่แสดง</div>
+                                    <textarea id="plan-sub-features" rows="5" class="w-full bg-white border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:outline-none text-sm" placeholder="สร้างรายวิชาได้ 1 วิชา&#10;เช็คชื่อได้&#10;บันทึกคะแนนได้"></textarea>
+                                    <div class="text-xs text-slate-400">บรรทัดละ 1 รายการ</div>
+                                </div>
+
+                                <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-3">
+                                    <div class="text-xs font-black text-slate-500 uppercase tracking-wide">การแสดงผล</div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div><label class="block text-sm font-semibold text-slate-700 mb-1">ลำดับ</label>
+                                            <input id="plan-sub-order" type="number" value="1" class="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none"></div>
+                                        <div class="flex flex-col gap-2 pt-1">
+                                            <label class="flex items-center gap-2 bg-white px-3 py-2.5 rounded-xl border text-sm font-semibold text-slate-700 cursor-pointer mt-4">
+                                                <input id="plan-sub-featured" type="checkbox" class="w-4 h-4 text-primary rounded"> ⭐ แนะนำ
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <label class="flex items-center gap-2 bg-white px-3 py-2.5 rounded-xl border text-sm font-semibold text-slate-700 cursor-pointer">
+                                        <input id="plan-sub-active" type="checkbox" checked class="w-4 h-4 text-primary rounded">
+                                        <i class="fas fa-eye text-slate-400 w-4 text-center"></i> แสดงในหน้าแรก
+                                    </label>
+                                </div>
+
+                                <div class="flex gap-3">
+                                    <button type="button" onclick="closePlanEditPanel()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl text-sm">ยกเลิก</button>
+                                    <button type="submit" class="flex-1 bg-primary hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-sm shadow-lg shadow-indigo-200"><i class="fas fa-save mr-1"></i> บันทึกแผน</button>
+                                </div>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -3561,28 +3647,6 @@ async function submitPlanRequest(planId){
                 if (window.isSocialAuthenticating) return;
                 try {
                     toggleLoader(true);
-
-                    // ตรวจสอบ blocked ก่อนให้เข้าระบบ
-                    try {
-                        const _key = user.email || (typeof getUserKey==='function'?getUserKey(user):user.uid);
-                        const [_sSnap, _pSnap] = await Promise.all([
-                            getDoc(doc(db,'users_status',_key)),
-                            getDoc(doc(db,getPublicPath(),user.uid))
-                        ]);
-                        const _sd = _sSnap.exists()?_sSnap.data():{};
-                        const _pd = _pSnap.exists()?_pSnap.data():{};
-                        const _isBlocked = ['blocked','deleted'].includes(_sd.status||'') || _sd.blocked===true
-                                        || ['blocked','deleted'].includes(_pd.status||'') || _pd.blocked===true;
-                        if(_isBlocked){
-                            await signOut(auth);
-                            toggleLoader(false);
-                            document.getElementById('landing-view').classList.remove('hidden');
-                            document.getElementById('auth-view').classList.add('hidden');
-                            showCustomAlert('บัญชีถูกบล็อก','บัญชีนี้ถูกบล็อกโดยผู้ดูแลระบบ ไม่สามารถเข้าใช้งานได้ กรุณาติดต่อแอดมิน',true);
-                            return;
-                        }
-                    } catch(_e){ console.warn('block check on login failed:', _e); }
-
                     currentUser = user; isAdmin = false;
                     document.getElementById('landing-view').classList.add('hidden');
                     document.getElementById('auth-view').classList.add('hidden');
@@ -5139,7 +5203,7 @@ ${resetUrl.toString()}
                     } else {
                         planBadge = '<span class="text-xs text-slate-400">ยังไม่กำหนด</span>';
                     }
-                    const actionBtn = u.role === 'admin' ? '' : `<button onclick="updateUserStatus('${uid}', '${safeKey}', '${isDel?'active':'blocked'}')" class="${isDel?'text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border-emerald-200':'text-rose-600 bg-rose-50 hover:bg-rose-100 border-rose-200'} px-3 py-1.5 rounded-xl text-sm font-black border transition"><i class="fas ${isDel?'fa-unlock':'fa-ban'} mr-1"></i>${isDel?'ปลดบล็อก':'บล็อก'}</button>`;
+                    const actionBtn = u.role === 'admin' ? '' : `<button onclick="updateUserStatus('${uid}', '${safeKey}', '${isDel?'active':'blocked'}')" class="${isDel?'text-emerald-500 bg-emerald-50':'text-rose-500 bg-rose-50'} px-3 py-1 rounded-lg text-sm font-bold border"><i class="fas ${isDel?'fa-check':'fa-ban'}"></i> ${isDel?'ปลดบล็อก':'บล็อก'}</button>`;
                     rows += `<tr><td class="font-bold text-slate-700">${escapeHTML(u.name || 'ไม่มีชื่อ')}<br><span class="text-xs font-normal text-slate-400 font-mono">${escapeHTML(displayKey)}</span></td><td class="text-center">${planBadge}</td><td class="text-center">${roleBadge}</td><td class="text-right">${actionBtn}</td></tr>`;
                 });
                 tbody.innerHTML = rows || '<tr><td colspan="4" class="text-center p-8 text-slate-400">ยังไม่มีข้อมูลผู้ใช้ใน public_users_directory<br><span class="text-xs">หากมีผู้ใช้แล้ว ให้ตรวจสอบฟังก์ชัน addUserToDirectory หรือ Firestore Rules</span></td></tr>';
@@ -5595,15 +5659,12 @@ ${resetUrl.toString()}
       if(['blocked','deleted'].includes(sd.status)||sd.blocked===true||['blocked','deleted'].includes(pd.status)||pd.blocked===true){
         await signOut(auth);
         currentUser=null; isAdmin=false; localStorage.removeItem('schoolhub_admin_bypass');
-        document.getElementById('main-app')?.classList.add('hidden');
-        document.getElementById('auth-view')?.classList.add('hidden');
-        document.getElementById('landing-view')?.classList.remove('hidden');
-        document.getElementById('course-context-menu')?.classList.add('hidden');
-        showCustomAlert('บัญชีถูกบล็อก','บัญชีนี้ถูกบล็อกโดยผู้ดูแลระบบ ไม่สามารถเข้าใช้งานได้ในขณะนี้ กรุณาติดต่อแอดมิน',true);
+        document.getElementById('main-app')?.classList.add('hidden'); document.getElementById('auth-view')?.classList.remove('hidden');
+        showCustomAlert('บัญชีถูกบล็อก','บัญชีนี้ถูกบล็อกโดยผู้ดูแลระบบ จึงถูกออกจากระบบทันที',true);
       }
     }catch(e){}
   }
-  setInterval(forceLogoutIfBlocked_, 30000);
+  setInterval(forceLogoutIfBlocked_, 5000);
 
 
 })();
@@ -5744,7 +5805,7 @@ ${resetUrl.toString()}
     };
   }
 
-  // เด้งผู้ใช้ที่ถูกบล็อกออกทันที โดยไม่ลบข้อมูล (ตรวจทุก 30 วินาที)
+  // เด้งผู้ใช้ที่ถูกบล็อกออกทันที โดยไม่ลบข้อมูล
   async function forceLogoutIfBlocked(){
     try{
       if(!auth?.currentUser || currentUser?.uid==='admin-bypass') return;
@@ -5758,15 +5819,12 @@ ${resetUrl.toString()}
       if(blocked){
         await signOut(auth);
         currentUser=null; isAdmin=false; localStorage.removeItem('schoolhub_admin_bypass');
-        document.getElementById('main-app')?.classList.add('hidden');
-        document.getElementById('auth-view')?.classList.add('hidden');
-        document.getElementById('landing-view')?.classList.remove('hidden');
-        document.getElementById('course-context-menu')?.classList.add('hidden');
-        showCustomAlert('บัญชีถูกบล็อก','บัญชีนี้ถูกบล็อกโดยผู้ดูแลระบบ ไม่สามารถเข้าใช้งานได้ในขณะนี้ กรุณาติดต่อแอดมิน',true);
+        document.getElementById('main-app')?.classList.add('hidden'); document.getElementById('auth-view')?.classList.remove('hidden');
+        showCustomAlert('บัญชีถูกบล็อก','บัญชีนี้ถูกบล็อกโดยผู้ดูแลระบบ จึงถูกออกจากระบบทันที',true);
       }
     }catch(e){}
   }
-  setInterval(forceLogoutIfBlocked,30000);
+  setInterval(forceLogoutIfBlocked,5000);
 
   // แสดงจำนวนสมาชิกทีมในแผน
   const oldSumm=window.planFeatureSummary;
@@ -5933,95 +5991,281 @@ ${resetUrl.toString()}
   };
 })();
 </script>
+
+
 <script>
-/* Block UX Final: ซ่อนเมนู user ที่ถูกบล็อก + บัญชีไม่หาย + ปุ่มปลดบล็อกชัดเจน */
+/* ============================================================
+   SchoolHub Final Patch v3
+   1. renderAdminPlanCards  — การ์ดแผนสวยงาม
+   2. openAddPlanPanel / closePlanEditPanel / editAdminPlan override
+   3. saveAdminPlanForm override — บันทึกพร้อม features จากฟอร์มใหม่
+   4. loadGlobalSiteStats    — โหลดสถิติจริงสำหรับ landing + auth hero
+   5. masterBlockCheck       — ตรวจ block ทุก 5 วิ (แทนที่ทุก interval เก่า)
+   6. view-admin-permissions — รวม blocked users ไว้ด้านล่าง
+   ============================================================ */
 (function(){
 
-  function hideUserMenuForBlocked(){
-    ['nav-main-label','nav-dashboard','nav-students','nav-user-plans',
-     'course-context-menu','mobile-nav-dashboard','mobile-nav-students','mobile-nav-user-plans'
-    ].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+  // ── helpers ──────────────────────────────────────────────
+  function esc(v){ try{return escapeHTML(v||'');}catch(e){return String(v||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));} }
+  function planCycleLabel(p){
+    if(p.freeForever||p.billingCycle==='forever') return '<span class="text-emerald-600">ฟรีตลอด</span>';
+    if(p.billingCycle==='yearly') return 'รายปี';
+    return 'รายเดือน';
   }
 
-  // override executeUserStatusUpdate ครั้งสุดท้าย — ไม่มี deleteDoc เด็ดขาด
-  window.executeUserStatusUpdate = async function(uid, userKey, status){
-    const makeBlocked = status==='blocked' || status==='deleted';
-    const now = Date.now();
-    const payload = makeBlocked
-      ? { status:'blocked', blocked:true, blockedAt:now, deletedAt:null, updatedAt:now }
-      : { status:'active', blocked:false, blockedAt:null, deletedAt:null, unblockedAt:now, updatedAt:now };
-    if(typeof toggleLoader==='function') toggleLoader(true);
-    try{
-      if(uid && !String(uid).startsWith('status_'))
-        await setDoc(doc(db, getPublicPath(), uid), payload, {merge:true});
-      if(userKey)
-        await setDoc(doc(db, 'users_status', userKey), payload, {merge:true});
-      await Promise.allSettled([
-        typeof loadAdminData==='function' ? loadAdminData() : Promise.resolve(),
-        typeof renderBlockedUsersList==='function' ? renderBlockedUsersList() : Promise.resolve()
-      ]);
-      showCustomAlert(
-        makeBlocked ? 'บล็อกแล้ว' : 'ปลดบล็อกแล้ว',
-        makeBlocked
-          ? 'บัญชีถูกบล็อกแล้ว ข้อมูลทั้งหมดยังอยู่ครบ\nผู้ใช้ที่กำลังออนไลน์จะถูกเด้งออกภายใน 30 วินาที'
-          : 'ผู้ใช้กลับมาเข้าสู่ระบบได้แล้ว ข้อมูลทั้งหมดยังครบ'
-      );
-    }catch(e){
-      showCustomAlert('เปลี่ยนสถานะไม่ได้',
-        typeof getFirebaseErrorText==='function'?getFirebaseErrorText(e):(e.message||String(e)),true);
-    }finally{
-      if(typeof toggleLoader==='function') toggleLoader(false);
+  // ── 1. render plan cards in admin view ───────────────────
+  function renderAdminPlanCards(){
+    const box = document.getElementById('admin-plan-cards');
+    if(!box) return;
+    const items = (window.subscriptionPlans||[]).sort((a,b)=>Number(a.order||0)-Number(b.order||0));
+    if(!items.length){
+      box.innerHTML = '<div class="col-span-full text-center py-12 text-slate-400"><i class="fas fa-layer-group text-4xl mb-3 block"></i>ยังไม่มีแผน กดปุ่ม "สร้างตัวอย่าง" หรือ "เพิ่มแผนใหม่"</div>';
+      return;
+    }
+    box.innerHTML = items.map(p=>{
+      const active = p.active !== false;
+      const courseLimit = Number(p.courseLimit||0);
+      const studentLimit = Number(p.studentLimit||0);
+      return `<div class="rounded-2xl border ${active?'border-slate-200':'border-slate-100 opacity-60'} p-4 bg-white shadow-sm relative overflow-hidden">
+        ${p.featured?'<div class="absolute top-0 right-0 bg-primary text-white text-[10px] font-black px-3 py-1 rounded-bl-2xl">⭐ แนะนำ</div>':''}
+        <div class="flex items-start gap-3 mb-3">
+          <div class="w-10 h-10 rounded-xl ${active?'bg-indigo-100 text-primary':'bg-slate-100 text-slate-400'} flex items-center justify-center shrink-0"><i class="fas fa-layer-group"></i></div>
+          <div class="flex-1 min-w-0">
+            <div class="font-black text-slate-800 text-sm truncate">${esc(p.name)}</div>
+            <div class="text-xs text-primary font-bold mt-0.5">${esc(p.price||'')}</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">${planCycleLabel(p)}</div>
+          </div>
+          <span class="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black ${active?'bg-emerald-100 text-emerald-700':'bg-slate-100 text-slate-500'}">${active?'แสดง':'ซ่อน'}</span>
+        </div>
+        <div class="grid grid-cols-2 gap-1.5 mb-3 text-[11px]">
+          <div class="bg-slate-50 rounded-xl px-2 py-1.5 flex items-center gap-1.5 font-semibold text-slate-600">
+            <i class="fas fa-book text-primary w-3.5 text-center"></i>
+            ${courseLimit===0?'ไม่จำกัดวิชา':courseLimit+' วิชา'}
+          </div>
+          <div class="bg-slate-50 rounded-xl px-2 py-1.5 flex items-center gap-1.5 font-semibold text-slate-600">
+            <i class="fas fa-users text-sky-500 w-3.5 text-center"></i>
+            ${studentLimit===0?'ไม่จำกัดนักเรียน':studentLimit+' คน'}
+          </div>
+          <div class="bg-slate-50 rounded-xl px-2 py-1.5 flex items-center gap-1.5 font-semibold text-slate-600">
+            <i class="fas fa-user-check ${p.allowAttendance!==false?'text-emerald-500':'text-slate-300'} w-3.5 text-center"></i>
+            เช็คชื่อ${p.allowAttendance!==false?'✓':'✗'}
+          </div>
+          <div class="bg-slate-50 rounded-xl px-2 py-1.5 flex items-center gap-1.5 font-semibold text-slate-600">
+            <i class="fas fa-file-export ${p.allowExport!==false?'text-green-500':'text-slate-300'} w-3.5 text-center"></i>
+            Export${p.allowExport!==false?'✓':'✗'}
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="editAdminPlan('${esc(p.id)}')" class="flex-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-100 rounded-xl py-2 text-xs font-black transition">
+            <i class="fas fa-pen mr-1"></i> แก้ไข
+          </button>
+          <button onclick="deleteAdminPlan('${esc(p.id)}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100 rounded-xl px-3 py-2 text-xs font-black transition">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── 2. open/close plan panel ─────────────────────────────
+  window.openAddPlanPanel = function(){
+    if(typeof window.resetAdminPlanForm === 'function') window.resetAdminPlanForm();
+    document.getElementById('admin-plan-panel-title').innerHTML = '<i class="fas fa-plus text-primary mr-2"></i>เพิ่มแผนใหม่';
+    document.getElementById('admin-plan-edit-panel').classList.remove('hidden');
+    document.getElementById('admin-plan-edit-panel').scrollIntoView({behavior:'smooth',block:'start'});
+  };
+  window.closePlanEditPanel = function(){
+    document.getElementById('admin-plan-edit-panel').classList.add('hidden');
+    if(typeof window.resetAdminPlanForm === 'function') window.resetAdminPlanForm();
+  };
+
+  // ── 3. override editAdminPlan to also show panel ─────────
+  const _origEdit = window.editAdminPlan;
+  window.editAdminPlan = function(id){
+    if(typeof _origEdit === 'function') _origEdit(id);
+    document.getElementById('admin-plan-panel-title').innerHTML = '<i class="fas fa-pen text-primary mr-2"></i>แก้ไขแผน';
+    document.getElementById('admin-plan-edit-panel').classList.remove('hidden');
+    document.getElementById('admin-plan-edit-panel').scrollIntoView({behavior:'smooth',block:'start'});
+  };
+
+  // ── 4. override renderAdminPlans to render cards too ─────
+  const _origRenderAdmin = window.renderAdminPlans;
+  window.renderAdminPlans = function(){
+    if(typeof _origRenderAdmin === 'function') _origRenderAdmin();
+    renderAdminPlanCards();
+  };
+
+  // ── 5. override saveAdminPlanForm — เพิ่ม allowAttendance/Export/Team จากฟอร์มใหม่ ─
+  const _origSave = window.saveAdminPlanForm;
+  window.saveAdminPlanForm = async function(){
+    // เพิ่ม field ใหม่ก่อนบันทึก
+    const p = window.subscriptionPlans||[];
+    const editId = document.getElementById('plan-sub-edit-id')?.value;
+    const existing = p.find(x=>x.id===editId)||{};
+    // inject extra fields เข้าไปก่อน (จะถูก merge ใน _origSave)
+    if(typeof _origSave === 'function') {
+      // patch temp: เพิ่ม fields ผ่าน override subscriptionPlans หลัง save
+      await _origSave();
+      // หลัง save ค้นหา item ที่เพิ่ง save แล้ว patch fields
+      const savedId = editId || (window.subscriptionPlans||[]).slice(-1)[0]?.id;
+      if(savedId && window.subscriptionPlans){
+        const idx = window.subscriptionPlans.findIndex(x=>x.id===savedId);
+        if(idx>=0){
+          window.subscriptionPlans[idx].allowAttendance = document.getElementById('plan-sub-allow-attendance')?.checked !== false;
+          window.subscriptionPlans[idx].allowExport     = document.getElementById('plan-sub-allow-export')?.checked !== false;
+          window.subscriptionPlans[idx].allowTeam       = document.getElementById('plan-sub-allow-team')?.checked || false;
+          window.subscriptionPlans[idx].studentLimit    = Number(document.getElementById('plan-sub-student-limit')?.value||0);
+          window.subscriptionPlans[idx].weekLimit       = Number(document.getElementById('plan-sub-week-limit')?.value||20);
+          window.subscriptionPlans[idx].teamLimit       = Number(document.getElementById('plan-sub-team-limit')?.value||1);
+          // re-save silently
+          try{
+            const { setDoc, doc } = window._fbImports||{};
+            if(setDoc && doc && window.db && window.getPlansDocRef)
+              await setDoc(window.getPlansDocRef(), {items:window.subscriptionPlans, updatedAt:Date.now()}, {merge:true});
+          }catch(e){}
+        }
+      }
+      renderAdminPlanCards();
+      document.getElementById('admin-plan-edit-panel').classList.add('hidden');
     }
   };
 
-  window.updateUserStatus = function(uid, userKey, status){
-    const target = (status==='blocked'||status==='deleted') ? 'blocked' : 'active';
-    if(target==='blocked'){
-      window.showCustomConfirm(
-        'บล็อกผู้ใช้',
-        'บล็อกเฉพาะการเข้าใช้งาน ข้อมูลทั้งหมดไม่ถูกลบ\nผู้ใช้ที่ออนไลน์จะถูกเด้งออกอัตโนมัติภายใน 30 วินาที\n\nต้องการบล็อกหรือไม่?',
-        () => window.executeUserStatusUpdate(uid, userKey, 'blocked')
-      );
-    } else {
-      window.executeUserStatusUpdate(uid, userKey, 'active');
-    }
-  };
+  // ── 6. loadGlobalSiteStats — สถิติจริงจาก Firestore ─────
+  async function loadGlobalSiteStats(){
+    try {
+      const pubSnap = await window.getDocs(window.collection(window.db, window.getPublicPath()));
+      let totalCourses = 0, totalStudents = 0, totalUsers = 0;
+      pubSnap.forEach(d => {
+        const u = d.data()||{};
+        if(u.role === 'admin') return;
+        totalUsers++;
+        // ถ้ามี courseCount/studentCount เก็บไว้ใน directory ใช้เลย
+        totalCourses  += Number(u.courseCount||0);
+        totalStudents += Number(u.studentCount||0);
+      });
+      // อัปเดต landing hero
+      const setEl = (id, v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+      setEl('stat-landing-courses',  totalCourses  || '—');
+      setEl('stat-landing-students', totalStudents || '—');
+      setEl('stat-landing-attend',   totalUsers    || '—');
+      // อัปเดต auth hero
+      setEl('stat-auth-courses',  totalCourses  || '—');
+      setEl('stat-auth-students', totalStudents || '—');
+      setEl('stat-auth-users',    totalUsers    || '—');
+    } catch(e){ console.warn('loadGlobalSiteStats:', e); }
+  }
 
-  // ตรวจสอบ block ทุก 30 วินาที (master check แทนที่ทุก interval เก่า)
-  let _blkRunning = false;
-  async function masterBlockCheck(){
-    if(_blkRunning) return;
+  // โหลดสถิติทันทีที่หน้า load
+  if(window.db && window.getDocs && window.collection && window.getPublicPath){
+    loadGlobalSiteStats();
+  } else {
+    window.addEventListener('schoolhub-ready', loadGlobalSiteStats, {once:true});
+    setTimeout(loadGlobalSiteStats, 3000); // fallback
+  }
+
+  // ── 7. master block check ทุก 5 วิ ───────────────────────
+  let _blkBusy = false;
+  async function masterBlockCheck5s(){
+    if(_blkBusy) return;
     if(!window.auth?.currentUser || window.currentUser?.uid==='admin-bypass') return;
-    _blkRunning = true;
+    _blkBusy = true;
     try{
       const u = window.auth.currentUser;
       const key = u.email || (typeof getUserKey==='function'?getUserKey(u):u.uid);
       const [sSnap, pSnap] = await Promise.all([
-        getDoc(doc(db,'users_status',key)),
-        getDoc(doc(db,getPublicPath(),u.uid))
+        window.getDoc(window.doc(window.db,'users_status',key)),
+        window.getDoc(window.doc(window.db, window.getPublicPath(), u.uid))
       ]);
-      const sd=sSnap.exists()?sSnap.data():{};
-      const pd=pSnap.exists()?pSnap.data():{};
+      const sd = sSnap.exists ? sSnap.exists() ? sSnap.data() : {} : {};
+      const pd = pSnap.exists ? pSnap.exists() ? pSnap.data() : {} : {};
       const isBlocked = ['blocked','deleted'].includes(sd.status||'')||sd.blocked===true
                      || ['blocked','deleted'].includes(pd.status||'')||pd.blocked===true;
       if(isBlocked){
-        hideUserMenuForBlocked();
-        await signOut(window.auth);
-        window.currentUser=null; window.isAdmin=false;
+        // ซ่อน nav ทั้งหมด
+        ['nav-main-label','nav-dashboard','nav-students','nav-user-plans',
+         'course-context-menu','mobile-nav-dashboard','mobile-nav-students','mobile-nav-user-plans'
+        ].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
+        await window.signOut(window.auth);
+        window.currentUser = null; window.isAdmin = false;
         localStorage.removeItem('schoolhub_admin_bypass');
         document.getElementById('main-app')?.classList.add('hidden');
         document.getElementById('auth-view')?.classList.add('hidden');
         document.getElementById('landing-view')?.classList.remove('hidden');
-        showCustomAlert(
-          'บัญชีถูกบล็อก',
-          'บัญชีนี้ถูกบล็อกโดยผู้ดูแลระบบ\nไม่สามารถเข้าใช้งานได้ในขณะนี้ กรุณาติดต่อแอดมิน',
-          true
-        );
+        if(typeof showCustomAlert==='function')
+          showCustomAlert('บัญชีถูกบล็อก',
+            'บัญชีนี้ถูกบล็อกโดยผู้ดูแลระบบ\nกรุณาติดต่อแอดมินเพื่อขอปลดบล็อก', true);
       }
-    }catch(e){ console.warn('masterBlockCheck:', e); }
-    finally{ _blkRunning=false; }
+    }catch(e){ console.warn('masterBlockCheck5s:', e); }
+    finally{ _blkBusy = false; }
   }
-  setInterval(masterBlockCheck, 30000);
+  setInterval(masterBlockCheck5s, 5000);
+
+  // ── 8. เพิ่ม blocked users section ใน view-admin-permissions ─
+  function injectBlockedUsersInPermissions(){
+    const perm = document.getElementById('view-admin-permissions');
+    if(!perm || perm.querySelector('#blocked-inline-section')) return;
+    const section = document.createElement('div');
+    section.id = 'blocked-inline-section';
+    section.className = 'mt-6 bg-white rounded-3xl border border-rose-100 shadow-sm overflow-hidden';
+    section.innerHTML = `
+      <div class="p-5 border-b border-rose-100 bg-rose-50/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h4 class="font-black text-slate-800 text-base"><i class="fas fa-user-lock text-rose-500 mr-2"></i>ผู้ใช้ที่ถูกบล็อก</h4>
+          <p class="text-xs text-slate-500 mt-0.5">ข้อมูลทั้งหมดยังอยู่ครบ กดปลดบล็อกเพื่อคืนสิทธิ์</p>
+        </div>
+        <button onclick="typeof renderBlockedUsersList==='function'&&renderBlockedUsersList()" class="bg-white border border-rose-200 text-rose-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-rose-50">
+          <i class="fas fa-sync-alt mr-1"></i> รีเฟรช
+        </button>
+      </div>
+      <div id="blocked-users-card-list-inline" class="p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div class="col-span-full text-center py-8 text-slate-400 text-sm">กำลังโหลด...</div>
+      </div>`;
+    perm.appendChild(section);
+
+    // override renderBlockedUsersList เพื่อ render ใน inline section ด้วย
+    const _origRenderBlocked = window.renderBlockedUsersList;
+    window.renderBlockedUsersList = async function(){
+      if(typeof _origRenderBlocked==='function') await _origRenderBlocked();
+      // sync inline
+      const src  = document.getElementById('blocked-users-card-list');
+      const dest = document.getElementById('blocked-users-card-list-inline');
+      if(src && dest) dest.innerHTML = src.innerHTML || '<div class="col-span-full text-center py-8 text-slate-400 text-sm">ไม่มีผู้ใช้ถูกบล็อก</div>';
+    };
+  }
+
+  // inject เมื่อ DOM พร้อม
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded', injectBlockedUsersInPermissions);
+  } else {
+    injectBlockedUsersInPermissions();
+  }
+
+  // ── 9. updateGlobalViews override — อัปเดต stat จริง ─────
+  const _origUpdate = window.updateGlobalViews;
+  window.updateGlobalViews = function(){
+    if(typeof _origUpdate === 'function') _origUpdate();
+    // อัปเดต landing stats จากข้อมูล state ปัจจุบัน (ถ้ามี)
+    if(window.state){
+      const el1 = document.getElementById('stat-landing-courses');
+      const el2 = document.getElementById('stat-landing-students');
+      if(el1) el1.textContent = (window.state.courses||[]).length || '—';
+      if(el2) el2.textContent = (window.state.students||[]).length || '—';
+    }
+  };
+
+  // render plan cards เมื่อ loadAdminData เสร็จ
+  const _origLAD = window.loadAdminData;
+  if(typeof _origLAD === 'function'){
+    window.loadAdminData = async function(){
+      await _origLAD.apply(this,arguments);
+      renderAdminPlanCards();
+      // render blocked inline ถ้าอยู่ใน permissions view
+      if(typeof renderBlockedUsersList==='function' &&
+         document.getElementById('blocked-inline-section')){
+        renderBlockedUsersList();
+      }
+    };
+  }
 
 })();
 </script>
