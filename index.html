@@ -6499,7 +6499,7 @@ async function syncAndRebuildStats() {
     if (isSyncing) return;
     isSyncing = true;
     try {
-        await syncCurrentUserStats();
+        await 
         await rebuildGlobalSummaryFromUserStats();
     } catch (error) {
         console.error('syncAndRebuildStats error:', error);
@@ -8369,5 +8369,10 @@ onAuthStateChanged(emailOnlyAuth, user => {
 })();
 </script>
 
+
+<script>
+window.__SINGLE_STATS_MODE__=true;
+if(window.__schoolhubScheduleStatsSync){window.__schoolhubScheduleStatsSync=function(){};}
+</script>
 </body>
 </html>
