@@ -8028,19 +8028,12 @@ function countAny(v) {
     return 0;
 }
 function countAttendance(attendance) {
-    if (!attendance) return 0;
-    if (Array.isArray(attendance)) return attendance.length;
-    if (typeof attendance !== 'object') return 0;
+    if (!attendance || typeof attendance !== 'object') return 0;
     let total = 0;
     Object.values(attendance).forEach(group => {
         if (!group) return;
-        if (Array.isArray(group)) total += group.length;
-        else if (typeof group === 'object') {
-            if (group.dates && typeof group.dates === 'object') total += Object.keys(group.dates).length;
-            else if (group.records && typeof group.records === 'object') total += Object.keys(group.records).length;
-            else total += Object.keys(group).length;
-        } else {
-            total += 1;
+        if (typeof group === 'object' && !Array.isArray(group)) {
+            total += Object.keys(group).length;
         }
     });
     return total;
