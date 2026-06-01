@@ -2196,6 +2196,16 @@ document.addEventListener('click',function(){
 <meta name="twitter:title" content="SchoolHub">
 <meta name="twitter:description" content="จัดการห้องเรียนให้จบในหน้าเดียว">
 <meta name="twitter:image" content="PTPShoolHub.png">
+
+<style id="attendance-export-button-header-fix">
+#attendance-calendar-popup #btn-export-attendance-excel,
+#course-tab-attendance > .grid > .bg-white:first-child #btn-export-attendance-excel{display:none!important;}
+#schoolhub-attendance-header-actions{margin-left:auto;}
+@media (max-width:768px){
+  #schoolhub-attendance-header-actions{margin-left:0;width:100%;}
+  #btn-export-attendance-excel{position:static!important;bottom:auto!important;top:auto!important;transform:none!important;}
+}
+</style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen overflow-hidden selection:bg-indigo-100 selection:text-indigo-900">
 
@@ -2835,7 +2845,6 @@ document.addEventListener('click',function(){
                             <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                                 <div>
                                     <h3 class="text-lg font-bold text-slate-800"><i class="fas fa-chart-line text-primary mr-2"></i> สรุปภาพรวมรายวิชา</h3>
-                                    <div id="overview-room-filter" class="mt-3 hidden"></div>
                                 </div>
                                 <div class="flex gap-2 flex-wrap justify-end">
                                     <button onclick="openGradeCriteriaModalForCurrentCourse()" class="bg-indigo-50 text-primary hover:bg-indigo-100 px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition border border-indigo-200">
@@ -2845,6 +2854,7 @@ document.addEventListener('click',function(){
                                     <button onclick="exportScoresToExcel()" class="bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition border border-emerald-200">
                                         <i class="fas fa-download"></i> โหลดตารางนี้ (Excel)
                                     </button>
+                                    <div id="overview-room-filter" class="hidden"></div>
                                 </div>
                             </div>
                             <div class="overflow-x-auto">
@@ -6968,6 +6978,20 @@ ${resetUrl.toString()}
 </script>
 
 
+
+<style id="schoolhub-overview-room-filter-position-fix">
+@media (max-width: 768px){
+  #course-tab-overview .table-container > .p-6{align-items:flex-start !important;}
+  #course-tab-overview .table-container > .p-6 > .flex{width:100%; flex-direction:column !important; align-items:stretch !important;}
+  #course-tab-overview .table-container > .p-6 > .flex button,
+  #course-tab-overview #overview-room-filter,
+  #course-tab-overview #overview-room-filter select{width:100%; justify-content:center;}
+  #course-tab-overview #overview-room-filter{order:99;}
+}
+@media (min-width: 769px){
+  #course-tab-overview #overview-room-filter{display:flex;}
+}
+</style>
 <script id="schoolhub-overview-student-card-export-patch">
 (function(){
   if (window.__schoolhubOverviewStudentCardPatch) return;
@@ -6998,12 +7022,14 @@ ${resetUrl.toString()}
   window.renderOverviewRoomFilter = function(){
     var box = document.getElementById('overview-room-filter');
     if (!box || !window.currentActiveCourseId) return;
-    var data = getOverviewStudents(window.currentActiveCourseId);
+    var courseId = window.currentActiveCourseId;
+    var data = getOverviewStudents(courseId);
     if (data.rooms.length <= 1) { box.classList.add('hidden'); box.innerHTML=''; return; }
     box.classList.remove('hidden');
-    box.innerHTML = '<label class="text-xs font-black text-slate-500 mr-2"><i class="fas fa-layer-group text-primary mr-1"></i>เลือกชั้น/ห้องในภาพรวม</label>'+
-      '<select class="bg-white border border-indigo-100 rounded-xl px-3 py-2 text-sm font-bold text-primary focus:ring-2 focus:ring-primary outline-none" onchange="window.__overviewRoomFilter[\''+window.currentActiveCourseId+'\']=this.value; renderCourseOverview();">'+
-      '<option value="all" '+(data.selected==='all'?'selected':'')+'>ทั้งหมด</option>'+ data.rooms.map(r=>'<option value="'+esc(r)+'" '+(data.selected===r?'selected':'')+'>'+esc(r)+'</option>').join('') + '</select>';
+    box.innerHTML = '<div class="overview-room-select-wrap flex items-center gap-2">'+
+      '<label class="text-xs font-black text-slate-500 whitespace-nowrap hidden sm:inline-flex items-center gap-1"><i class="fas fa-door-open text-primary"></i> ห้อง</label>'+ 
+      '<select class="overview-room-select bg-white border border-indigo-200 rounded-lg px-3 py-2 text-sm font-bold text-primary focus:ring-2 focus:ring-primary outline-none min-w-[120px]" onclick="event.stopPropagation();" onchange="event.stopPropagation(); window.__overviewRoomFilter=window.__overviewRoomFilter||{}; window.__overviewRoomFilter[\''+courseId+'\']=this.value; window.requestAnimationFrame(function(){ renderCourseOverview(); });">'+
+      '<option value="all" '+(data.selected==='all'?'selected':'')+'>ทุกห้อง</option>'+ data.rooms.map(function(r){ return '<option value="'+esc(r)+'" '+(data.selected===r?'selected':'')+'>'+esc(r)+'</option>'; }).join('') + '</select></div>';
   };
 
   window.renderCourseOverview = function(){
@@ -12025,11 +12051,12 @@ window.requestOwnPasswordReset = async function(){
     var selected = window.__overviewRoomFilter[cid] || '';
     if (selected && !rooms.includes(selected)) selected = window.__overviewRoomFilter[cid] = '';
     box.classList.remove('hidden');
-    box.innerHTML = '<label class="text-xs font-black text-slate-500 mr-2"><i class="fas fa-door-open text-primary mr-1"></i>เลือกชั้นปี/ห้องในภาพรวม</label>'+
-      '<select class="bg-white border border-indigo-100 rounded-xl px-3 py-2 text-sm font-bold text-primary focus:ring-2 focus:ring-primary outline-none" onchange="window.__overviewRoomFilter[\''+cid+'\']=this.value; renderCourseOverview();">'+
+    box.innerHTML = '<div class="bg-white rounded-2xl border border-indigo-100 shadow-sm p-3 flex flex-col sm:flex-row sm:items-center gap-2">'+
+      '<button type="button" class="bg-primary text-white px-4 py-2 rounded-xl font-black text-sm flex items-center justify-center gap-2 cursor-default"><i class="fas fa-door-open"></i> เลือกห้อง</button>'+
+      '<select class="bg-white border border-indigo-100 rounded-xl px-3 py-2 text-sm font-bold text-primary focus:ring-2 focus:ring-primary outline-none flex-1" onchange="window.__overviewRoomFilter[\''+cid+'\']=this.value; renderCourseOverview();">'+
       '<option value="" '+(selected===''?'selected':'')+'>-- เลือกชั้นปี/ห้องก่อน --</option>'+
       rooms.map(function(r){ return '<option value="'+esc(r)+'" '+(selected===r?'selected':'')+'>'+esc(r)+'</option>'; }).join('')+
-      '</select>';
+      '</select></div>';
   };
 
   function ensureMobileContainer(){
@@ -12067,15 +12094,15 @@ window.requestOwnPasswordReset = async function(){
     window.renderOverviewRoomFilter();
     var all = allStudentsForCourse(cid);
     var rooms = getRoomsFromStudents(all);
-    var selectedRoom = window.__overviewRoomFilter[cid] || '';
+    var selectedRoom = window.__overviewRoomFilter[cid] || 'all';
     var requiresSelect = rooms.length > 1;
-    var students = requiresSelect ? (selectedRoom ? all.filter(function(st){ return cls(st) === selectedRoom; }) : []) : all;
+    var students = (requiresSelect && selectedRoom && selectedRoom !== 'all') ? all.filter(function(st){ return cls(st) === selectedRoom; }) : all;
 
     var empty = document.getElementById('empty-summary');
     if (!cid || !students.length) {
       if (empty) {
         empty.classList.remove('hidden');
-        empty.innerHTML = requiresSelect && !selectedRoom
+        empty.innerHTML = false
           ? '<i class="fas fa-door-open text-4xl text-indigo-200 mb-3"></i><p class="text-slate-600 font-black">กรุณาเลือกชั้นปี/ห้องก่อน</p><p class="text-xs text-slate-400 mt-1">เมื่อยังไม่เลือก ระบบจะยังไม่แสดงข้อมูลภาพรวม</p>'
           : '<i class="fas fa-table text-4xl text-slate-200 mb-3"></i><p class="text-slate-500 font-medium">ยังไม่มีข้อมูลคะแนนหรืองานในวิชานี้</p>';
       }
@@ -12802,5 +12829,1834 @@ window.requestOwnPasswordReset = async function(){
   }
 }
 </style>
+
+
+<!-- Patch: Overview room selector top + course card room preview (no logic/Firebase change) -->
+<style id="schoolhub-overview-room-selector-card-preview-fix">
+  #overview-room-filter:empty{display:none!important; margin:0!important; padding:0!important;}
+  #overview-room-filter.hidden{display:none!important; margin:0!important; padding:0!important;}
+  .schoolhub-course-room-preview{font-size:.78rem;font-weight:800;color:#64748b;margin-top:.35rem;line-height:1.35;display:flex;align-items:flex-start;gap:.35rem;}
+  .schoolhub-course-room-preview i{color:#4f46e5;margin-top:.15rem;}
+  .schoolhub-course-room-preview span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+</style>
+<script id="schoolhub-overview-room-selector-card-preview-fix-script">
+(function(){
+  if(window.__schoolhubOverviewRoomSelectorCardPreviewFix) return;
+  window.__schoolhubOverviewRoomSelectorCardPreviewFix = true;
+
+  function esc(v){
+    if(window.escapeHTML) return window.escapeHTML(v == null ? '' : v);
+    return String(v == null ? '' : v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});
+  }
+  function courseById(id){
+    try{return (window.state && Array.isArray(state.courses) ? state.courses : []).find(function(c){return c && c.id === id;}) || null;}catch(e){return null;}
+  }
+  function studentClassName(st){
+    try{return (window.getStudentClassName ? window.getStudentClassName(st) : (st && (st.room || st.classroom || st.grade || st.className))) || '';}catch(e){return '';}
+  }
+  function unique(arr){
+    var out=[];
+    (arr||[]).forEach(function(v){v=String(v == null ? '' : v).trim(); if(v && out.indexOf(v) < 0) out.push(v);});
+    return out.sort(function(a,b){return a.localeCompare(b,'th',{numeric:true});});
+  }
+  function getSelectedRoomsForCourse(course){
+    if(!course) return [];
+    var rooms=[];
+    if(Array.isArray(course.studentRooms)) rooms = rooms.concat(course.studentRooms);
+    if(Array.isArray(course.studentGrades)) rooms = rooms.concat(course.studentGrades);
+    return unique(rooms);
+  }
+  function getStudentsForCourse(course){
+    if(!course || !window.state || !Array.isArray(state.students)) return [];
+    var rooms=getSelectedRoomsForCourse(course);
+    var extraIds=Array.isArray(course.extraStudentIds) ? course.extraStudentIds : [];
+    return state.students.filter(function(st){return rooms.indexOf(studentClassName(st)) >= 0 || extraIds.indexOf(st.id) >= 0;});
+  }
+  function getRoomsForOverview(courseId){
+    var course=courseById(courseId);
+    var rooms=getSelectedRoomsForCourse(course);
+    if(rooms.length) return rooms;
+    return unique(getStudentsForCourse(course).map(studentClassName));
+  }
+
+  window.__overviewRoomFilter = window.__overviewRoomFilter || {};
+
+  window.renderOverviewRoomFilter = function(){
+    var box=document.getElementById('overview-room-filter');
+    var cid=window.currentActiveCourseId;
+    if(!box || !cid) return;
+    var rooms=getRoomsForOverview(cid);
+
+    if(rooms.length <= 1){
+      box.classList.add('hidden');
+      box.innerHTML='';
+      box.style.display='none';
+      if(rooms.length === 1) window.__overviewRoomFilter[cid] = rooms[0];
+      return;
+    }
+
+    var selected=window.__overviewRoomFilter[cid] || rooms[0];
+    if(rooms.indexOf(selected) < 0) selected=rooms[0];
+    window.__overviewRoomFilter[cid]=selected;
+
+    box.style.display='block';
+    box.classList.remove('hidden');
+    box.innerHTML = ''+
+      '<div class="bg-white rounded-2xl border border-indigo-100 shadow-sm p-3 mb-4 flex flex-col sm:flex-row sm:items-center gap-2">'+
+        '<button type="button" class="bg-primary text-white px-4 py-2 rounded-xl font-black text-sm flex items-center justify-center gap-2 cursor-default"><i class="fas fa-door-open"></i> เลือกห้อง</button>'+
+        '<select class="bg-white border border-indigo-100 rounded-xl px-3 py-2 text-sm font-bold text-primary focus:ring-2 focus:ring-primary outline-none flex-1" onchange="window.__overviewRoomFilter[\''+esc(cid)+'\']=this.value; if(typeof renderCourseOverview===\'function\') renderCourseOverview();">'+
+          rooms.map(function(r){return '<option value="'+esc(r)+'" '+(selected===r?'selected':'')+'>'+esc(r)+'</option>';}).join('')+
+        '</select>'+
+      '</div>';
+  };
+
+  function decorateCourseRoomPreviews(){
+    var grid=document.getElementById('course-grid');
+    if(!grid || !window.state || !Array.isArray(state.courses)) return;
+    var cards=Array.prototype.slice.call(grid.children || []);
+    cards.forEach(function(card){
+      var onclick=card.getAttribute('onclick') || '';
+      var m=onclick.match(/enterCourse\(['\"]([^'\"]+)['\"]\)/);
+      if(!m) return;
+      var course=courseById(m[1]);
+      if(!course) return;
+      var old=card.querySelector('.schoolhub-course-room-preview');
+      if(old) old.remove();
+      var rooms=getSelectedRoomsForCourse(course);
+      if(!rooms.length) return;
+      var title=card.querySelector('h3');
+      if(!title) return;
+      var div=document.createElement('div');
+      div.className='schoolhub-course-room-preview';
+      div.innerHTML='<i class="fas fa-door-open"></i><span>'+esc(rooms.join(', '))+'</span>';
+      title.insertAdjacentElement('afterend', div);
+    });
+  }
+
+  if(typeof window.renderCourseGrid === 'function' && !window.renderCourseGrid.__schoolhubRoomPreviewWrapped){
+    var oldGrid=window.renderCourseGrid;
+    var wrappedGrid=function(){
+      var r=oldGrid.apply(this, arguments);
+      setTimeout(decorateCourseRoomPreviews, 0);
+      setTimeout(decorateCourseRoomPreviews, 120);
+      return r;
+    };
+    wrappedGrid.__schoolhubRoomPreviewWrapped=true;
+    window.renderCourseGrid=wrappedGrid;
+  }
+
+  if(typeof window.renderCourseOverview === 'function' && !window.renderCourseOverview.__schoolhubRoomSelectorTopWrapped){
+    var oldOverview=window.renderCourseOverview;
+    var wrappedOverview=function(){
+      try{window.renderOverviewRoomFilter();}catch(e){}
+      var r=oldOverview.apply(this, arguments);
+      try{window.renderOverviewRoomFilter();}catch(e){}
+      setTimeout(function(){try{window.renderOverviewRoomFilter();}catch(e){}},80);
+      return r;
+    };
+    wrappedOverview.__schoolhubRoomSelectorTopWrapped=true;
+    window.renderCourseOverview=wrappedOverview;
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(decorateCourseRoomPreviews, 200);
+    setTimeout(function(){try{window.renderOverviewRoomFilter();}catch(e){}}, 250);
+  });
+  document.addEventListener('click', function(){setTimeout(decorateCourseRoomPreviews, 120);}, true);
+})();
+</script>
+
+
+
+<!-- Final Room Selector Fix: show room selector from course data + course card room preview -->
+<style>
+  #overview-room-filter.schoolhub-room-filter-ready{display:block!important;margin-bottom:1rem!important;}
+  #overview-room-filter.schoolhub-room-filter-hidden{display:none!important;margin:0!important;padding:0!important;}
+  .schoolhub-room-selector-mini{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;background:#fff;border:1px solid #e0e7ff;border-radius:1rem;padding:.55rem .65rem;box-shadow:0 2px 8px rgba(15,23,42,.04);width:fit-content;max-width:100%;}
+  .schoolhub-room-selector-mini-label{display:inline-flex;align-items:center;gap:.4rem;color:#4f46e5;font-size:.82rem;font-weight:900;white-space:nowrap;}
+  .schoolhub-room-selector-mini select{border:1px solid #c7d2fe;border-radius:.8rem;padding:.48rem .75rem;color:#4338ca;font-weight:800;font-size:.82rem;background:#fff;outline:none;min-width:120px;}
+  .schoolhub-course-room-preview{display:inline-flex;align-items:center;gap:.35rem;margin-top:.45rem;color:#059669;background:#ecfdf5;border:1px solid #d1fae5;border-radius:999px;padding:.25rem .55rem;font-size:.72rem;font-weight:900;max-width:100%;}
+  .schoolhub-course-room-preview span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+</style>
+<script>
+(function(){
+  if(window.__schoolhubFinalRoomSelectorRealFix) return;
+  window.__schoolhubFinalRoomSelectorRealFix = true;
+
+  function esc(v){
+    if(window.escapeHTML) return window.escapeHTML(v == null ? '' : v);
+    return String(v == null ? '' : v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});
+  }
+  function unique(arr){
+    var out=[];
+    (arr||[]).forEach(function(v){ v=String(v == null ? '' : v).trim(); if(v && out.indexOf(v)<0) out.push(v); });
+    return out.sort(function(a,b){return a.localeCompare(b,'th',{numeric:true});});
+  }
+  function getCourse(cid){
+    try{return ((window.state&&state.courses)||[]).find(function(c){return c && c.id===cid;})||null;}catch(e){return null;}
+  }
+  function getRooms(course){
+    if(!course) return [];
+    var rooms=[];
+    if(Array.isArray(course.studentRooms)) rooms=rooms.concat(course.studentRooms);
+    if(Array.isArray(course.studentGrades)) rooms=rooms.concat(course.studentGrades);
+    return unique(rooms);
+  }
+  function getStudentRoom(st){
+    try{
+      var v = window.getStudentClassName ? window.getStudentClassName(st) : (st && (st.room||st.classroom||st.grade||st.className));
+      return String(v == null ? '' : v).trim();
+    }catch(e){ return ''; }
+  }
+  function getStudentByCode(code){
+    code=String(code||'').trim();
+    try{return ((window.state&&state.students)||[]).find(function(st){return String(st.code||'').trim()===code;})||null;}catch(e){return null;}
+  }
+
+  window.__overviewRoomFilter = window.__overviewRoomFilter || {};
+
+  window.renderOverviewRoomFilter = function(){
+    var cid=window.currentActiveCourseId;
+    var course=getCourse(cid);
+    var rooms=getRooms(course);
+    var box=document.getElementById('overview-room-filter');
+    if(!box) return;
+
+    if(rooms.length<=1){
+      box.classList.add('hidden','schoolhub-room-filter-hidden');
+      box.classList.remove('schoolhub-room-filter-ready');
+      box.innerHTML='';
+      return;
+    }
+
+    var selected=window.__overviewRoomFilter[cid] || 'all';
+    if(selected!=='all' && rooms.indexOf(selected)<0) selected='all';
+    window.__overviewRoomFilter[cid]=selected;
+
+    box.classList.remove('hidden','schoolhub-room-filter-hidden');
+    box.classList.add('schoolhub-room-filter-ready');
+    box.innerHTML='<div class="schoolhub-room-selector-mini">'+
+      '<span class="schoolhub-room-selector-mini-label"><i class="fas fa-door-open"></i> เลือกห้อง</span>'+
+      '<select onchange="window.__overviewRoomFilter[\''+esc(cid)+'\']=this.value; if(typeof window.renderCourseOverview===\'function\') window.renderCourseOverview();">'+
+        '<option value="all" '+(selected==='all'?'selected':'')+'>ทุกห้อง</option>'+rooms.map(function(r){return '<option value="'+esc(r)+'" '+(selected===r?'selected':'')+'>'+esc(r)+'</option>';}).join('')+
+      '</select></div>';
+  };
+
+  function applyOverviewRoomFilterToTable(){
+    var cid=window.currentActiveCourseId;
+    var course=getCourse(cid);
+    var rooms=getRooms(course);
+    if(rooms.length<=1) return;
+    var selected=window.__overviewRoomFilter[cid] || 'all';
+    if(selected==='all') return;
+    var table=document.getElementById('course-summary-table');
+    if(!table) return;
+    var rows=Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
+    var visibleIndex=1;
+    rows.forEach(function(row){
+      var cells=row.children||[];
+      var codeCell=cells[1];
+      var st=getStudentByCode(codeCell ? (codeCell.innerText||codeCell.textContent) : '');
+      var room=getStudentRoom(st);
+      var show=room===selected;
+      row.style.display=show?'':'none';
+      if(show && cells[0]) cells[0].innerHTML='<span class="schoolhub-seq-text">#'+(visibleIndex++)+'</span>';
+    });
+  }
+
+  function decorateCourseRoomPreviews(){
+    var grid=document.getElementById('course-grid');
+    if(!grid) return;
+    var cards=Array.prototype.slice.call(grid.children||[]);
+    cards.forEach(function(card){
+      var id='';
+      var onclick=card.getAttribute('onclick')||'';
+      var m=onclick.match(/enterCourse\(['\"]([^'\"]+)['\"]\)/);
+      if(m) id=m[1];
+      if(!id){
+        var btn=card.querySelector('[onclick*="enterCourse"]');
+        if(btn){ var mm=(btn.getAttribute('onclick')||'').match(/enterCourse\(['\"]([^'\"]+)['\"]\)/); if(mm) id=mm[1]; }
+      }
+      if(!id) return;
+      var course=getCourse(id);
+      var rooms=getRooms(course);
+      var old=card.querySelector('.schoolhub-course-room-preview'); if(old) old.remove();
+      if(!rooms.length) return;
+      var anchor=card.querySelector('h3') || card.querySelector('.font-black') || card.querySelector('.font-bold');
+      if(!anchor) return;
+      var div=document.createElement('div');
+      div.className='schoolhub-course-room-preview';
+      div.innerHTML='<i class="fas fa-door-open"></i><span>'+esc(rooms.join(', '))+'</span>';
+      anchor.insertAdjacentElement('afterend', div);
+    });
+  }
+
+  function afterOverviewRender(){
+    try{window.renderOverviewRoomFilter();}catch(e){}
+    try{applyOverviewRoomFilterToTable();}catch(e){}
+    try{if(window.buildMobileOverviewCards) window.buildMobileOverviewCards();}catch(e){}
+  }
+
+  if(typeof window.renderCourseOverview==='function' && !window.renderCourseOverview.__schoolhubFinalRoomSelectorRealWrapped){
+    var oldOverview=window.renderCourseOverview;
+    var wrapped=function(){
+      var r=oldOverview.apply(this, arguments);
+      afterOverviewRender();
+      setTimeout(afterOverviewRender,60);
+      setTimeout(afterOverviewRender,180);
+      return r;
+    };
+    wrapped.__schoolhubFinalRoomSelectorRealWrapped=true;
+    window.renderCourseOverview=wrapped;
+  }
+  if(typeof window.renderCourseGrid==='function' && !window.renderCourseGrid.__schoolhubFinalRoomPreviewWrapped){
+    var oldGrid=window.renderCourseGrid;
+    var gridWrapped=function(){var r=oldGrid.apply(this,arguments); setTimeout(decorateCourseRoomPreviews,0); setTimeout(decorateCourseRoomPreviews,150); return r;};
+    gridWrapped.__schoolhubFinalRoomPreviewWrapped=true;
+    window.renderCourseGrid=gridWrapped;
+  }
+  if(typeof window.enterCourse==='function' && !window.enterCourse.__schoolhubRoomFilterEnterWrapped){
+    var oldEnter=window.enterCourse;
+    var enterWrapped=function(cid){ var r=oldEnter.apply(this,arguments); setTimeout(afterOverviewRender,120); return r; };
+    enterWrapped.__schoolhubRoomFilterEnterWrapped=true;
+    window.enterCourse=enterWrapped;
+  }
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(decorateCourseRoomPreviews,300);setTimeout(afterOverviewRender,350);});
+  document.addEventListener('click',function(){setTimeout(decorateCourseRoomPreviews,120);},true);
+})();
+</script>
+
+
+
+<!-- Patch: auto room preview on dashboard + reliable overview room selector (rooms show without entering another page first) -->
+<style id="schoolhub-auto-room-preview-selector-style">
+  #overview-room-filter.schoolhub-room-filter-ready{display:block!important;margin:0 0 1rem 0!important;padding:0!important;}
+  #overview-room-filter.schoolhub-room-filter-hidden,
+  #overview-room-filter.hidden:empty{display:none!important;margin:0!important;padding:0!important;}
+  .schoolhub-room-selector-mini{display:inline-flex;align-items:center;gap:.5rem;flex-wrap:wrap;background:#fff;border:1px solid #e0e7ff;border-radius:1rem;padding:.5rem .65rem;box-shadow:0 2px 8px rgba(15,23,42,.04);max-width:100%;}
+  .schoolhub-room-selector-mini-label{display:inline-flex;align-items:center;gap:.38rem;color:#4f46e5;font-size:.82rem;font-weight:900;white-space:nowrap;}
+  .schoolhub-room-selector-mini select{border:1px solid #c7d2fe;border-radius:.8rem;padding:.45rem .75rem;color:#4338ca;font-weight:900;font-size:.82rem;background:#fff;outline:none;min-width:115px;}
+  .schoolhub-course-room-preview{display:flex!important;align-items:center;gap:.35rem;margin-top:.45rem;color:#059669!important;background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;font-size:.78rem!important;font-weight:900!important;line-height:1.35!important;max-width:100%;}
+  .schoolhub-course-room-preview i{color:#4f46e5!important;font-size:.88em;}
+  .schoolhub-course-room-preview span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+</style>
+<script id="schoolhub-auto-room-preview-selector-script">
+(function(){
+  if(window.__schoolhubAutoRoomPreviewSelectorFinal) return;
+  window.__schoolhubAutoRoomPreviewSelectorFinal = true;
+
+  function esc(v){
+    if(window.escapeHTML) return window.escapeHTML(v == null ? '' : v);
+    return String(v == null ? '' : v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});
+  }
+  function unique(arr){
+    var out=[];
+    (arr||[]).forEach(function(v){
+      if(Array.isArray(v)){ v.forEach(function(x){ var t=String(x==null?'':x).trim(); if(t && out.indexOf(t)<0) out.push(t); }); return; }
+      var t=String(v==null?'':v).trim();
+      if(!t || t==='-' || t==='undefined' || t==='null') return;
+      if(out.indexOf(t)<0) out.push(t);
+    });
+    return out.sort(function(a,b){return a.localeCompare(b,'th',{numeric:true});});
+  }
+  function courses(){ try{return (window.state && Array.isArray(state.courses)) ? state.courses : [];}catch(e){return [];} }
+  function students(){ try{return (window.state && Array.isArray(state.students)) ? state.students : [];}catch(e){return [];} }
+  function studentRoom(st){
+    try{
+      var v = window.getStudentClassName ? window.getStudentClassName(st) : (st && (st.room || st.classroom || st.grade || st.className));
+      return String(v==null?'':v).trim();
+    }catch(e){return '';}
+  }
+  function courseById(id){ return courses().find(function(c){return c && String(c.id)===String(id);}) || null; }
+  function selectedRoomsFromCourse(course){
+    if(!course) return [];
+    var rooms=[];
+    ['studentRooms','studentGrades','rooms','grades','classes','classrooms','selectedRooms','selectedGrades'].forEach(function(k){
+      if(Array.isArray(course[k])) rooms = rooms.concat(course[k]);
+      else if(typeof course[k] === 'string') rooms = rooms.concat(course[k].split(/[,|،]/));
+    });
+    return unique(rooms);
+  }
+  function courseStudents(course){
+    if(!course) return [];
+    var rooms=selectedRoomsFromCourse(course);
+    var extraIds=Array.isArray(course.extraStudentIds) ? course.extraStudentIds.map(String) : [];
+    if(!rooms.length && !extraIds.length) return [];
+    return students().filter(function(st){
+      return rooms.indexOf(studentRoom(st))>=0 || extraIds.indexOf(String(st.id))>=0;
+    });
+  }
+  function roomsForCourse(course){
+    var direct=selectedRoomsFromCourse(course);
+    if(direct.length) return direct;
+    return unique(courseStudents(course).map(studentRoom));
+  }
+  function currentCourseId(){
+    if(window.currentActiveCourseId) return window.currentActiveCourseId;
+    var sel=document.getElementById('att-course-select') || document.getElementById('score-course-select');
+    if(sel && sel.value) return sel.value;
+    return '';
+  }
+
+  window.__overviewRoomFilter = window.__overviewRoomFilter || {};
+
+  window.renderOverviewRoomFilter = function(){
+    var box=document.getElementById('overview-room-filter');
+    if(!box) return;
+    var cid=currentCourseId();
+    var course=courseById(cid);
+    var rooms=roomsForCourse(course);
+
+    if(!cid || rooms.length<=1){
+      box.classList.add('hidden','schoolhub-room-filter-hidden');
+      box.classList.remove('schoolhub-room-filter-ready');
+      box.innerHTML='';
+      return;
+    }
+
+    var selected=window.__overviewRoomFilter[cid] || 'all';
+    if(selected !== 'all' && rooms.indexOf(selected)<0) selected='all';
+    window.__overviewRoomFilter[cid]=selected;
+
+    box.classList.remove('hidden','schoolhub-room-filter-hidden');
+    box.classList.add('schoolhub-room-filter-ready');
+    box.innerHTML = '<div class="schoolhub-room-selector-mini">'+
+      '<span class="schoolhub-room-selector-mini-label"><i class="fas fa-door-open"></i> เลือกห้อง</span>'+
+      '<select onchange="window.__overviewRoomFilter[\''+esc(cid)+'\']=this.value; if(typeof window.renderCourseOverview===\'function\') window.renderCourseOverview();">'+
+      '<option value="all" '+(selected==='all'?'selected':'')+'>ทุกห้อง</option>'+rooms.map(function(r){return '<option value="'+esc(r)+'" '+(selected===r?'selected':'')+'>'+esc(r)+'</option>';}).join('')+
+      '</select></div>';
+  };
+
+  function applyOverviewFilter(){
+    var cid=currentCourseId();
+    var course=courseById(cid);
+    var rooms=roomsForCourse(course);
+    if(!cid || rooms.length<=1) return;
+    var selected=window.__overviewRoomFilter[cid] || 'all';
+    if(selected==='all') return;
+
+    var table=document.getElementById('course-summary-table');
+    if(!table) return;
+    var visible=1;
+    Array.prototype.slice.call(table.querySelectorAll('tbody tr')).forEach(function(row){
+      var cells=row.children || [];
+      var code=(cells[1] ? (cells[1].innerText || cells[1].textContent || '') : '').replace(/^#?\d+\s*/,'').trim();
+      var st=students().find(function(x){return String(x.code||'').trim()===code;});
+      var show=st ? studentRoom(st)===selected : true;
+      row.style.display=show?'':'none';
+      if(show && cells[0]) cells[0].innerHTML='<span class="schoolhub-seq-text">#'+(visible++)+'</span>';
+    });
+  }
+
+  function decorateCourseRoomPreviews(){
+    var grid=document.getElementById('course-grid');
+    if(!grid) return;
+    var list=courses();
+    Array.prototype.slice.call(grid.children||[]).forEach(function(card,idx){
+      var id='';
+      var onclick=card.getAttribute('onclick')||'';
+      var m=onclick.match(/enterCourse\(['\"]([^'\"]+)['\"]\)/);
+      if(m) id=m[1];
+      if(!id){
+        var btn=card.querySelector('[onclick*="enterCourse"]');
+        if(btn){ var mm=(btn.getAttribute('onclick')||'').match(/enterCourse\(['\"]([^'\"]+)['\"]\)/); if(mm) id=mm[1]; }
+      }
+      var course=id ? courseById(id) : list[idx];
+      if(!course) return;
+      var rooms=roomsForCourse(course);
+      var old=card.querySelector('.schoolhub-course-room-preview');
+      if(old) old.remove();
+      if(!rooms.length) return;
+      var anchor=card.querySelector('h3') || card.querySelector('.font-black') || card.querySelector('.font-bold');
+      if(!anchor) return;
+      var div=document.createElement('div');
+      div.className='schoolhub-course-room-preview';
+      div.innerHTML='<i class="fas fa-door-open"></i><span>'+esc(rooms.join(', '))+'</span>';
+      anchor.insertAdjacentElement('afterend', div);
+    });
+  }
+
+  function afterOverview(){
+    try{ window.renderOverviewRoomFilter(); }catch(e){}
+    try{ applyOverviewFilter(); }catch(e){}
+    try{ if(window.buildMobileOverviewCards) window.buildMobileOverviewCards(); }catch(e){}
+  }
+
+  function afterDashboard(){
+    try{ decorateCourseRoomPreviews(); }catch(e){}
+  }
+
+  if(typeof window.renderCourseOverview==='function' && !window.renderCourseOverview.__schoolhubFinalAutoRoomWrapped){
+    var oldOverview=window.renderCourseOverview;
+    var wrapOverview=function(){
+      var r=oldOverview.apply(this, arguments);
+      afterOverview();
+      setTimeout(afterOverview,60);
+      setTimeout(afterOverview,220);
+      return r;
+    };
+    wrapOverview.__schoolhubFinalAutoRoomWrapped=true;
+    window.renderCourseOverview=wrapOverview;
+  }
+  if(typeof window.renderCourseGrid==='function' && !window.renderCourseGrid.__schoolhubFinalAutoRoomWrapped){
+    var oldGrid=window.renderCourseGrid;
+    var wrapGrid=function(){
+      var r=oldGrid.apply(this, arguments);
+      afterDashboard();
+      setTimeout(afterDashboard,80);
+      setTimeout(afterDashboard,300);
+      return r;
+    };
+    wrapGrid.__schoolhubFinalAutoRoomWrapped=true;
+    window.renderCourseGrid=wrapGrid;
+  }
+  if(typeof window.enterCourse==='function' && !window.enterCourse.__schoolhubFinalAutoRoomWrapped){
+    var oldEnter=window.enterCourse;
+    var wrapEnter=function(){
+      var r=oldEnter.apply(this, arguments);
+      setTimeout(afterOverview,60);
+      setTimeout(afterOverview,250);
+      return r;
+    };
+    wrapEnter.__schoolhubFinalAutoRoomWrapped=true;
+    window.enterCourse=wrapEnter;
+  }
+
+  document.addEventListener('DOMContentLoaded',function(){
+    afterDashboard();
+    afterOverview();
+    var n=0;
+    var timer=setInterval(function(){
+      afterDashboard();
+      afterOverview();
+      if(++n>30) clearInterval(timer);
+    },500);
+    var grid=document.getElementById('course-grid');
+    if(grid && window.MutationObserver){
+      new MutationObserver(function(){ setTimeout(afterDashboard,50); }).observe(grid,{childList:true,subtree:true});
+    }
+  });
+  document.addEventListener('click',function(){ setTimeout(afterDashboard,80); setTimeout(afterOverview,80); },true);
+})();
+</script>
+
+
+
+<!-- Patch: move overview room selector beside Excel and prevent mobile/desktop dropdown flicker -->
+<style id="schoolhub-overview-room-selector-beside-excel-final">
+  #course-tab-overview .p-6.border-b > div:last-child #overview-room-filter.schoolhub-room-filter-ready,
+  #course-tab-overview .p-6.border-b > div:last-child #overview-room-filter:not(.hidden){
+    display:inline-flex!important;
+    margin:0!important;
+    padding:0!important;
+    width:auto!important;
+  }
+  #course-tab-overview #overview-room-filter .schoolhub-room-selector-mini{
+    display:inline-flex!important;
+    align-items:center!important;
+    gap:.45rem!important;
+    background:transparent!important;
+    border:0!important;
+    box-shadow:none!important;
+    padding:0!important;
+    max-width:100%!important;
+  }
+  #course-tab-overview #overview-room-filter .schoolhub-room-selector-mini-label{
+    color:#4f46e5!important;
+    font-size:.82rem!important;
+    font-weight:900!important;
+    white-space:nowrap!important;
+  }
+  #course-tab-overview #overview-room-filter select{
+    width:auto!important;
+    min-width:108px!important;
+    min-height:38px!important;
+    border:1px solid #c7d2fe!important;
+    border-radius:.75rem!important;
+    padding:.45rem .75rem!important;
+    font-size:.82rem!important;
+    font-weight:900!important;
+    color:#4338ca!important;
+    background:#fff!important;
+    outline:none!important;
+  }
+  @media (max-width:768px){
+    #course-tab-overview .p-6.border-b{align-items:flex-start!important;}
+    #course-tab-overview .p-6.border-b > div:last-child{
+      width:100%!important;
+      flex-direction:column!important;
+      align-items:stretch!important;
+    }
+    #course-tab-overview .p-6.border-b > div:last-child > button,
+    #course-tab-overview .p-6.border-b > div:last-child #overview-room-filter,
+    #course-tab-overview .p-6.border-b > div:last-child #overview-room-filter select{
+      width:100%!important;
+      justify-content:center!important;
+    }
+    #course-tab-overview .p-6.border-b > div:last-child #overview-room-filter{order:99!important;}
+    #course-tab-overview #overview-room-filter .schoolhub-room-selector-mini{width:100%!important;}
+    #course-tab-overview #overview-room-filter .schoolhub-room-selector-mini-label{display:inline-flex!important;}
+  }
+</style>
+<script id="schoolhub-overview-room-selector-beside-excel-final-script">
+(function(){
+  if(window.__schoolhubOverviewRoomSelectorBesideExcelFinal) return;
+  window.__schoolhubOverviewRoomSelectorBesideExcelFinal = true;
+  function esc(v){
+    if(window.escapeHTML) return window.escapeHTML(v == null ? '' : v);
+    return String(v == null ? '' : v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});
+  }
+  function courses(){try{return window.state && Array.isArray(state.courses) ? state.courses : [];}catch(e){return [];}}
+  function students(){try{return window.state && Array.isArray(state.students) ? state.students : [];}catch(e){return [];}}
+  function currentCourseId(){
+    if(window.currentActiveCourseId) return window.currentActiveCourseId;
+    var sel=document.getElementById('att-course-select') || document.getElementById('score-course-select');
+    return sel && sel.value ? sel.value : '';
+  }
+  function courseById(id){return courses().find(function(c){return c && String(c.id)===String(id);}) || null;}
+  function unique(arr){var out=[];(arr||[]).forEach(function(v){if(Array.isArray(v)){v.forEach(function(x){var t=String(x==null?'':x).trim(); if(t&&t!=='-'&&out.indexOf(t)<0) out.push(t);});return;} var t=String(v==null?'':v).trim(); if(t&&t!=='-'&&t!=='undefined'&&t!=='null'&&out.indexOf(t)<0) out.push(t);}); return out.sort(function(a,b){return a.localeCompare(b,'th',{numeric:true});});}
+  function studentRoom(st){try{return String(window.getStudentClassName ? window.getStudentClassName(st) : (st && (st.room||st.classroom||st.grade||st.className)) || '').trim();}catch(e){return '';}}
+  function selectedRoomsFromCourse(course){
+    if(!course) return [];
+    var rooms=[];
+    ['studentRooms','studentGrades','rooms','grades','classes','classrooms','selectedRooms','selectedGrades'].forEach(function(k){
+      if(Array.isArray(course[k])) rooms=rooms.concat(course[k]);
+      else if(typeof course[k]==='string') rooms=rooms.concat(course[k].split(/[,|،]/));
+    });
+    return unique(rooms);
+  }
+  function roomsForCourse(course){
+    var direct=selectedRoomsFromCourse(course);
+    if(direct.length) return direct;
+    var extraIds=Array.isArray(course&&course.extraStudentIds) ? course.extraStudentIds.map(String) : [];
+    if(!course || !extraIds.length) return [];
+    return unique(students().filter(function(st){return extraIds.indexOf(String(st.id))>=0;}).map(studentRoom));
+  }
+  function ensureSelectorPosition(){
+    var box=document.getElementById('overview-room-filter');
+    var exportBtn=document.querySelector('#course-tab-overview button[onclick="exportScoresToExcel()"]');
+    if(box && exportBtn && exportBtn.parentElement && box.parentElement!==exportBtn.parentElement){
+      exportBtn.insertAdjacentElement('afterend', box);
+    }
+  }
+  window.__overviewRoomFilter = window.__overviewRoomFilter || {};
+  window.renderOverviewRoomFilter = function(){
+    ensureSelectorPosition();
+    var box=document.getElementById('overview-room-filter');
+    var cid=currentCourseId();
+    if(!box || !cid) return;
+    var rooms=roomsForCourse(courseById(cid));
+    if(!cid || rooms.length<=1){
+      box.classList.add('hidden','schoolhub-room-filter-hidden');
+      box.classList.remove('schoolhub-room-filter-ready');
+      box.innerHTML='';
+      return;
+    }
+    if(window.__schoolhubRoomSelectActive && box.querySelector('select')) return;
+    var selected=window.__overviewRoomFilter[cid] || 'all';
+    if(selected!=='all' && rooms.indexOf(selected)<0) selected='all';
+    window.__overviewRoomFilter[cid]=selected;
+    box.classList.remove('hidden','schoolhub-room-filter-hidden');
+    box.classList.add('schoolhub-room-filter-ready');
+    box.innerHTML='<div class="schoolhub-room-selector-mini">'+
+      '<span class="schoolhub-room-selector-mini-label"><i class="fas fa-door-open"></i> เลือกห้อง</span>'+ 
+      '<select onpointerdown="window.__schoolhubRoomSelectActive=true;" onmousedown="window.__schoolhubRoomSelectActive=true;" onfocus="window.__schoolhubRoomSelectActive=true;" onblur="setTimeout(function(){window.__schoolhubRoomSelectActive=false;},120);" onchange="window.__schoolhubRoomSelectActive=false; window.__overviewRoomFilter[\''+esc(cid)+'\']=this.value; if(typeof window.renderCourseOverview===\'function\') window.renderCourseOverview();">'+
+      '<option value="all" '+(selected==='all'?'selected':'')+'>ทุกห้อง</option>'+rooms.map(function(r){return '<option value="'+esc(r)+'" '+(selected===r?'selected':'')+'>'+esc(r)+'</option>';}).join('')+
+      '</select></div>';
+  };
+  setTimeout(function(){ensureSelectorPosition(); if(typeof window.renderOverviewRoomFilter==='function') window.renderOverviewRoomFilter();},100);
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){ensureSelectorPosition(); if(typeof window.renderOverviewRoomFilter==='function') window.renderOverviewRoomFilter();},300);});
+})();
+</script>
+
+
+
+<!-- Patch: reliable overview room select update + no unnecessary full-click refresh -->
+<script id="schoolhub-room-select-responsive-final">
+(function(){
+  if(window.__schoolhubRoomSelectResponsiveFinal) return;
+  window.__schoolhubRoomSelectResponsiveFinal = true;
+  function currentCourseId(){
+    return window.currentActiveCourseId || ((document.getElementById('att-course-select')||document.getElementById('score-course-select')||{}).value) || '';
+  }
+  function applyRoomValue(value){
+    var cid=currentCourseId();
+    if(!cid) return;
+    window.__overviewRoomFilter = window.__overviewRoomFilter || {};
+    window.__overviewRoomFilter[cid]=value || 'all';
+    if(typeof window.renderCourseOverview === 'function'){
+      window.requestAnimationFrame ? requestAnimationFrame(function(){ window.renderCourseOverview(); }) : setTimeout(function(){ window.renderCourseOverview(); },0);
+    }
+  }
+  document.addEventListener('change', function(e){
+    var sel=e.target && e.target.closest && e.target.closest('#overview-room-filter select');
+    if(!sel) return;
+    e.stopPropagation();
+    applyRoomValue(sel.value);
+  }, true);
+})();
+</script>
+
+
+<!-- Final Patch: sync overview room selector with real course action filter -->
+<script id="schoolhub-overview-room-selector-sync-action-filter-final">
+(function(){
+  if(window.__schoolhubOverviewRoomSelectorSyncActionFilterFinal) return;
+  window.__schoolhubOverviewRoomSelectorSyncActionFilterFinal = true;
+
+  function currentCourseId(){
+    return window.currentActiveCourseId || ((document.getElementById('att-course-select')||document.getElementById('score-course-select')||{}).value) || '';
+  }
+
+  function applyOverviewRoomFilterValue(value){
+    var cid = currentCourseId();
+    if(!cid) return;
+
+    window.__overviewRoomFilter = window.__overviewRoomFilter || {};
+    window.activeCourseRoomFilter = window.activeCourseRoomFilter || {};
+
+    if(!value || value === 'all'){
+      window.__overviewRoomFilter[cid] = 'all';
+      delete window.activeCourseRoomFilter[cid];
+    }else{
+      window.__overviewRoomFilter[cid] = value;
+      window.activeCourseRoomFilter[cid] = value;
+    }
+
+    if(typeof window.renderCourseOverview === 'function'){
+      window.renderCourseOverview();
+    }
+  }
+
+  function syncSelectorFromRealFilter(){
+    var cid = currentCourseId();
+    if(!cid) return;
+    window.__overviewRoomFilter = window.__overviewRoomFilter || {};
+    window.activeCourseRoomFilter = window.activeCourseRoomFilter || {};
+
+    var real = window.activeCourseRoomFilter[cid];
+    if(real) window.__overviewRoomFilter[cid] = real;
+    else if(!window.__overviewRoomFilter[cid]) window.__overviewRoomFilter[cid] = 'all';
+
+    var sel = document.querySelector('#overview-room-filter select');
+    if(sel){
+      var target = window.__overviewRoomFilter[cid] || 'all';
+      if(Array.prototype.some.call(sel.options, function(o){return o.value === target;})){
+        sel.value = target;
+      }
+    }
+  }
+
+  document.addEventListener('change', function(e){
+    var sel = e.target && e.target.closest && e.target.closest('#overview-room-filter select');
+    if(!sel) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    applyOverviewRoomFilterValue(sel.value);
+  }, true);
+
+  function hookRenderOverviewFilter(){
+    if(typeof window.renderOverviewRoomFilter === 'function' && !window.renderOverviewRoomFilter.__syncActionFilterWrapped){
+      var old = window.renderOverviewRoomFilter;
+      var fn = function(){
+        syncSelectorFromRealFilter();
+        var r = old.apply(this, arguments);
+        syncSelectorFromRealFilter();
+        return r;
+      };
+      fn.__syncActionFilterWrapped = true;
+      window.renderOverviewRoomFilter = fn;
+    }
+  }
+
+  function hookCourseOverview(){
+    if(typeof window.renderCourseOverview === 'function' && !window.renderCourseOverview.__syncOverviewRoomAfterWrapped){
+      var old = window.renderCourseOverview;
+      var fn = function(){
+        syncSelectorFromRealFilter();
+        var r = old.apply(this, arguments);
+        setTimeout(syncSelectorFromRealFilter, 0);
+        setTimeout(syncSelectorFromRealFilter, 120);
+        return r;
+      };
+      fn.__syncOverviewRoomAfterWrapped = true;
+      window.renderCourseOverview = fn;
+    }
+  }
+
+  hookRenderOverviewFilter();
+  hookCourseOverview();
+  document.addEventListener('DOMContentLoaded', function(){
+    hookRenderOverviewFilter();
+    hookCourseOverview();
+    setTimeout(syncSelectorFromRealFilter, 300);
+  });
+})();
+</script>
+
+
+
+<!-- Final Patch: Attendance Excel export popup + Overview Excel room popup + fast overview room selector -->
+<style id="schoolhub-final-export-room-fast-style">
+  .schoolhub-export-popup{position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(6px);z-index:1000001;display:none;align-items:center;justify-content:center;padding:1rem;}
+  .schoolhub-export-popup:not(.hidden){display:flex!important;}
+  .schoolhub-export-box{width:100%;max-width:460px;background:#fff;border-radius:1.4rem;box-shadow:0 24px 80px rgba(15,23,42,.22);border:1px solid #e2e8f0;overflow:hidden;}
+  .schoolhub-export-head{padding:1rem 1.15rem;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:.8rem;}
+  .schoolhub-export-title{font-weight:1000;color:#0f172a;font-size:1.05rem;display:flex;align-items:center;gap:.55rem;}
+  .schoolhub-export-body{padding:1.1rem;display:grid;gap:.85rem;}
+  .schoolhub-export-label{font-size:.82rem;font-weight:900;color:#475569;margin-bottom:.35rem;display:block;}
+  .schoolhub-export-input{width:100%;border:1px solid #c7d2fe;border-radius:.9rem;padding:.75rem .85rem;font-weight:800;color:#334155;outline:none;background:#fff;}
+  .schoolhub-export-input:focus{box-shadow:0 0 0 3px rgba(79,70,229,.12);border-color:#818cf8;}
+  .schoolhub-export-actions{display:flex;gap:.65rem;justify-content:flex-end;padding:0 1.1rem 1.1rem;}
+  .schoolhub-export-actions button{border-radius:.9rem;padding:.75rem 1rem;font-weight:900;}
+  #course-tab-overview #overview-room-filter select{transition:none!important;}
+  #course-tab-overview #overview-room-filter .schoolhub-room-selector-mini{box-shadow:none!important;background:transparent!important;border:0!important;padding:0!important;}
+  @media(max-width:767px){
+    .schoolhub-export-box{max-width:100%;border-radius:1.25rem;}
+    .schoolhub-export-actions{display:grid;grid-template-columns:1fr;}
+    #course-tab-overview .p-6.border-b > div:last-child #overview-room-filter{order:99!important;width:100%!important;}
+    #course-tab-overview #overview-room-filter .schoolhub-room-selector-mini,
+    #course-tab-overview #overview-room-filter select{width:100%!important;}
+  }
+</style>
+<script id="schoolhub-final-export-room-fast-script">
+(function(){
+  if(window.__schoolhubFinalExportRoomFastPatch) return;
+  window.__schoolhubFinalExportRoomFastPatch = true;
+
+  function esc(v){
+    if(window.escapeHTML) return window.escapeHTML(v == null ? '' : v);
+    return String(v == null ? '' : v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});
+  }
+  function courseId(){ return window.currentActiveCourseId || ''; }
+  function course(){ var cid=courseId(); return (window.state&&state.courses||[]).find(function(c){return String(c.id)===String(cid);}) || null; }
+  function studentRoom(st){ try{return String(window.getStudentClassName ? window.getStudentClassName(st) : (st && (st.room||st.classroom||st.grade||st.className)) || '-').trim() || '-';}catch(e){return '-';} }
+  function unique(arr){ var out=[]; (arr||[]).forEach(function(v){ if(Array.isArray(v)){v.forEach(function(x){var t=String(x||'').trim(); if(t&&t!=='-'&&out.indexOf(t)<0) out.push(t);}); return;} var t=String(v||'').trim(); if(t&&t!=='-'&&t!=='undefined'&&t!=='null'&&out.indexOf(t)<0) out.push(t); }); return out.sort(function(a,b){return a.localeCompare(b,'th',{numeric:true});}); }
+  function roomsForCourse(c){
+    if(!c) return [];
+    var rooms=[];
+    ['studentRooms','studentGrades','rooms','grades','classes','classrooms','selectedRooms','selectedGrades'].forEach(function(k){
+      if(Array.isArray(c[k])) rooms=rooms.concat(c[k]);
+      else if(typeof c[k]==='string') rooms=rooms.concat(c[k].split(/[,|،]/));
+    });
+    rooms=unique(rooms);
+    if(rooms.length) return rooms;
+    var extraIds=Array.isArray(c.extraStudentIds)?c.extraStudentIds.map(String):[];
+    if(!extraIds.length) return [];
+    return unique((state.students||[]).filter(function(st){return extraIds.indexOf(String(st.id))>=0;}).map(studentRoom));
+  }
+  function allCourseStudents(cid){ return (window.getCourseStudents ? window.getCourseStudents(cid,{ignoreActionFilter:true}) : []); }
+  function studentsForRoom(cid, room){
+    var list=allCourseStudents(cid);
+    if(room && room !== 'all') list=list.filter(function(st){return studentRoom(st)===room;});
+    return list.sort(function(a,b){return studentRoom(a).localeCompare(studentRoom(b),'th',{numeric:true}) || String(a.code||'').localeCompare(String(b.code||''),'th',{numeric:true}) || String(a.name||'').localeCompare(String(b.name||''),'th');});
+  }
+  function cleanSheetName(name){ return String(name||'ชีต').replace(/[\\/?*\[\]:]/g,' ').trim().slice(0,31) || 'ชีต'; }
+  function statusThai(v){ return v==='present'?'มา':(v==='late'?'สาย':(v==='absent'?'ขาด':'-')); }
+  function getPlans(cid){ return ((state.coursePlans&&state.coursePlans[cid])||[]).slice().sort(function(a,b){return Number(a.week)-Number(b.week);}); }
+  function calcGrade(score, criteria){
+    criteria = criteria || window.defaultGradeCriteria || {'4':80,'3.5':75,'3':70,'2.5':65,'2':60,'1.5':55,'1':50};
+    if(score >= criteria['4']) return '4'; if(score >= criteria['3.5']) return '3.5'; if(score >= criteria['3']) return '3'; if(score >= criteria['2.5']) return '2.5'; if(score >= criteria['2']) return '2'; if(score >= criteria['1.5']) return '1.5'; if(score >= criteria['1']) return '1'; return '0';
+  }
+  function buildOverviewAoa(cid, list, roomName){
+    var c=(state.courses||[]).find(function(x){return String(x.id)===String(cid);})||{};
+    var cName=c.name||c.code||'Unknown';
+    var history=(state.attendance&&state.attendance[cid])||{};
+    var attDates=Object.keys(history).sort();
+    var plans=getPlans(cid);
+    var scores=(state.scores||[]).filter(function(s){return String(s.courseId)===String(cid);});
+    var criteria=(state.courseGrades&&state.courseGrades[cid])?state.courseGrades[cid]:window.defaultGradeCriteria;
+    var header=['ลำดับ','รหัสนักเรียน','ชื่อ - นามสกุล','ห้อง','มา','สาย','ขาด'];
+    var totalMax=0;
+    plans.forEach(function(p){ var full=Number(p.maxScore); header.push('สัปดาห์ '+p.week+' - '+p.title+(full===0?' (เช็คงาน)':' (เต็ม '+full+')')); if(full!==0) totalMax+=full; });
+    header.push('รวมคะแนน(เต็ม '+totalMax+')','เกรด');
+    var aoa=[['สรุปภาพรวมวิชา: '+cName],['ห้อง: '+(roomName||'ทุกห้อง')],[],header];
+    list.forEach(function(st,idx){
+      var pr=0,la=0,ab=0;
+      attDates.forEach(function(d){ var rec=history[d]&&history[d].records||{}; var v=rec[st.id]; if(v==='present')pr++; else if(v==='late')la++; else if(v==='absent')ab++; });
+      var row=[idx+1,st.code||'',st.name||'',studentRoom(st),pr,la,ab];
+      var total=0;
+      plans.forEach(function(p){
+        var task=scores.find(function(ts){return String(ts.week)===String(p.week) && String(ts.title)===String(p.title);});
+        var raw=task&&task.records?task.records[st.id]:null;
+        if(Number(p.maxScore)===0){ row.push(raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-')); }
+        else { if(raw!==null && raw!=='') total+=Number(raw); row.push(!task?'-':(raw===''?'ขาดส่ง (-)':Number(raw))); }
+      });
+      row.push(total, totalMax>0?calcGrade(total,criteria):'-');
+      aoa.push(row);
+    });
+    return aoa;
+  }
+  function writeWorkbook(sheets, filename){
+    if(typeof XLSX==='undefined') return showCustomAlert('โหลด Excel ไม่สำเร็จ','ไม่พบไลบรารี XLSX กรุณาเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่',true);
+    var wb=XLSX.utils.book_new();
+    Object.keys(sheets).forEach(function(name){ XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheets[name]), cleanSheetName(name)); });
+    XLSX.writeFile(wb, filename+'.xlsx');
+  }
+  function ensureModal(id, html){
+    var old=document.getElementById(id); if(old) old.remove();
+    var div=document.createElement('div'); div.id=id; div.className='schoolhub-export-popup hidden'; div.innerHTML=html; document.body.appendChild(div); return div;
+  }
+  function closeModal(id){ var el=document.getElementById(id); if(el) el.classList.add('hidden'); }
+
+  window.exportScoresToExcel = function(){
+    var cid=courseId(); if(!cid) return showCustomAlert('ผิดพลาด','ไม่พบรายวิชา',true);
+    var c=course(); var rooms=roomsForCourse(c); var all=allCourseStudents(cid);
+    if(!all.length) return showCustomAlert('ผิดพลาด','ไม่มีข้อมูลนักเรียนในวิชานี้',true);
+    if(rooms.length>1){
+      var opts='<option value="all">ทุกห้อง (แยกชีตตามห้อง)</option>'+rooms.map(function(r){return '<option value="'+esc(r)+'">'+esc(r)+'</option>';}).join('');
+      var modal=ensureModal('schoolhub-overview-export-room-modal','<div class="schoolhub-export-box"><div class="schoolhub-export-head"><div class="schoolhub-export-title"><i class="fas fa-file-excel text-emerald-600"></i> โหลดตารางภาพรวม</div><button class="text-slate-400 hover:text-slate-700" onclick="document.getElementById(\'schoolhub-overview-export-room-modal\').classList.add(\'hidden\')"><i class="fas fa-times"></i></button></div><div class="schoolhub-export-body"><div><label class="schoolhub-export-label">เลือกห้องที่ต้องการโหลด</label><select id="overview-export-room-select" class="schoolhub-export-input">'+opts+'</select></div><p class="text-xs font-semibold text-slate-500">ถ้าเลือกทุกห้อง ระบบจะแยกชีตในไฟล์ Excel เป็นห้องละ 1 หน้า</p></div><div class="schoolhub-export-actions"><button class="bg-slate-100 text-slate-600" onclick="document.getElementById(\'schoolhub-overview-export-room-modal\').classList.add(\'hidden\')">ยกเลิก</button><button id="overview-export-confirm" class="bg-emerald-600 hover:bg-emerald-700 text-white"><i class="fas fa-download mr-1"></i> โหลด Excel</button></div></div>');
+      modal.classList.remove('hidden');
+      document.getElementById('overview-export-confirm').onclick=function(){
+        var selected=document.getElementById('overview-export-room-select').value;
+        var sheets={};
+        if(selected==='all') rooms.forEach(function(r){ sheets[r]=buildOverviewAoa(cid, studentsForRoom(cid,r), r); });
+        else sheets[selected]=buildOverviewAoa(cid, studentsForRoom(cid,selected), selected);
+        closeModal('schoolhub-overview-export-room-modal');
+        writeWorkbook(sheets, 'สรุปภาพรวม_'+((c&&c.code)||'รายวิชา'));
+      };
+    }else{
+      var room=rooms[0]||'ทุกห้อง';
+      writeWorkbook({[room]:buildOverviewAoa(cid, all, room)}, 'สรุปภาพรวม_'+((c&&c.code)||'รายวิชา'));
+    }
+  };
+
+  window.exportAttendanceToExcel = function(){
+    var cid=courseId(); var c=course(); if(!cid||!c) return showCustomAlert('ผิดพลาด','ไม่พบรายวิชา',true);
+    var history=(state.attendance&&state.attendance[cid])||{};
+    var dates=Object.keys(history).sort();
+    if(!dates.length) return showCustomAlert('ยังไม่มีข้อมูล','ยังไม่มีวันที่เคยเช็คชื่อในรายวิชานี้',true);
+    var rooms=roomsForCourse(c); var selectedRoom=(window.activeCourseRoomFilter&&window.activeCourseRoomFilter[cid])||'all';
+    var roomOpts = rooms.length>1 ? '<div><label class="schoolhub-export-label">เลือกห้อง</label><select id="attendance-export-room" class="schoolhub-export-input"><option value="all">ทุกห้อง</option>'+rooms.map(function(r){return '<option value="'+esc(r)+'" '+(selectedRoom===r?'selected':'')+'>'+esc(r)+'</option>';}).join('')+'</select></div>' : '';
+    var dateOpts=dates.map(function(d){return '<option value="'+esc(d)+'">'+esc(d)+'</option>';}).join('');
+    var modal=ensureModal('schoolhub-attendance-export-modal','<div class="schoolhub-export-box"><div class="schoolhub-export-head"><div class="schoolhub-export-title"><i class="fas fa-calendar-check text-emerald-600"></i> โหลดเช็คชื่อ Excel</div><button class="text-slate-400 hover:text-slate-700" onclick="document.getElementById(\'schoolhub-attendance-export-modal\').classList.add(\'hidden\')"><i class="fas fa-times"></i></button></div><div class="schoolhub-export-body">'+roomOpts+'<div><label class="schoolhub-export-label">รูปแบบวันที่</label><select id="attendance-export-mode" class="schoolhub-export-input"><option value="all">ทุกวันที่เคยเช็ค</option><option value="range">เลือกช่วงวันที่</option></select></div><div id="attendance-export-range" class="grid grid-cols-1 sm:grid-cols-2 gap-3 hidden"><div><label class="schoolhub-export-label">เริ่มวันที่</label><select id="attendance-export-start" class="schoolhub-export-input">'+dateOpts+'</select></div><div><label class="schoolhub-export-label">ถึงวันที่</label><select id="attendance-export-end" class="schoolhub-export-input">'+dateOpts+'</select></div></div><p class="text-xs font-semibold text-slate-500">ไฟล์จะเรียงรายชื่อนักเรียน และวันที่เช็คชื่อตามลำดับ</p></div><div class="schoolhub-export-actions"><button class="bg-slate-100 text-slate-600" onclick="document.getElementById(\'schoolhub-attendance-export-modal\').classList.add(\'hidden\')">ยกเลิก</button><button id="attendance-export-confirm" class="bg-emerald-600 hover:bg-emerald-700 text-white"><i class="fas fa-download mr-1"></i> โหลด Excel</button></div></div>');
+    modal.classList.remove('hidden');
+    var mode=document.getElementById('attendance-export-mode');
+    mode.onchange=function(){ document.getElementById('attendance-export-range').classList.toggle('hidden', this.value!=='range'); };
+    document.getElementById('attendance-export-end').value=dates[dates.length-1];
+    document.getElementById('attendance-export-confirm').onclick=function(){
+      var useDates=dates.slice();
+      if(mode.value==='range'){
+        var a=document.getElementById('attendance-export-start').value, b=document.getElementById('attendance-export-end').value;
+        if(a>b){var t=a;a=b;b=t;}
+        useDates=dates.filter(function(d){return d>=a && d<=b;});
+      }
+      var roomSel=(document.getElementById('attendance-export-room')||{}).value || 'all';
+      var list=studentsForRoom(cid, roomSel);
+      var header=['ลำดับ','รหัสนักเรียน','ชื่อ - นามสกุล','ห้อง'].concat(useDates);
+      var aoa=[['รายงานเช็คชื่อ: '+(c.name||c.code||'รายวิชา')],['ช่วงวันที่: '+(useDates[0]||'-')+' ถึง '+(useDates[useDates.length-1]||'-')],[],header];
+      list.forEach(function(st,idx){ var row=[idx+1,st.code||'',st.name||'',studentRoom(st)]; useDates.forEach(function(d){ var rec=history[d]&&history[d].records||{}; row.push(statusThai(rec[st.id])); }); aoa.push(row); });
+      closeModal('schoolhub-attendance-export-modal');
+      writeWorkbook({'เช็คชื่อ':aoa}, 'เช็คชื่อ_'+(c.code||'รายวิชา'));
+    };
+  };
+
+  function ensureAttendanceExportButton(){
+    var oldBtn=document.getElementById('btn-export-attendance-excel');
+    var header=document.querySelector('#attendance-area > .p-5.border-b');
+    if(!header) return;
+    var rightWrap=header.querySelector('#schoolhub-attendance-header-actions');
+    if(!rightWrap){
+      rightWrap=document.createElement('div');
+      rightWrap.id='schoolhub-attendance-header-actions';
+      rightWrap.className='flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto';
+      var lastSaved=document.getElementById('att-last-saved');
+      if(lastSaved) rightWrap.appendChild(lastSaved);
+      header.appendChild(rightWrap);
+    }
+    if(oldBtn && oldBtn.parentElement!==rightWrap) oldBtn.remove();
+    if(document.getElementById('btn-export-attendance-excel')) return;
+    var btn=document.createElement('button');
+    btn.id='btn-export-attendance-excel';
+    btn.type='button';
+    btn.className='bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition shadow-sm w-full sm:w-auto justify-center text-sm';
+    btn.innerHTML='<i class="fas fa-file-excel"></i> โหลด Excel';
+    btn.onclick=window.exportAttendanceToExcel;
+    rightWrap.appendChild(btn);
+  }
+  function ensureOverviewRoomSelector(){
+    var box=document.getElementById('overview-room-filter');
+    var exportBtn=document.querySelector('#course-tab-overview button[onclick="exportScoresToExcel()"]');
+    if(box && exportBtn && exportBtn.parentElement && box.parentElement!==exportBtn.parentElement) exportBtn.insertAdjacentElement('afterend', box);
+  }
+  window.renderOverviewRoomFilter = function(){
+    ensureOverviewRoomSelector();
+    var box=document.getElementById('overview-room-filter'); var cid=courseId(); var c=course(); var rooms=roomsForCourse(c);
+    if(!box) return;
+    if(!cid || rooms.length<=1){ box.className='hidden schoolhub-room-filter-hidden'; box.innerHTML=''; return; }
+
+    // Prevent native select popup from being destroyed by overview re-render/click refresh.
+    // This fixes: click room button/select -> opens briefly -> closes immediately.
+    var existingSelect = box.querySelector('#schoolhub-overview-room-select-final');
+    if(window.__schoolhubOverviewRoomSelectOpening && existingSelect){
+      return;
+    }
+
+    window.__overviewRoomFilter=window.__overviewRoomFilter||{};
+    window.activeCourseRoomFilter=window.activeCourseRoomFilter||{};
+    var selected=window.activeCourseRoomFilter[cid] || window.__overviewRoomFilter[cid] || 'all';
+    if(selected!=='all' && rooms.indexOf(selected)<0) selected='all';
+    window.__overviewRoomFilter[cid]=selected;
+    box.className='schoolhub-room-filter-ready';
+    box.innerHTML='<div class="schoolhub-room-selector-mini"><span class="schoolhub-room-selector-mini-label"><i class="fas fa-door-open"></i> เลือกห้อง</span><select id="schoolhub-overview-room-select-final" onpointerdown="window.__schoolhubOverviewRoomSelectOpening=true; clearTimeout(window.__schoolhubOverviewRoomSelectTimer); window.__schoolhubOverviewRoomSelectTimer=setTimeout(function(){window.__schoolhubOverviewRoomSelectOpening=false;},1200);" onmousedown="window.__schoolhubOverviewRoomSelectOpening=true;" onclick="event.stopPropagation();" onfocus="window.__schoolhubOverviewRoomSelectOpening=true;" onblur="clearTimeout(window.__schoolhubOverviewRoomSelectTimer); window.__schoolhubOverviewRoomSelectTimer=setTimeout(function(){window.__schoolhubOverviewRoomSelectOpening=false;},120);"><option value="all" '+(selected==='all'?'selected':'')+'>ทุกห้อง</option>'+rooms.map(function(r){return '<option value="'+esc(r)+'" '+(selected===r?'selected':'')+'>'+esc(r)+'</option>';}).join('')+'</select></div>';
+  };
+  document.addEventListener('change',function(e){
+    var sel=e.target && e.target.closest && e.target.closest('#schoolhub-overview-room-select-final');
+    if(!sel) return;
+    e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+    var cid=courseId(); if(!cid) return;
+    window.__overviewRoomFilter=window.__overviewRoomFilter||{}; window.activeCourseRoomFilter=window.activeCourseRoomFilter||{};
+    window.__overviewRoomFilter[cid]=sel.value;
+    if(sel.value==='all') delete window.activeCourseRoomFilter[cid]; else window.activeCourseRoomFilter[cid]=sel.value;
+    window.__schoolhubOverviewRoomSelectOpening=false;
+    clearTimeout(window.__schoolhubOverviewRoomSelectTimer);
+    if(typeof window.renderCourseOverview==='function') setTimeout(function(){ window.renderCourseOverview(); },0);
+  }, true);
+  if(typeof window.renderCourseOverview==='function' && !window.renderCourseOverview.__finalFastSelectorExportWrapped){
+    var old=window.renderCourseOverview;
+    var fn=function(){ var r=old.apply(this,arguments); try{window.renderOverviewRoomFilter();}catch(e){} try{ensureAttendanceExportButton();}catch(e){} return r; };
+    fn.__finalFastSelectorExportWrapped=true; window.renderCourseOverview=fn;
+  }
+  if(typeof window.renderAttendanceList==='function' && !window.renderAttendanceList.__finalExportButtonWrapped){
+    var oldA=window.renderAttendanceList;
+    var fnA=function(){ var r=oldA.apply(this,arguments); try{ensureAttendanceExportButton();}catch(e){} return r; };
+    fnA.__finalExportButtonWrapped=true; window.renderAttendanceList=fnA;
+  }
+  document.addEventListener('DOMContentLoaded',function(){ setTimeout(function(){ensureOverviewRoomSelector(); if(window.renderOverviewRoomFilter) window.renderOverviewRoomFilter(); ensureAttendanceExportButton();},300); });
+})();
+</script>
+
+
+<!-- Patch: keep Attendance Excel button under calendar card, not inside calendar/header -->
+<style id="schoolhub-attendance-excel-under-calendar-final">
+  #schoolhub-attendance-calendar-column{
+    display:flex;
+    flex-direction:column;
+    gap:.75rem;
+  }
+  #schoolhub-attendance-calendar-column > .bg-white{
+    width:100%;
+  }
+  #schoolhub-attendance-excel-under-calendar-wrap{
+    width:100%;
+  }
+  #schoolhub-attendance-excel-under-calendar-wrap #btn-export-attendance-excel{
+    display:flex!important;
+    width:100%!important;
+    justify-content:center!important;
+    align-items:center!important;
+    position:static!important;
+    inset:auto!important;
+    transform:none!important;
+    margin:0!important;
+  }
+  #attendance-area #btn-export-attendance-excel,
+  #schoolhub-attendance-header-actions #btn-export-attendance-excel,
+  #attendance-calendar-popup #btn-export-attendance-excel{
+    display:none!important;
+  }
+  @media (max-width:768px){
+    #schoolhub-attendance-calendar-column{gap:.65rem;}
+    #schoolhub-attendance-excel-under-calendar-wrap{order:2;}
+  }
+</style>
+<script id="schoolhub-attendance-excel-under-calendar-final-script">
+(function(){
+  if(window.__schoolhubAttendanceExcelUnderCalendarFinal) return;
+  window.__schoolhubAttendanceExcelUnderCalendarFinal=true;
+
+  function placeAttendanceExcelButtonUnderCalendar(){
+    var tab=document.getElementById('course-tab-attendance');
+    if(!tab) return;
+    var grid=tab.querySelector('.grid.grid-cols-1.lg\\:grid-cols-3, .grid');
+    if(!grid) return;
+    var calendarCard=document.getElementById('attendance-calendar-open-btn') && document.getElementById('attendance-calendar-open-btn').closest('.bg-white.rounded-2xl');
+    if(!calendarCard) return;
+
+    var column=document.getElementById('schoolhub-attendance-calendar-column');
+    if(!column){
+      column=document.createElement('div');
+      column.id='schoolhub-attendance-calendar-column';
+      calendarCard.parentNode.insertBefore(column, calendarCard);
+      column.appendChild(calendarCard);
+    }else if(calendarCard.parentElement!==column){
+      column.insertBefore(calendarCard, column.firstChild);
+    }
+
+    var wrap=document.getElementById('schoolhub-attendance-excel-under-calendar-wrap');
+    if(!wrap){
+      wrap=document.createElement('div');
+      wrap.id='schoolhub-attendance-excel-under-calendar-wrap';
+      column.appendChild(wrap);
+    }else if(wrap.parentElement!==column){
+      column.appendChild(wrap);
+    }
+
+    var btn=document.getElementById('btn-export-attendance-excel');
+    if(!btn){
+      btn=document.createElement('button');
+      btn.id='btn-export-attendance-excel';
+      btn.type='button';
+      btn.innerHTML='<i class="fas fa-file-excel"></i> โหลด Excel';
+    }
+    btn.className='bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-4 py-3 rounded-2xl font-bold flex items-center gap-2 transition shadow-sm w-full justify-center text-sm border border-emerald-200';
+    btn.onclick=window.exportAttendanceToExcel;
+    if(btn.parentElement!==wrap) wrap.appendChild(btn);
+  }
+
+  var oldRenderAttendanceList=window.renderAttendanceList;
+  if(typeof oldRenderAttendanceList==='function' && !oldRenderAttendanceList.__excelUnderCalendarWrapped){
+    var wrapped=function(){
+      var r=oldRenderAttendanceList.apply(this,arguments);
+      setTimeout(placeAttendanceExcelButtonUnderCalendar,0);
+      return r;
+    };
+    wrapped.__excelUnderCalendarWrapped=true;
+    window.renderAttendanceList=wrapped;
+  }
+
+  var oldSwitchCourseTab=window.switchCourseTab;
+  if(typeof oldSwitchCourseTab==='function' && !oldSwitchCourseTab.__excelUnderCalendarWrapped){
+    var switchWrapped=function(){
+      var r=oldSwitchCourseTab.apply(this,arguments);
+      setTimeout(placeAttendanceExcelButtonUnderCalendar,0);
+      setTimeout(placeAttendanceExcelButtonUnderCalendar,250);
+      return r;
+    };
+    switchWrapped.__excelUnderCalendarWrapped=true;
+    window.switchCourseTab=switchWrapped;
+  }
+
+  document.addEventListener('DOMContentLoaded',function(){
+    placeAttendanceExcelButtonUnderCalendar();
+    setTimeout(placeAttendanceExcelButtonUnderCalendar,300);
+    setTimeout(placeAttendanceExcelButtonUnderCalendar,900);
+    var tab=document.getElementById('course-tab-attendance');
+    if(tab && window.MutationObserver){
+      new MutationObserver(function(){placeAttendanceExcelButtonUnderCalendar();}).observe(tab,{childList:true,subtree:true});
+    }
+  });
+})();
+</script>
+
+
+<!-- Patch: keep overview room selector open while choosing room (fix open-and-close flicker) -->
+<script id="schoolhub-overview-room-select-open-lock-final">
+(function(){
+  if(window.__schoolhubOverviewRoomSelectOpenLockFinal) return;
+  window.__schoolhubOverviewRoomSelectOpenLockFinal = true;
+  function markOpen(){
+    window.__schoolhubOverviewRoomSelectOpening = true;
+    clearTimeout(window.__schoolhubOverviewRoomSelectTimer);
+    window.__schoolhubOverviewRoomSelectTimer = setTimeout(function(){ window.__schoolhubOverviewRoomSelectOpening = false; }, 1200);
+  }
+  ['pointerdown','mousedown','touchstart','click','focus'].forEach(function(type){
+    document.addEventListener(type, function(e){
+      var sel = e.target && e.target.closest && e.target.closest('#schoolhub-overview-room-select-final');
+      if(!sel) return;
+      markOpen();
+      e.stopPropagation();
+    }, true);
+  });
+  document.addEventListener('change', function(e){
+    var sel = e.target && e.target.closest && e.target.closest('#schoolhub-overview-room-select-final');
+    if(!sel) return;
+    window.__schoolhubOverviewRoomSelectOpening = false;
+    clearTimeout(window.__schoolhubOverviewRoomSelectTimer);
+  }, true);
+  document.addEventListener('blur', function(e){
+    var sel = e.target && e.target.closest && e.target.closest('#schoolhub-overview-room-select-final');
+    if(!sel) return;
+    clearTimeout(window.__schoolhubOverviewRoomSelectTimer);
+    window.__schoolhubOverviewRoomSelectTimer = setTimeout(function(){ window.__schoolhubOverviewRoomSelectOpening = false; }, 120);
+  }, true);
+})();
+</script>
+
+
+
+<!-- Patch: make Overview Excel button use attendance-style popup with suitable room choices -->
+<style id="schoolhub-overview-excel-popup-like-attendance-final">
+  #course-tab-overview button[onclick="exportScoresToExcel()"]{
+    background:#dcfce7!important;
+    color:#047857!important;
+    border-color:#bbf7d0!important;
+    border-radius:1rem!important;
+    font-weight:800!important;
+  }
+  #course-tab-overview button[onclick="exportScoresToExcel()"]:hover{
+    background:#bbf7d0!important;
+  }
+  @media (max-width:768px){
+    #course-tab-overview button[onclick="exportScoresToExcel()"]{
+      width:100%!important;
+      justify-content:center!important;
+      padding-top:.75rem!important;
+      padding-bottom:.75rem!important;
+    }
+  }
+</style>
+<script id="schoolhub-overview-excel-popup-like-attendance-final-script">
+(function(){
+  if(window.__schoolhubOverviewExcelPopupLikeAttendanceFinal) return;
+  window.__schoolhubOverviewExcelPopupLikeAttendanceFinal = true;
+
+  function esc(v){
+    if(typeof window.escapeHTML === 'function') return window.escapeHTML(String(v == null ? '' : v));
+    return String(v == null ? '' : v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});
+  }
+  function courseId(){ return window.currentActiveCourseId || (window.currentCourse && window.currentCourse.id) || null; }
+  function course(){
+    var cid=courseId();
+    return ((window.state && state.courses) || []).find(function(c){return String(c.id)===String(cid);}) || window.currentCourse || null;
+  }
+  function studentRoom(st){ return String((st && (st.room || st.grade || st.className || st.classroom)) || '').trim() || 'ไม่ระบุห้อง'; }
+  function allCourseStudents(cid){
+    if(typeof window.getCourseStudents === 'function') return window.getCourseStudents(cid) || [];
+    var c=course();
+    var ids=(c && (c.studentIds || c.students || c.studentIdList)) || [];
+    return ((window.state && state.students) || []).filter(function(s){ return !ids.length || ids.indexOf(s.id) !== -1 || ids.indexOf(s.code) !== -1; });
+  }
+  function roomsForCourse(c){
+    var arr=[];
+    [['studentRooms'],['rooms'],['grades'],['studentGrades'],['classes']].forEach(function(keys){
+      var v=c && c[keys[0]];
+      if(Array.isArray(v)) arr=arr.concat(v);
+    });
+    allCourseStudents(courseId()).forEach(function(s){ arr.push(studentRoom(s)); });
+    var seen={};
+    return arr.map(function(x){return String(x||'').trim();}).filter(function(x){ if(!x) return false; if(seen[x]) return false; seen[x]=true; return true; });
+  }
+  function studentsForRoom(cid, room){
+    var list=allCourseStudents(cid);
+    if(!room || room==='all') return list;
+    return list.filter(function(s){ return studentRoom(s) === room; });
+  }
+  function cleanSheetName(name){
+    return String(name || 'ชีต').replace(/[\\/?*\[\]:]/g,' ').trim().slice(0,31) || 'ชีต';
+  }
+  function statusThai(v){ return v==='present'?'มา':(v==='late'?'สาย':(v==='absent'?'ขาด':'-')); }
+  function calcGrade(score, criteria){
+    if(typeof window.calculateGrade === 'function') return window.calculateGrade(score, criteria);
+    var gs=(criteria || window.defaultGradeCriteria || []).slice().sort(function(a,b){return Number(b.min)-Number(a.min);});
+    var g=gs.find(function(x){return Number(score)>=Number(x.min);});
+    return g ? (g.grade || g.name || '-') : '-';
+  }
+  function buildOverviewAoa(cid, list, roomName){
+    var c=course();
+    var cName=(c && (c.name || c.code)) || 'รายวิชา';
+    var history=(state.attendance && state.attendance[cid]) || {};
+    var attDates=Object.keys(history).sort();
+    var plans=((state.coursePlans && state.coursePlans[cid]) || []).slice().sort(function(a,b){return Number(a.week)-Number(b.week);});
+    var scores=((state.scores) || []).filter(function(s){return String(s.courseId)===String(cid);});
+    var criteria=(state.courseGrades && state.courseGrades[cid]) || window.defaultGradeCriteria;
+    var totalMax=0;
+    var header=['ลำดับ','รหัสนักเรียน','ชื่อ - นามสกุล','ห้อง','มา','สาย','ขาด'];
+    plans.forEach(function(p){
+      var full=Number(p.maxScore);
+      header.push('สัปดาห์ '+p.week+' - '+p.title+(full===0?' (เช็คงาน)':' (เต็ม '+full+')'));
+      if(full!==0) totalMax += full;
+    });
+    header.push('รวมคะแนน(เต็ม '+totalMax+')','เกรด');
+    var aoa=[['สรุปภาพรวมวิชา: '+cName],['ห้อง: '+(roomName || 'ทุกห้อง')],[],header];
+    list.forEach(function(st,idx){
+      var pr=0,la=0,ab=0;
+      attDates.forEach(function(d){
+        var rec=(history[d] && history[d].records) || {};
+        var v=rec[st.id];
+        if(v==='present') pr++; else if(v==='late') la++; else if(v==='absent') ab++;
+      });
+      var row=[idx+1, st.code || '', st.name || '', studentRoom(st), pr, la, ab];
+      var total=0;
+      plans.forEach(function(p){
+        var task=scores.find(function(ts){return String(ts.week)===String(p.week) && String(ts.title)===String(p.title);});
+        var raw=task && task.records ? task.records[st.id] : null;
+        if(Number(p.maxScore)===0){ row.push(raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-')); }
+        else{
+          if(raw!==null && raw!=='') total += Number(raw);
+          row.push(!task ? '-' : (raw==='' ? 'ขาดส่ง (-)' : Number(raw)));
+        }
+      });
+      row.push(total, totalMax>0 ? calcGrade(total, criteria) : '-');
+      aoa.push(row);
+    });
+    return aoa;
+  }
+  function writeWorkbook(sheets, filename){
+    if(typeof XLSX === 'undefined') return showCustomAlert('โหลด Excel ไม่สำเร็จ','ไม่พบไลบรารี XLSX กรุณาเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่',true);
+    var wb=XLSX.utils.book_new();
+    Object.keys(sheets).forEach(function(name){ XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheets[name]), cleanSheetName(name)); });
+    XLSX.writeFile(wb, filename + '.xlsx');
+  }
+  function ensureModal(id, html){
+    var old=document.getElementById(id); if(old) old.remove();
+    var div=document.createElement('div'); div.id=id; div.className='schoolhub-export-popup hidden'; div.innerHTML=html; document.body.appendChild(div); return div;
+  }
+  function closeModal(id){ var el=document.getElementById(id); if(el) el.classList.add('hidden'); }
+  function currentOverviewRoom(cid){
+    var select=document.getElementById('schoolhub-overview-room-select-final');
+    return (select && select.value) || (window.__overviewRoomFilter && window.__overviewRoomFilter[cid]) || (window.activeCourseRoomFilter && window.activeCourseRoomFilter[cid]) || 'all';
+  }
+
+  window.exportScoresToExcel = function(){
+    var cid=courseId();
+    var c=course();
+    if(!cid || !c) return showCustomAlert('ผิดพลาด','ไม่พบรายวิชา',true);
+    var all=allCourseStudents(cid);
+    if(!all.length) return showCustomAlert('ผิดพลาด','ไม่มีข้อมูลนักเรียนในวิชานี้',true);
+    var rooms=roomsForCourse(c);
+    var selected=currentOverviewRoom(cid);
+    if(selected!=='all' && rooms.indexOf(selected)<0) selected='all';
+
+    var options='';
+    if(rooms.length>1){
+      options += '<option value="current" '+(selected!=='all'?'selected':'')+'>ห้องที่เลือกอยู่ตอนนี้'+(selected!=='all'?' ('+esc(selected)+')':'')+'</option>';
+      options += '<option value="all" '+(selected==='all'?'selected':'')+'>ทุกห้อง (แยกชีตตามห้อง)</option>';
+      rooms.forEach(function(r){ options += '<option value="room:'+esc(r)+'" '+(selected===r?'selected':'')+'>'+esc(r)+'</option>'; });
+    }else{
+      var only=rooms[0] || 'ทุกห้อง';
+      options = '<option value="room:'+esc(only)+'" selected>'+esc(only)+'</option>';
+    }
+
+    var modal=ensureModal('schoolhub-overview-export-room-modal',
+      '<div class="schoolhub-export-box">'+
+        '<div class="schoolhub-export-head">'+
+          '<div class="schoolhub-export-title"><i class="fas fa-file-excel text-emerald-600"></i> โหลด Excel ภาพรวม</div>'+
+          '<button type="button" class="text-slate-400 hover:text-slate-700" onclick="document.getElementById(\'schoolhub-overview-export-room-modal\').classList.add(\'hidden\')"><i class="fas fa-times"></i></button>'+
+        '</div>'+
+        '<div class="schoolhub-export-body">'+
+          '<div><label class="schoolhub-export-label">เลือกข้อมูลที่ต้องการโหลด</label><select id="overview-export-room-select" class="schoolhub-export-input">'+options+'</select></div>'+
+          '<p class="text-xs font-semibold text-slate-500">ถ้าเลือกทุกห้อง ระบบจะแยกชีตในไฟล์ Excel เป็นห้องละหน้า ตามชื่อห้องที่ตั้งไว้</p>'+
+        '</div>'+
+        '<div class="schoolhub-export-actions">'+
+          '<button type="button" class="bg-slate-100 text-slate-600" onclick="document.getElementById(\'schoolhub-overview-export-room-modal\').classList.add(\'hidden\')">ยกเลิก</button>'+
+          '<button type="button" id="overview-export-confirm" class="bg-emerald-600 hover:bg-emerald-700 text-white"><i class="fas fa-download mr-1"></i> โหลด Excel</button>'+
+        '</div>'+
+      '</div>'
+    );
+    modal.classList.remove('hidden');
+    setTimeout(function(){ var s=document.getElementById('overview-export-room-select'); if(s) s.focus(); },0);
+
+    document.getElementById('overview-export-confirm').onclick=function(){
+      var value=document.getElementById('overview-export-room-select').value;
+      var sheets={};
+      if(value==='current') value = (selected==='all' ? 'all' : 'room:'+selected);
+      if(value==='all'){
+        rooms.forEach(function(r){ sheets[r]=buildOverviewAoa(cid, studentsForRoom(cid,r), r); });
+      }else{
+        var room=value.replace(/^room:/,'');
+        sheets[room]=buildOverviewAoa(cid, studentsForRoom(cid,room), room);
+      }
+      closeModal('schoolhub-overview-export-room-modal');
+      writeWorkbook(sheets, 'สรุปภาพรวม_'+((c && (c.code || c.name)) || 'รายวิชา'));
+    };
+  };
+
+  function fixOverviewExcelButtonText(){
+    var btn=document.querySelector('#course-tab-overview button[onclick="exportScoresToExcel()"]');
+    if(!btn) return;
+    btn.innerHTML='<i class="fas fa-file-excel"></i> โหลด Excel';
+  }
+  var oldRenderOverview = window.renderCourseOverview;
+  if(typeof oldRenderOverview === 'function' && !oldRenderOverview.__overviewExcelPopupLikeAttendanceWrapped){
+    var wrapped=function(){ var r=oldRenderOverview.apply(this,arguments); setTimeout(fixOverviewExcelButtonText,0); return r; };
+    wrapped.__overviewExcelPopupLikeAttendanceWrapped=true;
+    window.renderCourseOverview=wrapped;
+  }
+  document.addEventListener('DOMContentLoaded',function(){ fixOverviewExcelButtonText(); setTimeout(fixOverviewExcelButtonText,300); });
+})();
+</script>
+
+
+
+<!-- Patch: force Overview Excel export to open room popup (capture click, no direct download) -->
+<style id="schoolhub-overview-excel-room-popup-force-style">
+  .schoolhub-overview-excel-room-modal{position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(6px);z-index:2147483000;display:none;align-items:center;justify-content:center;padding:18px;}
+  .schoolhub-overview-excel-room-modal:not(.hidden){display:flex!important;}
+  .schoolhub-overview-excel-room-box{width:min(92vw,520px);background:#fff;border-radius:24px;box-shadow:0 24px 80px rgba(15,23,42,.25);overflow:hidden;border:1px solid rgba(226,232,240,.9);}
+  .schoolhub-overview-excel-room-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 22px;border-bottom:1px solid #eef2f7;}
+  .schoolhub-overview-excel-room-title{font-weight:900;color:#0f172a;font-size:20px;display:flex;align-items:center;gap:10px;}
+  .schoolhub-overview-excel-room-body{padding:22px;display:grid;gap:14px;}
+  .schoolhub-overview-excel-room-label{font-size:14px;font-weight:900;color:#475569;margin-bottom:8px;display:block;}
+  .schoolhub-overview-excel-room-select{width:100%;min-height:54px;border:1.5px solid #c7d2fe;border-radius:16px;padding:0 16px;font-size:18px;font-weight:900;color:#334155;background:#fff;outline:none;}
+  .schoolhub-overview-excel-room-actions{display:flex;justify-content:flex-end;gap:10px;padding:0 22px 22px;}
+  .schoolhub-overview-excel-room-actions button{border:0;border-radius:14px;padding:14px 22px;font-size:16px;font-weight:900;cursor:pointer;}
+  .schoolhub-overview-excel-room-cancel{background:#f1f5f9;color:#475569;}
+  .schoolhub-overview-excel-room-confirm{background:#059669;color:#fff;}
+  @media(max-width:768px){.schoolhub-overview-excel-room-box{width:100%;}.schoolhub-overview-excel-room-actions{flex-direction:column-reverse}.schoolhub-overview-excel-room-actions button{width:100%;}}
+</style>
+<script id="schoolhub-overview-excel-room-popup-force-script">
+(function(){
+  if(window.__schoolhubOverviewExcelRoomPopupForce) return;
+  window.__schoolhubOverviewExcelRoomPopupForce = true;
+
+  function esc(v){
+    if(typeof window.escapeHTML === 'function') return window.escapeHTML(String(v == null ? '' : v));
+    return String(v == null ? '' : v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});
+  }
+  function getCourseId(){ return window.currentActiveCourseId || (window.currentCourse && window.currentCourse.id) || null; }
+  function getCourse(){
+    var cid=getCourseId();
+    return ((window.state && state.courses) || []).find(function(c){ return String(c.id) === String(cid); }) || window.currentCourse || null;
+  }
+  function roomOf(st){
+    return String((st && (st.room || st.classroom || st.className || st.grade || st.level)) || '').trim() || 'ไม่ระบุห้อง';
+  }
+  function courseRoomList(course){
+    var out=[];
+    ['studentRooms','studentGrades','rooms','grades','classes','classrooms'].forEach(function(k){
+      if(course && Array.isArray(course[k])) out = out.concat(course[k]);
+    });
+    var seen={};
+    return out.map(function(x){return String(x||'').trim();}).filter(function(x){ if(!x || seen[x]) return false; seen[x]=1; return true; });
+  }
+  function allStudentsForCourse(){
+    var cid=getCourseId(), c=getCourse();
+    var all=((window.state && state.students) || []).slice();
+    var rooms=courseRoomList(c);
+    var extra=(c && (c.extraStudentIds || c.studentIds || c.students)) || [];
+    if(rooms.length || extra.length){
+      return all.filter(function(st){ return rooms.indexOf(roomOf(st)) !== -1 || extra.indexOf(st.id) !== -1 || extra.indexOf(st.code) !== -1; });
+    }
+    if(typeof window.getCourseStudents === 'function'){
+      try { return window.getCourseStudents(cid) || []; } catch(e){}
+    }
+    return all;
+  }
+  function roomsForExport(){
+    var c=getCourse();
+    var rooms=courseRoomList(c);
+    allStudentsForCourse().forEach(function(st){ rooms.push(roomOf(st)); });
+    var seen={};
+    return rooms.map(function(x){return String(x||'').trim();}).filter(function(x){ if(!x || seen[x]) return false; seen[x]=1; return true; }).sort(function(a,b){return a.localeCompare(b,'th',{numeric:true});});
+  }
+  function selectedOverviewRoom(){
+    var cid=getCourseId();
+    var el=document.querySelector('#overview-room-filter select, #schoolhub-overview-room-select-final, .overview-room-select');
+    return (el && el.value && el.value !== '') ? el.value : ((window.__overviewRoomFilter && window.__overviewRoomFilter[cid]) || 'all');
+  }
+  function studentsByRoom(room){
+    var list=allStudentsForCourse();
+    if(room && room !== 'all') list=list.filter(function(st){ return roomOf(st) === room; });
+    return list.sort(function(a,b){ return String(roomOf(a)).localeCompare(String(roomOf(b)),'th',{numeric:true}) || String(a.code||'').localeCompare(String(b.code||''),'th',{numeric:true}) || String(a.name||'').localeCompare(String(b.name||''),'th'); });
+  }
+  function safeSheetName(v){ return String(v || 'ชีต').replace(/[\\/?*\[\]:]/g,' ').trim().slice(0,31) || 'ชีต'; }
+  function gradeOf(total, criteria){ return (typeof window.calculateGrade === 'function') ? window.calculateGrade(total, criteria) : '-'; }
+  function makeAoa(room){
+    var cid=getCourseId(), c=getCourse();
+    var cName=(c && (c.name || c.code)) || 'รายวิชา';
+    var students=studentsByRoom(room);
+    var history=(state.attendance && state.attendance[cid]) || {};
+    var dates=Object.keys(history).sort();
+    var plans=((state.coursePlans && state.coursePlans[cid]) || []).slice().sort(function(a,b){return Number(a.week)-Number(b.week);});
+    var scores=((state.scores) || []).filter(function(s){ return String(s.courseId) === String(cid); });
+    var criteria=(state.courseGrades && state.courseGrades[cid]) || window.defaultGradeCriteria || [];
+    var totalMax=0;
+    var header=['ลำดับ','รหัสนักเรียน','ชื่อ - นามสกุล','ห้อง','มา','สาย','ขาด'];
+    plans.forEach(function(p){ var full=Number(p.maxScore||0); header.push('สัปดาห์ '+p.week+' - '+(p.title||'')+(full===0?' (เช็คงาน)':' (เต็ม '+full+')')); if(full!==0) totalMax += full; });
+    header.push('รวมคะแนน(เต็ม '+totalMax+')','เกรด');
+    var aoa=[['สรุปภาพรวมวิชา: '+cName],['ห้อง: '+(room || 'ทุกห้อง')],[],header];
+    students.forEach(function(st,idx){
+      var pr=0, la=0, ab=0;
+      dates.forEach(function(d){ var rec=(history[d] && history[d].records) || {}; var v=rec[st.id]; if(v==='present') pr++; else if(v==='late') la++; else if(v==='absent') ab++; });
+      var row=[idx+1, st.code||'', st.name||'', roomOf(st), pr, la, ab];
+      var total=0;
+      plans.forEach(function(p){
+        var task=scores.find(function(ts){ return String(ts.week)===String(p.week) && String(ts.title)===String(p.title); });
+        var raw=task && task.records ? task.records[st.id] : null;
+        if(Number(p.maxScore||0)===0) row.push(raw===1?'ส่งแล้ว':(raw===0?'ยังไม่ส่ง':'-'));
+        else { if(raw!==null && raw!=='') total += Number(raw); row.push(!task ? '-' : (raw==='' ? 'ขาดส่ง (-)' : Number(raw))); }
+      });
+      row.push(total, totalMax>0 ? gradeOf(total, criteria) : '-');
+      aoa.push(row);
+    });
+    return aoa;
+  }
+  function writeExcel(value){
+    if(typeof XLSX === 'undefined') return showCustomAlert('โหลด Excel ไม่สำเร็จ','ไม่พบไลบรารี XLSX',true);
+    var cid=getCourseId(), c=getCourse();
+    var rooms=roomsForExport();
+    var wb=XLSX.utils.book_new();
+    if(value === 'all'){
+      rooms.forEach(function(r){ XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(makeAoa(r)), safeSheetName(r)); });
+    }else{
+      var room=value.replace(/^room:/,'');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(makeAoa(room)), safeSheetName(room));
+    }
+    XLSX.writeFile(wb, 'ภาพรวม_'+(((c && (c.code || c.name)) || 'รายวิชา'))+'.xlsx');
+  }
+  function openPopup(){
+    var cid=getCourseId(), c=getCourse();
+    if(!cid || !c) return showCustomAlert('ผิดพลาด','ไม่พบรายวิชา',true);
+    var all=allStudentsForCourse();
+    if(!all.length) return showCustomAlert('ผิดพลาด','ไม่มีข้อมูลนักเรียนในวิชานี้',true);
+    var rooms=roomsForExport();
+    var selected=selectedOverviewRoom();
+    if(selected && selected !== 'all' && rooms.indexOf(selected) === -1) selected='all';
+    var options='';
+    if(rooms.length > 1){
+      options += '<option value="all" '+(selected==='all'?'selected':'')+'>ทุกห้อง</option>';
+      rooms.forEach(function(r){ options += '<option value="room:'+esc(r)+'" '+(selected===r?'selected':'')+'>'+esc(r)+'</option>'; });
+    }else{
+      var only=rooms[0] || roomOf(all[0]) || 'ห้อง';
+      options += '<option value="room:'+esc(only)+'" selected>'+esc(only)+'</option>';
+    }
+    var old=document.getElementById('schoolhub-overview-excel-room-modal-force'); if(old) old.remove();
+    var modal=document.createElement('div');
+    modal.id='schoolhub-overview-excel-room-modal-force';
+    modal.className='schoolhub-overview-excel-room-modal';
+    modal.innerHTML='<div class="schoolhub-overview-excel-room-box">'+
+      '<div class="schoolhub-overview-excel-room-head"><div class="schoolhub-overview-excel-room-title"><i class="fas fa-file-excel text-emerald-600"></i> โหลดภาพรวม Excel</div><button type="button" id="schoolhub-overview-excel-room-close" class="text-slate-400 hover:text-slate-700 text-xl"><i class="fas fa-times"></i></button></div>'+
+      '<div class="schoolhub-overview-excel-room-body"><div><label class="schoolhub-overview-excel-room-label">เลือกห้อง</label><select id="schoolhub-overview-excel-room-choice" class="schoolhub-overview-excel-room-select">'+options+'</select></div><p class="text-xs font-bold text-slate-500">ถ้าเลือกทุกห้อง ระบบจะแยกชีตด้านในเป็นห้องละหน้า โดยใช้ชื่อชีตเป็นชื่อห้องที่ตั้งไว้</p></div>'+
+      '<div class="schoolhub-overview-excel-room-actions"><button type="button" class="schoolhub-overview-excel-room-cancel" id="schoolhub-overview-excel-room-cancel">ยกเลิก</button><button type="button" class="schoolhub-overview-excel-room-confirm" id="schoolhub-overview-excel-room-confirm"><i class="fas fa-download mr-1"></i> โหลด Excel</button></div>'+
+      '</div>';
+    document.body.appendChild(modal);
+    modal.classList.remove('hidden');
+    function close(){ modal.classList.add('hidden'); }
+    document.getElementById('schoolhub-overview-excel-room-close').onclick=close;
+    document.getElementById('schoolhub-overview-excel-room-cancel').onclick=close;
+    document.getElementById('schoolhub-overview-excel-room-confirm').onclick=function(){ var v=document.getElementById('schoolhub-overview-excel-room-choice').value; close(); writeExcel(v); };
+  }
+
+  window.exportScoresToExcel = openPopup;
+  document.addEventListener('click', function(e){
+    var btn=e.target.closest && e.target.closest('#course-tab-overview button');
+    if(!btn) return;
+    var on=btn.getAttribute('onclick') || '';
+    var txt=(btn.textContent || '').replace(/\s+/g,' ');
+    if(on.indexOf('exportScoresToExcel') !== -1 || (txt.indexOf('Excel') !== -1 && txt.indexOf('โหลด') !== -1)){
+      e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation(); openPopup();
+    }
+  }, true);
+})();
+</script>
+
+
+
+<!-- Patch: Attendance Excel export - split sheets by room when choosing all rooms -->
+<script id="schoolhub-attendance-export-all-rooms-sheets-patch">
+(function(){
+  if(window.__schoolhubAttendanceExportAllRoomsSheetsPatch) return;
+  window.__schoolhubAttendanceExportAllRoomsSheetsPatch = true;
+
+  function esc(v){
+    if(typeof window.escapeHTML === 'function') return window.escapeHTML(String(v == null ? '' : v));
+    return String(v == null ? '' : v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});
+  }
+  function cid(){ return window.currentActiveCourseId || (window.currentCourse && window.currentCourse.id) || ''; }
+  function course(){
+    var id=cid();
+    return ((window.state && state.courses) || []).find(function(c){return String(c.id)===String(id);}) || window.currentCourse || null;
+  }
+  function roomOf(st){
+    try{
+      if(typeof window.getStudentClassName === 'function') return String(window.getStudentClassName(st) || '').trim() || 'ไม่ระบุห้อง';
+    }catch(e){}
+    return String((st && (st.room || st.classroom || st.className || st.grade || st.level)) || '').trim() || 'ไม่ระบุห้อง';
+  }
+  function unique(arr){
+    var out=[];
+    (arr||[]).forEach(function(v){
+      if(Array.isArray(v)){ v.forEach(function(x){ var t=String(x||'').trim(); if(t && t!=='-' && out.indexOf(t)<0) out.push(t); }); return; }
+      var t=String(v||'').trim();
+      if(t && t!=='-' && t!=='undefined' && t!=='null' && out.indexOf(t)<0) out.push(t);
+    });
+    return out.sort(function(a,b){return a.localeCompare(b,'th',{numeric:true});});
+  }
+  function roomsForCourse(c){
+    if(!c) return [];
+    var rooms=[];
+    ['studentRooms','studentGrades','rooms','grades','classes','classrooms','selectedRooms','selectedGrades'].forEach(function(k){
+      if(Array.isArray(c[k])) rooms=rooms.concat(c[k]);
+      else if(typeof c[k] === 'string') rooms=rooms.concat(c[k].split(/[,|،]/));
+    });
+    var fromCourse=unique(rooms);
+    if(fromCourse.length) return fromCourse;
+    var list=allCourseStudents();
+    return unique(list.map(roomOf));
+  }
+  function allCourseStudents(){
+    var id=cid();
+    if(typeof window.getCourseStudents === 'function'){
+      try{ return window.getCourseStudents(id,{ignoreActionFilter:true}) || []; }catch(e){}
+      try{ return window.getCourseStudents(id) || []; }catch(e){}
+    }
+    return ((window.state && state.students) || []).slice();
+  }
+  function studentsForRoom(room){
+    var list=allCourseStudents();
+    if(room && room !== 'all') list=list.filter(function(st){return roomOf(st) === room;});
+    return list.sort(function(a,b){
+      return roomOf(a).localeCompare(roomOf(b),'th',{numeric:true}) || String(a.code||'').localeCompare(String(b.code||''),'th',{numeric:true}) || String(a.name||'').localeCompare(String(b.name||''),'th');
+    });
+  }
+  function statusThai(v){ return v==='present'?'มา':(v==='late'?'สาย':(v==='absent'?'ขาด':'-')); }
+  function sheetName(name, used){
+    var base=String(name || 'เช็คชื่อ').replace(/[\\/?*\[\]:]/g,' ').trim().slice(0,31) || 'เช็คชื่อ';
+    var n=base, i=2;
+    used=used||{};
+    while(used[n]){
+      var suffix=' '+i++;
+      n=base.slice(0,31-suffix.length)+suffix;
+    }
+    used[n]=true;
+    return n;
+  }
+  function ensureModal(id, html){
+    var old=document.getElementById(id); if(old) old.remove();
+    var div=document.createElement('div'); div.id=id; div.className='schoolhub-export-popup hidden'; div.innerHTML=html; document.body.appendChild(div); return div;
+  }
+  function buildAttendanceAoa(students, roomName, dates){
+    var c=course() || {};
+    var history=(state.attendance && state.attendance[cid()]) || {};
+    var header=['ลำดับ','รหัสนักเรียน','ชื่อ - นามสกุล','ห้อง'].concat(dates);
+    var aoa=[['รายงานเช็คชื่อ: '+(c.name || c.code || 'รายวิชา')],['ห้อง: '+(roomName || 'ทุกห้อง')],['ช่วงวันที่: '+(dates[0] || '-')+' ถึง '+(dates[dates.length-1] || '-')],[],header];
+    students.forEach(function(st,idx){
+      var row=[idx+1, st.code || '', st.name || '', roomOf(st)];
+      dates.forEach(function(d){
+        var rec=(history[d] && history[d].records) || {};
+        row.push(statusThai(rec[st.id]));
+      });
+      aoa.push(row);
+    });
+    return aoa;
+  }
+  function writeAttendanceWorkbook(roomChoice, dates){
+    if(typeof XLSX === 'undefined') return showCustomAlert('โหลด Excel ไม่สำเร็จ','ไม่พบไลบรารี XLSX กรุณาเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่',true);
+    var c=course() || {};
+    var rooms=roomsForCourse(c);
+    var wb=XLSX.utils.book_new();
+    var used={};
+    if(roomChoice === 'all' && rooms.length > 1){
+      rooms.forEach(function(r){
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(buildAttendanceAoa(studentsForRoom(r), r, dates)), sheetName(r, used));
+      });
+    }else{
+      var room=(roomChoice && roomChoice !== 'all') ? roomChoice : (rooms[0] || 'เช็คชื่อ');
+      var list=(roomChoice && roomChoice !== 'all') ? studentsForRoom(roomChoice) : allCourseStudents();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(buildAttendanceAoa(list, roomChoice==='all'?'ทุกห้อง':room, dates)), sheetName(roomChoice==='all'?'เช็คชื่อ':room, used));
+    }
+    XLSX.writeFile(wb, 'เช็คชื่อ_'+(c.code || c.name || 'รายวิชา')+'.xlsx');
+  }
+
+  window.exportAttendanceToExcel = function(){
+    var id=cid(), c=course();
+    if(!id || !c) return showCustomAlert('ผิดพลาด','ไม่พบรายวิชา',true);
+    var history=(state.attendance && state.attendance[id]) || {};
+    var dates=Object.keys(history).sort();
+    if(!dates.length) return showCustomAlert('ยังไม่มีข้อมูล','ยังไม่มีวันที่เคยเช็คชื่อในรายวิชานี้',true);
+
+    var rooms=roomsForCourse(c);
+    var selectedRoom=(window.activeCourseRoomFilter && window.activeCourseRoomFilter[id]) || 'all';
+    var roomHtml='';
+    if(rooms.length > 1){
+      roomHtml='<div><label class="schoolhub-export-label">เลือกห้อง</label><select id="attendance-export-room" class="schoolhub-export-input"><option value="all">ทุกห้อง (แยกชีตตามห้อง)</option>'+rooms.map(function(r){return '<option value="'+esc(r)+'" '+(selectedRoom===r?'selected':'')+'>'+esc(r)+'</option>';}).join('')+'</select></div>';
+    }else{
+      var only=rooms[0] || 'เช็คชื่อ';
+      roomHtml='<div><label class="schoolhub-export-label">ห้อง</label><select id="attendance-export-room" class="schoolhub-export-input"><option value="'+esc(only)+'" selected>'+esc(only)+'</option></select></div>';
+    }
+    var dateOpts=dates.map(function(d){return '<option value="'+esc(d)+'">'+esc(d)+'</option>';}).join('');
+    var modal=ensureModal('schoolhub-attendance-export-modal',
+      '<div class="schoolhub-export-box"><div class="schoolhub-export-head"><div class="schoolhub-export-title"><i class="fas fa-calendar-check text-emerald-600"></i> โหลดเช็คชื่อ Excel</div><button type="button" class="text-slate-400 hover:text-slate-700" onclick="document.getElementById(\'schoolhub-attendance-export-modal\').classList.add(\'hidden\')"><i class="fas fa-times"></i></button></div>'+ 
+      '<div class="schoolhub-export-body">'+roomHtml+'<div><label class="schoolhub-export-label">รูปแบบวันที่</label><select id="attendance-export-mode" class="schoolhub-export-input"><option value="all">ทุกวันที่เคยเช็ค</option><option value="range">เลือกช่วงวันที่</option></select></div>'+ 
+      '<div id="attendance-export-range" class="grid grid-cols-1 sm:grid-cols-2 gap-3 hidden"><div><label class="schoolhub-export-label">เริ่มวันที่</label><select id="attendance-export-start" class="schoolhub-export-input">'+dateOpts+'</select></div><div><label class="schoolhub-export-label">ถึงวันที่</label><select id="attendance-export-end" class="schoolhub-export-input">'+dateOpts+'</select></div></div>'+ 
+      '<p class="text-xs font-semibold text-slate-500">ถ้าเลือกทุกห้อง ระบบจะแยกชีตในไฟล์ Excel เป็นห้องละหน้า โดยใช้ชื่อชีตเป็นชื่อห้องที่ตั้งไว้</p></div>'+ 
+      '<div class="schoolhub-export-actions"><button type="button" class="bg-slate-100 text-slate-600" onclick="document.getElementById(\'schoolhub-attendance-export-modal\').classList.add(\'hidden\')">ยกเลิก</button><button type="button" id="attendance-export-confirm" class="bg-emerald-600 hover:bg-emerald-700 text-white"><i class="fas fa-download mr-1"></i> โหลด Excel</button></div></div>');
+    modal.classList.remove('hidden');
+    var mode=document.getElementById('attendance-export-mode');
+    var range=document.getElementById('attendance-export-range');
+    mode.onchange=function(){ range.classList.toggle('hidden', this.value !== 'range'); };
+    document.getElementById('attendance-export-end').value=dates[dates.length-1];
+    document.getElementById('attendance-export-confirm').onclick=function(){
+      var useDates=dates.slice();
+      if(mode.value === 'range'){
+        var a=document.getElementById('attendance-export-start').value;
+        var b=document.getElementById('attendance-export-end').value;
+        if(a>b){ var t=a; a=b; b=t; }
+        useDates=dates.filter(function(d){ return d>=a && d<=b; });
+      }
+      var roomChoice=(document.getElementById('attendance-export-room') || {}).value || 'all';
+      modal.classList.add('hidden');
+      writeAttendanceWorkbook(roomChoice, useDates);
+    };
+  };
+
+  var oldEnsure=setInterval(function(){
+    var btn=document.getElementById('btn-export-attendance-excel');
+    if(btn){ btn.onclick=window.exportAttendanceToExcel; clearInterval(oldEnsure); }
+  },300);
+})();
+</script>
+
+
+<style id="schoolhub-team-plan-current-box-style">
+  .schoolhub-team-panel{margin-top:14px;background:#fff;border:1px solid #e2e8f0;border-radius:24px;padding:18px;box-shadow:0 10px 30px rgba(15,23,42,.04)}
+  .schoolhub-team-panel input,.schoolhub-team-panel select{border:1px solid #cbd5e1;border-radius:14px;padding:12px;font-weight:700;color:#334155;background:#fff;outline:none}
+  .schoolhub-team-panel input:focus,.schoolhub-team-panel select:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.15)}
+  .schoolhub-team-member-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;border:1px solid #eef2f7;border-radius:18px;padding:12px;background:#f8fafc}
+  .schoolhub-team-status{display:inline-flex;align-items:center;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:900}
+  .schoolhub-team-status.pending{background:#fef3c7;color:#92400e}.schoolhub-team-status.accepted{background:#dcfce7;color:#166534}.schoolhub-team-status.cancelled{background:#fee2e2;color:#991b1b}
+  @media(max-width:768px){.schoolhub-team-member-row{grid-template-columns:1fr}.schoolhub-team-panel .team-form{grid-template-columns:1fr!important}.schoolhub-team-panel .team-actions{justify-content:stretch}.schoolhub-team-panel .team-actions button{width:100%}}
+</style>
+<script type="module" id="schoolhub-team-plan-current-box-patch">
+import { getApps, initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+(function(){
+  if(window.__schoolhubTeamPlanPatch) return;
+  window.__schoolhubTeamPlanPatch = true;
+  const firebaseConfig = {apiKey:"AIzaSyCFPpiDldze8x23HDwhJo7v8KM_uFOGJsg",authDomain:"shool-2312a.firebaseapp.com",projectId:"shool-2312a",storageBucket:"shool-2312a.firebasestorage.app",messagingSenderId:"803574136389",appId:"1:803574136389:web:e0e5eecfc36dec69d4ed2c",measurementId:"G-ME7E38XNX6"};
+  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const COL = 'teams';
+  const PUBLIC = 'public_users_directory';
+
+  function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+  function show(title,msg,bad){(window.showCustomAlert||alert)(title,msg,bad);}
+  function getUser(){return auth.currentUser || window.currentUser || null;}
+  function getDir(){return window.__currentUserDir || {};}
+  function getPlans(){return Array.isArray(window.subscriptionPlans)?window.subscriptionPlans:JSON.parse(localStorage.getItem('schoolhub_subscription_plans')||'[]');}
+  function getPlan(){const d=getDir(); return getPlans().find(p=>p.id===d.planId)||{};}
+  function teamLimit(){const d=getDir(),p=getPlan(); return Math.max(1,Number(d.teamMemberLimit||d.maxTeamMembers||p.teamMemberLimit||p.maxTeamMembers||p.teamLimit||1));}
+  function allowTeam(){const d=getDir(),p=getPlan(),limit=teamLimit(); return !!(d.allowTeam || p.allowTeam || limit>1);}
+  function ownerUid(){const u=getUser(); const d=getDir(); return d.teamOwnerUid || d.ownerUid || u?.uid || d.uid || '';}
+  function ownerDocRef(){const id=ownerUid(); return id?doc(db,COL,id):null;}
+  function fmt(ts){try{const n=Number(ts?.toMillis?ts.toMillis():ts); if(!n) return '-'; return new Date(n).toLocaleString('th-TH');}catch(e){return '-';}}
+  async function getTeamDoc(){const ref=ownerDocRef(); if(!ref) return {members:[]}; const snap=await getDoc(ref); return snap.exists()?snap.data():{members:[]};}
+  async function saveTeamDoc(data){const ref=ownerDocRef(); if(!ref) throw new Error('ไม่พบผู้ใช้'); await setDoc(ref,Object.assign({ownerUid:ownerUid(),ownerEmail:getUser()?.email||getDir().email||'',planId:getDir().planId||'',planName:getDir().planName||'',teamLimit:teamLimit(),updatedAt:Date.now()},data),{merge:true});}
+  function activeMembers(members){return (members||[]).filter(m=>m.status!=='cancelled');}
+  function statusText(s){return s==='accepted'?'ตอบรับแล้ว':(s==='cancelled'?'ยกเลิกแล้ว':'รอตอบรับ');}
+  function roleText(r){return r==='co_owner'?'เจ้าของร่วม':'ผู้ใช้ร่วม';}
+  function makeInviteLink(inviteId, email){const url=new URL(location.href); url.searchParams.set('teamInvite',inviteId); url.searchParams.set('teamOwner',ownerUid()); url.searchParams.set('teamEmail',email); return url.toString();}
+  function ensureTeamLimitText(){
+    const currentBox=document.getElementById('user-current-plan-box');
+    if(!currentBox) return;
+    const mainCard=currentBox.firstElementChild;
+    if(!mainCard) return;
+    let line=document.getElementById('schoolhub-current-plan-team-limit-text');
+    const limit=teamLimit();
+    const text='ใช้ร่วมกันได้สูงสุด '+limit+' คน';
+    if(line){ line.textContent=text; return; }
+    const target=mainCard.querySelector('div div') || mainCard;
+    const div=document.createElement('div');
+    div.id='schoolhub-current-plan-team-limit-text';
+    div.className='text-xs font-black text-indigo-700 mt-1';
+    div.textContent=text;
+    target.appendChild(div);
+  }
+
+  async function loadAndRenderTeamPanel(){
+    const box=document.getElementById('schoolhub-team-plan-box');
+    if(!box) return;
+    if(!allowTeam()){box.innerHTML=''; return;}
+    try{
+      const team=await getTeamDoc();
+      const members=Array.isArray(team.members)?team.members:[];
+      const limit=team.teamLimit||teamLimit();
+      const used=1+activeMembers(members).length;
+      const canInvite=used<limit;
+      const payer=team.lastPayment||{};
+      box.innerHTML=`<div class="schoolhub-team-panel">
+        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4">
+          <div><div class="text-lg font-black text-slate-900"><i class="fas fa-user-plus text-primary mr-2"></i>เชิญเพื่อนในแผนทีม</div>
+          <div class="text-xs font-bold text-slate-500 mt-1">ใช้แล้ว ${used}/${limit} คน • เจ้าของ 1 คน + สมาชิกที่เชิญ</div></div>
+          <div class="text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-3 py-2">${esc(getDir().planName||getPlan().name||'แผนปัจจุบัน')}</div>
+        </div>
+        <div class="bg-slate-50 border border-slate-100 rounded-2xl p-3 mb-4 text-xs font-bold text-slate-600">
+          <i class="fas fa-receipt text-emerald-500 mr-1"></i> การชำระล่าสุด: ${payer.email?`${esc(payer.name||payer.email)} • ${fmt(payer.paidAt)}`:'ยังไม่มีข้อมูลการชำระล่าสุด'}
+        </div>
+        <div class="team-form grid grid-cols-[1fr_160px_140px_auto] gap-2 mb-4">
+          <input id="team-invite-email" type="email" placeholder="อีเมลเพื่อน" ${canInvite?'':'disabled'}>
+          <select id="team-invite-role" ${canInvite?'':'disabled'}><option value="member">ผู้ใช้ร่วม</option><option value="co_owner">เจ้าของร่วม</option></select>
+          <label class="flex items-center gap-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-2xl px-3"><input id="team-invite-sendmail" type="checkbox" checked> ส่งเมลเชิญ</label>
+          <button type="button" onclick="schoolhubInviteTeamMember()" ${canInvite?'':'disabled'} class="bg-primary hover:bg-indigo-700 disabled:bg-slate-300 text-white font-black rounded-2xl px-4 py-3"><i class="fas fa-paper-plane mr-1"></i> เชิญ</button>
+        </div>
+        ${canInvite?'':'<div class="text-xs font-bold text-rose-600 bg-rose-50 border border-rose-100 rounded-2xl p-3 mb-4">สมาชิกครบตามจำนวนแผนแล้ว หากต้องการเชิญเพิ่มให้ยกเลิกคำเชิญเดิมหรือเปลี่ยนแผน</div>'}
+        <div class="space-y-2" id="team-member-list">${members.length?members.map(m=>renderMemberRow(m)).join(''):'<div class="text-sm font-bold text-slate-400 text-center py-4">ยังไม่มีคำเชิญ</div>'}</div>
+        <div class="text-[11px] text-slate-400 mt-3 leading-relaxed">หมายเหตุ: เจ้าของร่วมจะเห็นการแจ้งเตือนชำระเงินร่วมกับเจ้าของ ส่วนผู้ใช้ร่วมจะไม่เห็นการแจ้งเตือนชำระเงิน เมื่อมีการบันทึกว่าคนใดคนหนึ่งชำระแล้ว ระบบจะใช้ข้อมูลการชำระล่าสุดร่วมกันในกล่องนี้</div>
+      </div>`;
+    }catch(e){
+      console.warn('โหลดข้อมูลทีมจาก Firestore ไม่สำเร็จ:', e);
+      const limit=teamLimit();
+      box.innerHTML=`<div class="schoolhub-team-panel">
+        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4">
+          <div><div class="text-lg font-black text-slate-900"><i class="fas fa-user-plus text-primary mr-2"></i>เชิญเพื่อนในแผนทีม</div>
+          <div class="text-xs font-bold text-slate-500 mt-1">ใช้ร่วมกันได้สูงสุด ${limit} คน • ยังไม่มีสมาชิกที่เชิญ</div></div>
+          <div class="text-xs font-black text-amber-700 bg-amber-50 border border-amber-100 rounded-full px-3 py-2">รอสิทธิ์ Firestore</div>
+        </div>
+        <div class="text-sm font-bold text-amber-700 bg-amber-50 border border-amber-100 rounded-2xl p-3">ยังโหลดข้อมูลทีมจาก Firebase ไม่ได้ แต่จะไม่กระทบส่วนอื่นของระบบ<br><span class="text-xs text-amber-600">ตรวจ Rules ให้มี match /teams/{teamId} แล้วกด Publish</span></div>
+      </div>`;
+    }
+  }
+  function renderMemberRow(m){
+    const cancelled=m.status==='cancelled';
+    return `<div class="schoolhub-team-member-row ${cancelled?'opacity-60':''}">
+      <div><div class="font-black text-slate-800">${esc(m.email)}</div><div class="flex flex-wrap items-center gap-2 mt-1"><span class="schoolhub-team-status ${esc(m.status||'pending')}">${statusText(m.status)}</span><span class="text-xs font-bold text-slate-500">${roleText(m.role)}</span><span class="text-xs text-slate-400">เชิญเมื่อ ${fmt(m.invitedAt)}</span></div></div>
+      <div class="team-actions flex flex-wrap gap-2 justify-end">
+        ${m.status!=='cancelled'?`<select onchange="schoolhubChangeTeamRole('${esc(m.id)}',this.value)" class="!py-2 !text-xs"><option value="member" ${m.role==='member'?'selected':''}>ผู้ใช้ร่วม</option><option value="co_owner" ${m.role==='co_owner'?'selected':''}>เจ้าของร่วม</option></select><button type="button" onclick="schoolhubCancelTeamInvite('${esc(m.id)}')" class="bg-rose-50 text-rose-600 border border-rose-100 rounded-xl px-3 py-2 text-xs font-black">ยกเลิก</button>`:''}
+      </div>
+    </div>`;
+  }
+  window.schoolhubInviteTeamMember=async function(){
+    const email=document.getElementById('team-invite-email')?.value.trim().toLowerCase();
+    const role=document.getElementById('team-invite-role')?.value||'member';
+    const sendMail=document.getElementById('team-invite-sendmail')?.checked;
+    if(!email || !email.includes('@')) return show('อีเมลไม่ถูกต้อง','กรุณากรอกอีเมลเพื่อน',true);
+    try{
+      const team=await getTeamDoc(); const members=Array.isArray(team.members)?team.members:[]; const limit=team.teamLimit||teamLimit();
+      if(1+activeMembers(members).length>=limit) return show('สมาชิกเต็มแล้ว',`แผนนี้ใช้ได้สูงสุด ${limit} คน`,true);
+      const exists=members.find(m=>m.email===email && m.status!=='cancelled'); if(exists) return show('เชิญซ้ำไม่ได้','อีเมลนี้มีอยู่ในรายการแล้ว',true);
+      const id='inv_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+      const item={id,email,role,status:'pending',invitedAt:Date.now(),invitedBy:getUser()?.email||getDir().email||''};
+      members.push(item); await saveTeamDoc({members});
+      if(sendMail && window.sendMailViaWebApp){try{await window.sendMailViaWebApp({to:email,type:'team_invite',subject:`คำเชิญเข้าร่วมแผนทีม SchoolHub`,message:`คุณได้รับคำเชิญให้เข้าร่วมแผนทีม SchoolHub จาก ${getUser()?.email||getDir().email||''}\n\nสิทธิ์: ${roleText(role)}\nลิงก์ตอบรับ: ${makeInviteLink(id,email)}`,extra:{inviteId:id,ownerUid:ownerUid(),role}});}catch(e){console.warn(e); show('เชิญแล้ว แต่ส่งเมลไม่ได้','บันทึกคำเชิญแล้ว แต่ระบบส่งอีเมลไม่สำเร็จ',true);}}
+      await loadAndRenderTeamPanel(); show('เชิญแล้ว','บันทึกคำเชิญเรียบร้อย');
+    }catch(e){show('เชิญไม่ได้',e.message||String(e),true);}
+  };
+  window.schoolhubCancelTeamInvite=async function(id){
+    try{const team=await getTeamDoc(); const members=(team.members||[]).map(m=>m.id===id?Object.assign({},m,{status:'cancelled',cancelledAt:Date.now()}):m); await saveTeamDoc({members}); await loadAndRenderTeamPanel();}catch(e){show('ยกเลิกไม่ได้',e.message||String(e),true);}
+  };
+  window.schoolhubChangeTeamRole=async function(id,role){
+    try{const team=await getTeamDoc(); const members=(team.members||[]).map(m=>m.id===id?Object.assign({},m,{role,updatedAt:Date.now()}):m); await saveTeamDoc({members}); await loadAndRenderTeamPanel();}catch(e){show('เปลี่ยนสิทธิ์ไม่ได้',e.message||String(e),true);}
+  };
+  async function ensureTeamBox(){
+    const currentBox=document.getElementById('user-current-plan-box');
+    if(!currentBox) return;
+    ensureTeamLimitText();
+    if(document.getElementById('schoolhub-team-plan-box')) return;
+    const holder=document.createElement('div'); holder.id='schoolhub-team-plan-box'; currentBox.appendChild(holder); await loadAndRenderTeamPanel();
+  }
+  function patchRender(){
+    if(!window.renderUserPlans || window.__schoolhubTeamRenderWrapped) return;
+    const old=window.renderUserPlans;
+    window.renderUserPlans=function(){ const r=old.apply(this,arguments); setTimeout(ensureTeamBox,80); return r; };
+    window.__schoolhubTeamRenderWrapped=true;
+  }
+  window.schoolhubMarkTeamPayment=async function(payer){
+    try{const p=payer||{}; await saveTeamDoc({lastPayment:{email:p.email||getUser()?.email||'',name:p.name||getUser()?.displayName||'',paidAt:Date.now()}}); await loadAndRenderTeamPanel();}catch(e){console.warn(e);}
+  };
+  async function acceptInviteFromUrl(user){
+    const url=new URL(location.href); const inviteId=url.searchParams.get('teamInvite'); const own=url.searchParams.get('teamOwner'); const email=(url.searchParams.get('teamEmail')||'').toLowerCase();
+    if(!inviteId||!own||!user) return;
+    if(email && user.email && email!==user.email.toLowerCase()) return show('อีเมลไม่ตรงคำเชิญ',`คำเชิญนี้ส่งถึง ${email} กรุณาเข้าสู่ระบบด้วยอีเมลนั้น`,true);
+    try{
+      const ref=doc(db,COL,own); const snap=await getDoc(ref); if(!snap.exists()) return;
+      const team=snap.data(); const members=(team.members||[]).map(m=>m.id===inviteId?Object.assign({},m,{status:'accepted',acceptedAt:Date.now(),uid:user.uid,displayName:user.displayName||'',email:user.email||m.email}):m);
+      const me=members.find(m=>m.id===inviteId);
+      await setDoc(ref,{members,updatedAt:Date.now()},{merge:true});
+      await setDoc(doc(db,PUBLIC,user.uid),{teamOwnerUid:own,teamRole:me?.role||'member',teamStatus:'accepted',planId:team.planId||'',planName:team.planName||'',teamJoinedAt:Date.now(),updatedAt:Date.now()},{merge:true});
+      show('ตอบรับแล้ว','เข้าร่วมแผนทีมเรียบร้อย');
+      url.searchParams.delete('teamInvite'); url.searchParams.delete('teamOwner'); url.searchParams.delete('teamEmail'); history.replaceState({},'',url.toString());
+    }catch(e){show('ตอบรับไม่ได้',e.message||String(e),true);}
+  }
+  onAuthStateChanged(auth,(u)=>{ if(u) acceptInviteFromUrl(u); setTimeout(()=>{patchRender(); ensureTeamBox();},600); });
+  const timer=setInterval(()=>{patchRender(); if(document.getElementById('user-current-plan-box')) ensureTeamBox();},800);
+  setTimeout(()=>clearInterval(timer),12000);
+})();
+</script>
+
 </body>
 </html>
