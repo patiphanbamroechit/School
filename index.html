@@ -11690,21 +11690,29 @@ window.requestOwnPasswordReset = async function(){
     var rows=[].slice.call(table.querySelectorAll('tbody tr'));
     if(!rows.length){ box.innerHTML=''; return; }
     var headers=[].slice.call(table.querySelectorAll('thead th')).map(text);
-    var planHeaders=headers.slice(5, Math.max(5, headers.length-2));
+    var cid=window.currentActiveCourseId;
+    var plans=((window.state && state.coursePlans && state.coursePlans[cid]) || []).slice().sort(function(a,b){ return Number(a.week)-Number(b.week); });
     box.innerHTML=rows.map(function(row, idx){
       var cells=[].slice.call(row.children);
       var no=text(cells[0]) || String(idx+1);
       var code=text(cells[1]) || '-';
       var name=text(cells[2]) || '-';
       var room=text(cells[3]) || '-';
-      var att=splitAttendance(text(cells[4]));
+      var attIndex=4;
+      for(var ai=3; ai<Math.max(3, cells.length-2); ai++){
+        if(/\d+\s*\/\s*\d+\s*\/\s*\d+/.test(text(cells[ai]))){ attIndex=ai; break; }
+      }
+      var att=splitAttendance(text(cells[attIndex]));
       var total=text(cells[cells.length-2]) || '0';
       var grade=text(cells[cells.length-1]) || '-';
       var planHtml='';
-      for(var i=5;i<cells.length-2;i++){
-        var label=(planHeaders[i-5] || ('งาน '+(i-4))).replace(/คลิกเพื่อดูรายละเอียด[: ]*/g,'').trim();
+      for(var i=attIndex+1;i<cells.length-2;i++){
+        var plan=plans[i-(attIndex+1)] || null;
+        var header=(headers[i] || ('งาน '+(i-attIndex))).replace(/คลิกเพื่อดูรายละเอียด[: ]*/g,'').trim();
+        var week=plan ? plan.week : (header.split(' ')[0] || header);
+        var title=plan ? (plan.title || 'งาน') : header;
         var value=text(cells[i]) || '-';
-        planHtml += '<div class="summary-mobile-plan"><div class="summary-mobile-plan-top"><span>'+esc(label.split(' ')[0]||label)+'</span><span>'+esc(value)+'</span></div><div class="summary-mobile-plan-title">'+esc(label)+'</div></div>';
+        planHtml += '<div class="summary-mobile-plan"><div class="summary-mobile-plan-top"><span>'+esc(week)+'</span><span>'+esc(value)+'</span></div><div class="summary-mobile-plan-title">'+esc(title)+'</div></div>';
       }
       if(!planHtml) planHtml='<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>';
       return '<div class="summary-mobile-card">'+
