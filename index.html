@@ -14615,7 +14615,8 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
         const team=ds.data()||{};
         const members=Array.isArray(team.members)?team.members:[];
         members.forEach(m=>{
-          if(String(m.email||'').trim().toLowerCase()===myEmail && (m.status||'pending')==='pending'){
+          const inviteEmail=String(m.email||m.inviteEmail||m.memberEmail||'').trim().toLowerCase();
+          if(inviteEmail===myEmail && (m.status||'pending')==='pending'){
             found.push({teamId:ds.id,team,member:m});
           }
         });
