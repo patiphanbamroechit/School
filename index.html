@@ -3696,6 +3696,61 @@ document.addEventListener('click',function(){
             } catch(e) {}
         }
 
+        function clearSchoolHubLoginState() {
+            try {
+                const keepPrefixes = [
+                    'schoolhub_announcement_closed_',
+                    'schoolhub_announcement_seen_'
+                ];
+                const keepKeys = new Set([
+                    ANNOUNCEMENT_CACHE_KEY,
+                    PLANS_CACHE_KEY
+                ]);
+                const removeKeys = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (!key) continue;
+                    const shouldKeep = keepKeys.has(key) || keepPrefixes.some(prefix => key.startsWith(prefix));
+                    if (!shouldKeep && (key.startsWith('schoolhub_') || key === SCHOOLHUB_SESSION_KEY)) {
+                        removeKeys.push(key);
+                    }
+                }
+                removeKeys.forEach(key => localStorage.removeItem(key));
+                localStorage.setItem('schoolhub_logout_intent', String(Date.now()));
+            } catch(e) {}
+            try { sessionStorage.clear(); } catch(e) {}
+            currentUser = null;
+            isAdmin = false;
+            window.__currentUserDir = null;
+            window.__schoolhubPlanLocked = false;
+            window.__schoolhubPendingInvites = [];
+        }
+
+        async function forceSchoolHubLogout(options = {}) {
+            const redirect = options.redirect !== false;
+            clearSchoolHubLoginState();
+            try {
+                if (auth && auth.currentUser) await signOut(auth);
+            } catch(e) { console.warn('force logout signOut failed:', e); }
+            clearSchoolHubLoginState();
+            try { toggleLoader(false); } catch(e) {}
+            try {
+                const landing = document.getElementById('landing-view');
+                const authView = document.getElementById('auth-view');
+                const mainApp = document.getElementById('main-app');
+                if (mainApp) mainApp.classList.add('hidden');
+                if (authView) authView.classList.add('hidden');
+                if (landing) landing.classList.remove('hidden');
+            } catch(e) {}
+            if (redirect) {
+                const cleanUrl = window.location.origin + window.location.pathname;
+                setTimeout(() => {
+                    try { window.location.replace(cleanUrl); }
+                    catch(_e) { window.location.href = cleanUrl; }
+                }, options.delay || 250);
+            }
+        }
+
         async function restoreUserSessionFromLocal(saved) {
             if (!saved || saved.role !== 'user' || !saved.uid) return false;
             try {
@@ -3720,8 +3775,7 @@ document.addEventListener('click',function(){
                     if(dirSnap.exists()) window.__currentUserDir = dirSnap.data() || {};
                 } catch(e) { console.warn('restore user dir failed:', e); }
                 await refreshCurrentUserPlanLock();
-                if(window.__schoolhubPlanLocked) await window.openUserPlanSelector();
-                else window.goToHome();
+                window.goToHome();
                 return true;
             } catch(e) {
                 console.warn('restore local session failed:', e);
@@ -4993,7 +5047,13 @@ async function submitPlanRequest(planId){
                 const userCred = await signInWithEmailAndPassword(auth, email, pass);
                 const verifySnap = await getDoc(doc(db, `users_status`, email));
                 const isSchoolHubVerified = verifySnap.exists() && verifySnap.data().emailVerified === true;
-                if (!isSchoolHubVerified) {
+                const isFirebaseVerified = userCred.user.emailVerified === true;
+                const hasTeamInviteParam = !!(new URLSearchParams(location.search).get('teamInvite'));
+                // ถ้า Firebase ยืนยันแล้วแต่ users_status ยังไม่ set ให้ auto-sync
+                if (isFirebaseVerified && !isSchoolHubVerified) {
+                    try { await setDoc(doc(db, `users_status`, email), { emailVerified: true, verifiedAt: Date.now(), status: 'active' }, { merge: true }); } catch(syncErr) { console.warn('auto-sync emailVerified failed:', syncErr); }
+                }
+                if (!isSchoolHubVerified && !isFirebaseVerified) {
                     await signOut(auth);
                     toggleLoader(false);
                     window.showCustomConfirm(
@@ -5013,8 +5073,12 @@ async function submitPlanRequest(planId){
                                     message: `สวัสดี ${email}\n\nกรุณากดลิงก์ด้านล่างเพื่อยืนยันอีเมล:\n${verifyLink}\n\n— SchoolHub`,
                                     extra: { link: verifyLink }
                                 });
-                                showCustomAlert("ส่งลิงก์ใหม่แล้ว", "ตรวจสอบอีเมล " + email + " แล้วกดลิงก์ยืนยัน");
-                            } catch(e2) { showCustomAlert("ส่งไม่ได้", e2.message || String(e2), true); }
+                                showCustomAlert("ส่งลิงก์ใหม่แล้ว", "ตรวจสอบอีเมล " + email + " แล้วกดลิงก์ยืนยัน จากนั้นค่อยเข้าสู่ระบบอีกครั้ง");
+                                await forceSchoolHubLogout({ delay: 600 });
+                            } catch(e2) {
+                                await forceSchoolHubLogout({ redirect: false });
+                                showCustomAlert("ส่งไม่ได้", e2.message || String(e2), true);
+                            }
                             toggleLoader(false);
                         }
                     );
@@ -5047,7 +5111,7 @@ async function submitPlanRequest(planId){
                 const userCred = await createUserWithEmailAndPassword(auth, email, pass);
                 await updateProfile(userCred.user, { displayName: name });
                 await addUserToDirectory(userCred.user, name, 'user');
-                await setDoc(doc(db, `users_status`, email), { status: 'active', deletedAt: null }, { merge: true });
+                await setDoc(doc(db, `users_status`, email), { status: 'active', emailVerified: false, deletedAt: null }, { merge: true });
                 // ส่ง email verification
                 try {
                     const actionCodeSettings = {
@@ -5064,10 +5128,10 @@ async function submitPlanRequest(planId){
                         extra: { link: window.location.href }
                     });
                 } catch(verifyErr) { console.warn('sendEmailVerification failed:', verifyErr); }
-                // Sign out แล้วแจ้งให้ยืนยันเมลก่อน
-                await signOut(auth);
+                // ออกจากระบบจริงและล้าง session ทั้งหมด เพื่อบังคับให้ยืนยันอีเมลก่อนเข้าสู่ระบบ
                 toggleLoader(false);
-                showCustomAlert("สมัครสมาชิกสำเร็จ!", "ระบบส่งลิงก์ยืนยันอีเมลผ่าน Apps Script ไปที่ " + email + " แล้ว\n\nกรุณากดลิงก์ยืนยันในอีเมล จากนั้นกลับมาเข้าสู่ระบบได้ทันที");
+                showCustomAlert("สมัครสมาชิกสำเร็จ!", "ระบบส่งลิงก์ยืนยันอีเมลไปที่ " + email + " แล้ว\n\nกรุณากดลิงก์ยืนยันในอีเมลก่อนเข้าสู่ระบบ");
+                await forceSchoolHubLogout({ delay: 700 });
             } catch (error) {
                 if(error.code === 'auth/email-already-in-use') {
                     toggleLoader(false); showCustomAlert("สมัครไม่ได้", "อีเมลนี้มีผู้ใช้งานในระบบแล้ว", true);
@@ -5086,8 +5150,10 @@ async function submitPlanRequest(planId){
 
         onAuthStateChanged(auth, async (user) => {
             if (await safeAsync(() => withTimeout(loadPublicShareFromURL(), 7000, 'loadPublicShare'), false)) { toggleLoader(false); return; }
-            const savedSession = readSchoolHubSession();
-            if (localStorage.getItem('schoolhub_admin_bypass') === 'true' || savedSession?.role === 'admin') { await enterAdminMode(); return; }
+            const logoutIntentAt = Number(localStorage.getItem('schoolhub_logout_intent') || 0);
+            const isManualLogout = logoutIntentAt && (Date.now() - logoutIntentAt < 10 * 60 * 1000);
+            const savedSession = isManualLogout ? null : readSchoolHubSession();
+            if (!isManualLogout && (localStorage.getItem('schoolhub_admin_bypass') === 'true' || savedSession?.role === 'admin')) { await enterAdminMode(); return; }
             if (!user && savedSession?.role === 'user') {
                 const restored = await restoreUserSessionFromLocal(savedSession);
                 if (restored) return;
@@ -5118,8 +5184,7 @@ async function submitPlanRequest(planId){
                     await refreshCurrentUserPlanLock();
                     const planFlow = await processPendingPlanRequestAfterLogin();
                     if(!planFlow) {
-                        if(window.__schoolhubPlanLocked) await window.openUserPlanSelector();
-                        else window.goToHome();
+                        window.goToHome();
                     }
                 } catch (error) { showCustomAlert("ผิดพลาด", error.message, true); }
                 finally { toggleLoader(false); }
@@ -5134,11 +5199,8 @@ async function submitPlanRequest(planId){
             }
         });
 
-        window.doLogout = () => {
-            clearSchoolHubSession();
-            try { localStorage.setItem('schoolhub_logout_intent', String(Date.now())); } catch(e) {}
-            if(auth.currentUser) signOut(auth);
-            else { currentUser = null; isAdmin = false; window.location.reload(); }
+        window.doLogout = async () => {
+            await forceSchoolHubLogout({ delay: 120 });
         };
 
         function setAdminNavigationMode(enabled) {
@@ -6551,7 +6613,7 @@ ${resetUrl.toString()}
             localStorage.setItem(PLAN_LOCK_CACHE_KEY,JSON.stringify({locked,reason,checkedAt:now}));
             if(locked){
                 try{ await setDoc(doc(db,getPublicPath(),currentUser.uid),{status:dir.status==='pending_plan'?'pending_plan':'plan_locked',planLockedAt:now,planLockReason:reason},{merge:true}); }catch(e){}
-                setTimeout(()=>showCustomAlert('ต้องจัดการแผนก่อน',reason+'\n\nคุณยังเข้าไปดูข้อมูลเดิมได้ แต่จะแก้ไข/เพิ่มข้อมูลไม่ได้จนกว่าจะเลือกแผนหรือชำระรอบถัดไป',true),250);
+                /* ไม่เด้งเตือนเลือกแผนทันที: บังคับเฉพาะตอนกดใช้งานจริง */
             }
             return locked;
         }
@@ -6594,7 +6656,7 @@ ${resetUrl.toString()}
                 let statusHtml='';
                 if(hasPending) statusHtml=`<div class="bg-amber-50 border border-amber-200 text-amber-900 rounded-3xl p-5 flex justify-between gap-3"><div><div class="text-sm font-bold text-amber-500"><i class="fas fa-clock mr-1"></i>รอแอดมินอนุมัติ</div><div class="text-xl font-black">${escapeHTML(pendingPlanName||'คำขอแผน')}</div><div class="text-sm text-amber-700/80">ส่งคำขอแล้ว จึงส่งซ้ำไม่ได้จนกว่าแอดมินจะอนุมัติ/ไม่อนุมัติ</div></div><i class="fas fa-hourglass-half text-3xl text-amber-500 animate-pulse"></i></div>`;
                 else if(currentPlanId) statusHtml=`<div class="bg-indigo-50 border border-indigo-100 text-indigo-900 rounded-3xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"><div><div class="text-sm font-bold text-indigo-500">แผนปัจจุบัน</div><div class="text-xl font-black">${escapeHTML(dirUser.planName||'')}</div><div class="text-sm text-indigo-700/80">${escapeHTML(dirUser.planPrice||'')}</div><div class="text-xs font-bold text-slate-500 mt-2">เรียกเก็บครั้งต่อไป: ${escapeHTML(formatNextBilling(dirUser))}</div><div class="text-xs font-bold text-slate-500">เพิ่มรายวิชาได้: ${escapeHTML(dirUser.courseLimit?dirUser.courseLimit+' วิชา':'ไม่จำกัด')}</div></div><i class="fas fa-id-card text-3xl text-primary"></i></div>`;
-                else statusHtml=`<div class="bg-rose-50 border border-rose-100 text-rose-900 rounded-3xl p-5"><div class="text-sm font-bold text-rose-500">ยังไม่ได้เลือกแผน</div><div class="text-xl font-black">ต้องเลือกแผนก่อนใช้งาน</div><div class="text-sm text-rose-700/80">คุณดูหน้าเว็บได้ แต่ต้องเลือกแผนก่อนเพิ่มหรือแก้ไขข้อมูล</div></div>`;
+                else statusHtml=`<div class="bg-slate-50 border border-slate-200 text-slate-900 rounded-3xl p-5"><div class="text-sm font-bold text-slate-500">ยังไม่ได้เลือกแผน</div><div class="text-xl font-black">เลือกแผนเมื่อเริ่มใช้งาน</div><div class="text-sm text-slate-600/90">คุณสามารถดูหน้าแผนและตอบรับคำเชิญได้ก่อน ระบบจะบังคับเลือกแผนเมื่อกดเพิ่มหรือแก้ไขข้อมูลจริง</div></div>`;
                 currentBox.innerHTML=statusHtml;
             }
             box.innerHTML=items.map(p=>{ const active=p.id===currentPlanId&&!!currentPlanId; let btn=''; if(hasPending&&!active) btn=`<button onclick="showCustomAlert('มีคำขออยู่แล้ว','คุณมีคำขอสมัครแผนที่รอตรวจสอบอยู่ ไม่สามารถส่งซ้ำได้',true)" class="w-full bg-amber-100 text-amber-700 rounded-2xl py-3 font-bold cursor-not-allowed"><i class="fas fa-hourglass-half mr-1"></i> มีคำขอรออนุมัติอยู่แล้ว</button>`; else btn=`<button onclick="requestSubscriptionPlan('${p.id}')" class="w-full ${active?'bg-emerald-100 text-emerald-700':'bg-primary text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200'} rounded-2xl py-3 font-bold transition"><i class="fas ${active?'fa-rotate':'fa-paper-plane'} mr-1"></i> ${active?'ต่ออายุ/เปลี่ยนรอบ':'เลือกแผนนี้'}</button>`; return `<div class="pricing-card ${p.featured?'featured':''} ${active?'ring-2 ring-emerald-400':''} rounded-[2rem] p-6 relative overflow-hidden bg-white">${p.featured?'<div class="absolute top-4 right-4 bg-primary text-white text-xs font-black px-3 py-1 rounded-full">แนะนำ</div>':''}${active?'<div class="absolute top-4 left-4 bg-emerald-500 text-white text-xs font-black px-3 py-1 rounded-full">ใช้อยู่</div>':''}<h3 class="text-2xl font-black text-slate-900 mb-1 mt-6">${escapeHTML(p.name||'')}</h3><p class="text-sm text-slate-500 min-h-[42px]">${escapeHTML(p.desc||'')}</p><div class="my-5"><span class="text-3xl font-black text-primary">${escapeHTML(planDisplayPrice(p))}</span></div><div class="mb-4 text-xs font-bold text-slate-500 bg-slate-50 rounded-2xl p-3">เพิ่มรายวิชาได้ ${Number(p.courseLimit||0)===0?'ไม่จำกัด':Number(p.courseLimit||0)+' วิชา'}<br>${p.freeForever||p.billingCycle==='forever'?'ฟรีตลอด ไม่มีรอบเก็บเงิน':'รอบถัดไปจะแจ้งหลังอนุมัติ'}</div><ul class="space-y-3 mb-6">${(p.features||[]).map(f=>`<li class="flex gap-2 text-sm text-slate-600"><i class="fas fa-check text-emerald-500 mt-1"></i><span>${escapeHTML(f)}</span></li>`).join('')}</ul>${btn}</div>`; }).join('');
@@ -14525,6 +14587,39 @@ window.requestOwnPasswordReset = async function(){
 </script>
 
 
+
+<style id="schoolhub-force-hide-global-stats-panel-final">
+  /* SchoolHub final: ซ่อนสถิติรวมทั้งระบบทุกหน้า เพื่อไม่ให้ซ้อน/ดัน UI อีก */
+  #admin-global-stats-panel,
+  #admin-global-stats-panel * {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    pointer-events: none !important;
+  }
+</style>
+<script id="schoolhub-force-remove-global-stats-panel-final">
+(function(){
+  function removeGlobalStatsPanel(){
+    try{
+      var panel = document.getElementById('admin-global-stats-panel');
+      if(panel) panel.remove();
+    }catch(e){}
+  }
+  removeGlobalStatsPanel();
+  document.addEventListener('DOMContentLoaded', removeGlobalStatsPanel);
+  setInterval(removeGlobalStatsPanel, 800);
+})();
+</script>
+
 <style id="schoolhub-team-plan-current-box-style">
   .schoolhub-team-panel{margin-top:14px;background:#fff;border:1px solid #e2e8f0;border-radius:24px;padding:18px;box-shadow:0 10px 30px rgba(15,23,42,.04)}
   .schoolhub-team-panel input,.schoolhub-team-panel select{border:1px solid #cbd5e1;border-radius:14px;padding:12px;font-weight:700;color:#334155;background:#fff;outline:none}
@@ -14534,7 +14629,7 @@ window.requestOwnPasswordReset = async function(){
   .schoolhub-team-status.pending{background:#fef3c7;color:#92400e}.schoolhub-team-status.accepted{background:#dcfce7;color:#166534}.schoolhub-team-status.cancelled,.schoolhub-team-status.declined,.schoolhub-team-status.deleted,.schoolhub-team-status.removed{background:#fee2e2;color:#991b1b}
   #schoolhub-team-invite-alert{position:sticky;top:0;z-index:80;margin:0 0 14px 0;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:18px;padding:12px 14px;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 10px 22px rgba(234,88,12,.08)}
   #schoolhub-team-invite-alert button{background:#ea580c;color:white;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:900}
-  .schoolhub-team-invites-panel{margin-bottom:14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:24px;padding:18px;box-shadow:0 10px 30px rgba(234,88,12,.06)}
+  .schoolhub-team-invites-panel{margin-top:20px;margin-bottom:18px;background:#fff7ed;border:1px solid #fed7aa;border-radius:24px;padding:18px;box-shadow:0 10px 30px rgba(234,88,12,.06)}
   .schoolhub-team-invite-card{border:1px solid #fed7aa;border-radius:18px;padding:12px;background:white;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
 
   .schoolhub-team-spinner{width:16px;height:16px;border:2px solid rgba(99,102,241,.22);border-top-color:#6366f1;border-radius:50%;display:inline-block;vertical-align:-3px;animation:schoolhubTeamSpin .75s linear infinite}
@@ -14559,13 +14654,35 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
   const TEAM_INVITE_KEEP_MS = 24 * 60 * 60 * 1000;
 
   function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+  function cleanForFirestore(value){
+    if(value === undefined) return undefined;
+    if(value === null) return null;
+    if(Array.isArray(value)) return value.map(v=>{
+      const x=cleanForFirestore(v);
+      return x === undefined ? null : x;
+    });
+    if(typeof value === 'object'){
+      if(value && typeof value.toDate === 'function') return value;
+      const out={};
+      Object.keys(value||{}).forEach(k=>{
+        const v=cleanForFirestore(value[k]);
+        if(v !== undefined) out[k]=v;
+      });
+      return out;
+    }
+    return value;
+  }
+  function hasRealPlan(){
+    const d=getDir();
+    return !!(d.planId || d.teamStatus==='accepted' || d.teamOwnerUid || d.status==='active');
+  }
   function show(title,msg,bad){(window.showCustomAlert||alert)(title,msg,bad);}
   function getUser(){return auth.currentUser || window.currentUser || null;}
   function getDir(){return window.__currentUserDir || {};}
   function getPlans(){return Array.isArray(window.subscriptionPlans)?window.subscriptionPlans:JSON.parse(localStorage.getItem('schoolhub_subscription_plans')||'[]');}
   function getPlan(){const d=getDir(); return getPlans().find(p=>p.id===d.planId)||{};}
   function teamLimit(){const d=getDir(),p=getPlan(); return Math.max(1,Number(d.teamMemberLimit||d.maxTeamMembers||p.teamMemberLimit||p.maxTeamMembers||p.teamLimit||1));}
-  function allowTeam(){const d=getDir(),p=getPlan(),limit=teamLimit(); return !!(d.allowTeam || p.allowTeam || limit>1);}
+  function allowTeam(){const d=getDir(),p=getPlan(),limit=teamLimit(); return !!(d.teamStatus==='accepted' || d.teamOwnerUid || d.allowTeam || p.allowTeam || limit>1);}
   function ownerUid(){const u=getUser(); const d=getDir(); return d.teamOwnerUid || d.ownerUid || u?.uid || d.uid || '';}
   function ownerDocRef(){const id=ownerUid(); return id?doc(db,COL,id):null;}
   function fmt(ts){try{const n=Number(ts?.toMillis?ts.toMillis():ts); if(!n) return '-'; return new Date(n).toLocaleString('th-TH');}catch(e){return '-';}}
@@ -14578,7 +14695,7 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
     return function(){ const btn=document.getElementById(id); if(btn){btn.disabled=oldDisabled; btn.innerHTML=oldHtml;} };
   }
   async function getTeamDoc(){const ref=ownerDocRef(); if(!ref) return {members:[]}; const snap=await getDoc(ref); return snap.exists()?snap.data():{members:[]};}
-  async function saveTeamDoc(data){const ref=ownerDocRef(); if(!ref) throw new Error('ไม่พบผู้ใช้'); await setDoc(ref,Object.assign({ownerUid:ownerUid(),ownerEmail:getUser()?.email||getDir().email||'',planId:getDir().planId||'',planName:getDir().planName||'',teamLimit:teamLimit(),updatedAt:Date.now()},data),{merge:true});}
+  async function saveTeamDoc(data){const ref=ownerDocRef(); if(!ref) throw new Error('ไม่พบผู้ใช้'); await setDoc(ref,cleanForFirestore(Object.assign({ownerUid:ownerUid(),ownerEmail:getUser()?.email||getDir().email||'',planId:getDir().planId||'',planName:getDir().planName||'',teamLimit:teamLimit(),updatedAt:Date.now()},data)),{merge:true});}
   function getInviteClosedAt(m){return Number(m?.cancelledAt||m?.deletedAt||m?.removedAt||m?.declinedAt||m?.updatedAt||0);}
   function isClosedInvite(m){return ['cancelled','declined','deleted','removed'].includes(String(m?.status||''));}
   function shouldHideClosedInvite(m){const at=getInviteClosedAt(m); return isClosedInvite(m) && at && (Date.now()-at>=TEAM_INVITE_KEEP_MS);}
@@ -14621,7 +14738,12 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
     el.innerHTML=`<div><i class="fas fa-envelope-open-text mr-2"></i>คุณมีคำเชิญเข้าร่วมแผนทีม ${invites.length} รายการ</div><button type="button" onclick="schoolhubOpenPlanInvites()">ดูคำเชิญ</button>`;
   }
   function renderIncomingInvites(invites){
-    const box=document.getElementById('schoolhub-team-incoming-invites-box');
+    let box=document.getElementById('schoolhub-team-incoming-invites-box');
+    if(!box){
+      const currentBox=document.getElementById('user-current-plan-box');
+      const host=currentBox || document.getElementById('user-plans') || document.getElementById('main-content');
+      if(host){ box=document.createElement('div'); box.id='schoolhub-team-incoming-invites-box'; if(currentBox) currentBox.appendChild(box); else host.prepend(box); }
+    }
     if(!box) return;
     if(!invites || !invites.length){ box.innerHTML=''; return; }
     box.innerHTML=`<div class="schoolhub-team-invites-panel">
@@ -14710,12 +14832,12 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
           <i class="fas fa-receipt text-emerald-500 mr-1"></i> การชำระล่าสุด: ${payer.email?`${esc(payer.name||payer.email)} • ${fmt(payer.paidAt)}`:'ยังไม่มีข้อมูลการชำระล่าสุด'}
         </div>
         ${canManage?'':'<div class="text-xs font-bold text-slate-600 bg-slate-50 border border-slate-100 rounded-2xl p-3 mb-4"><i class="fas fa-lock mr-1"></i> ผู้ใช้ร่วมสามารถดูสมาชิกทีมและใช้งานแผนได้เท่านั้น ไม่สามารถเชิญสมาชิกหรือเปลี่ยนสิทธิ์ได้</div>'}
-        <div class="team-form grid grid-cols-[1fr_160px_140px_auto] gap-2 mb-4">
+        ${canManage?`<div class="team-form grid grid-cols-[1fr_160px_140px_auto] gap-2 mb-4">
           <input id="team-invite-email" type="email" placeholder="อีเมลเพื่อน" ${canInvite?'':'disabled'}>
           <select id="team-invite-role" ${canInvite?'':'disabled'}><option value="member">ผู้ใช้ร่วม</option><option value="co_owner">เจ้าของร่วม</option></select>
           <label class="flex items-center gap-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-2xl px-3"><input id="team-invite-sendmail" type="checkbox" checked> ส่งเมลเชิญ</label>
           <button type="button" id="team-invite-submit-btn" onclick="schoolhubInviteTeamMember()" ${canInvite?'':'disabled'} class="bg-primary hover:bg-indigo-700 disabled:bg-slate-300 text-white font-black rounded-2xl px-4 py-3"><i class="fas fa-paper-plane mr-1"></i> เชิญ</button>
-        </div>
+        </div>`:''}
         ${canManage && !canInvite?'<div class="text-xs font-bold text-rose-600 bg-rose-50 border border-rose-100 rounded-2xl p-3 mb-4">สมาชิกครบตามจำนวนแผนแล้ว หากต้องการเชิญเพิ่มให้ยกเลิกคำเชิญเดิมหรือเปลี่ยนแผน</div>':''}
         <div class="space-y-2" id="team-member-list">${members.length?members.map(m=>renderMemberRow(m,canManage)).join(''):'<div class="text-sm font-bold text-slate-400 text-center py-4">ยังไม่มีคำเชิญ</div>'}</div>
         <div class="text-[11px] text-slate-400 mt-3 leading-relaxed">หมายเหตุ: เจ้าของร่วมจะเห็นการแจ้งเตือนชำระเงินร่วมกับเจ้าของ ส่วนผู้ใช้ร่วมจะไม่เห็นการแจ้งเตือนชำระเงิน เมื่อมีการบันทึกว่าคนใดคนหนึ่งชำระแล้ว ระบบจะใช้ข้อมูลการชำระล่าสุดร่วมกันในกล่องนี้</div>
@@ -14743,19 +14865,80 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
     </div>`;
   }
   window.schoolhubOpenPlanInvites=async function(){
+    // เปิดหน้าแผนโดยไม่สั่ง scroll/focus เพื่อไม่ให้หน้ากระโดดและไม่ให้ส่วนล่างซ้อนขึ้นมา
+    const keepX = window.scrollX || 0;
+    const keepY = window.scrollY || 0;
     if(window.openUserPlanSelector) await window.openUserPlanSelector();
     else if(window.switchView) window.switchView('user-plans');
-    setTimeout(()=>{refreshIncomingInvites(); document.getElementById('schoolhub-team-incoming-invites-box')?.scrollIntoView({behavior:'smooth',block:'start'});},250);
+    setTimeout(async ()=>{
+      await refreshIncomingInvites();
+      try{ window.scrollTo(keepX, keepY); }catch(e){}
+    },250);
   };
   async function updateInviteStatus(teamId, inviteId, status){
     const u=getUser();
-    const ref=doc(db,COL,teamId); const snap=await getDoc(ref); if(!snap.exists()) throw new Error('ไม่พบทีม');
+    const ref=doc(db,COL,teamId);
+    const snap=await getDoc(ref);
+    if(!snap.exists()) throw new Error('ไม่พบทีม');
     const team=snap.data()||{};
-    const members=(team.members||[]).map(m=>m.id===inviteId?Object.assign({},m,{status,updatedAt:Date.now(),uid:u?.uid||m.uid||'',displayName:u?.displayName||m.displayName||'',email:u?.email||m.email||'',acceptedAt:status==='accepted'?Date.now():m.acceptedAt,declinedAt:status==='declined'?Date.now():m.declinedAt}):m);
-    const me=members.find(m=>m.id===inviteId);
-    await setDoc(ref,{members,updatedAt:Date.now()},{merge:true});
-    if(status==='accepted' && u?.uid){
-      await setDoc(doc(db,PUBLIC,u.uid),{teamOwnerUid:teamId,teamRole:me?.role||'member',teamStatus:'accepted',planId:team.planId||'',planName:team.planName||'',teamJoinedAt:Date.now(),updatedAt:Date.now()},{merge:true});
+    const now=Date.now();
+    const nextStatus = status === 'declined' ? 'cancelled' : status;
+    const members=(Array.isArray(team.members)?team.members:[]).map(raw=>{
+      const m=raw||{};
+      if(String(m.id||'')!==String(inviteId||'')) return cleanForFirestore(m);
+      const updated=Object.assign({},m,{
+        status:nextStatus,
+        updatedAt:now,
+        uid:u?.uid||m.uid||'',
+        displayName:u?.displayName||m.displayName||u?.email||'',
+        email:String(u?.email||m.email||'').trim().toLowerCase()
+      });
+      if(nextStatus==='accepted') updated.acceptedAt=now;
+      if(nextStatus==='cancelled') updated.cancelledAt=now;
+      return cleanForFirestore(updated);
+    });
+    const me=members.find(m=>String(m?.id||'')===String(inviteId||'')) || {};
+    await setDoc(ref,cleanForFirestore({members,updatedAt:now}),{merge:true});
+    if(nextStatus==='accepted' && u?.uid){
+      const payload=cleanForFirestore({
+        email:String(u.email||me.email||'').trim().toLowerCase(),
+        uid:u.uid,
+        displayName:u.displayName||me.displayName||u.email||'',
+        teamOwnerUid:teamId,
+        teamRole:me.role||'member',
+        teamStatus:'accepted',
+        planId:team.planId||null,
+        planName:team.planName||'ทีม',
+        teamJoinedAt:now,
+        updatedAt:now,
+        status:'active',
+        planLockedAt:null,
+        planLockReason:null
+      });
+      await setDoc(doc(db,PUBLIC,u.uid),payload,{merge:true});
+      try{
+        window.__currentUserDir=Object.assign(window.__currentUserDir||{},payload);
+        window.__schoolhubPlanLocked=false;
+        window.__schoolhubPlanLockReason='';
+      }catch(e){}
+    } else if(nextStatus==='cancelled' && u?.uid){
+      const current=getDir()||{};
+      const payload={
+        email:String(u.email||me.email||'').trim().toLowerCase(),
+        uid:u.uid,
+        displayName:u.displayName||current.displayName||u.email||'',
+        declinedTeamInviteAt:now,
+        declinedTeamInviteId:inviteId||'',
+        updatedAt:now
+      };
+      if(current.teamOwnerUid===teamId || current.teamStatus==='pending'){
+        Object.assign(payload,{teamOwnerUid:null,teamRole:null,teamStatus:null});
+      }
+      if(!current.planId){
+        Object.assign(payload,{status:'plan_locked',planLockedAt:now,planLockReason:'ยังไม่ได้เลือกแผน'});
+      }
+      await setDoc(doc(db,PUBLIC,u.uid),cleanForFirestore(payload),{merge:true});
+      try{ window.__currentUserDir=Object.assign(window.__currentUserDir||{},cleanForFirestore(payload)); }catch(e){}
     }
   }
   window.schoolhubAcceptIncomingTeamInvite=async function(teamId,inviteId){
@@ -14765,7 +14948,7 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
   };
   window.schoolhubDeclineIncomingTeamInvite=async function(teamId,inviteId){
     const restore=setTeamActionLoading('team-decline-'+inviteId,'กำลังปฏิเสธ...');
-    try{await updateInviteStatus(teamId,inviteId,'declined'); await refreshIncomingInvites(); show('ปฏิเสธแล้ว','ปฏิเสธคำเชิญเรียบร้อย');}
+    try{await updateInviteStatus(teamId,inviteId,'declined'); await refreshIncomingInvites(); show('ยกเลิกคำเชิญแล้ว','ปฏิเสธคำเชิญเรียบร้อย ระบบจะให้ใช้แผนเดิมหรือเลือกแผนใหม่เมื่อเริ่มใช้งาน');}
     catch(e){show('ปฏิเสธไม่ได้',e.message||String(e),true);}finally{restore();}
   };
   window.schoolhubInviteTeamMember=async function(){
@@ -14785,7 +14968,7 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
       const item={id,email,role,status:'pending',invitedAt:Date.now(),invitedBy:getUser()?.email||getDir().email||''};
       members.push(item); await saveTeamDoc({members});
       if(sendMail && window.sendMailViaWebApp){try{await window.sendMailViaWebApp({to:email,type:'team_invite',subject:`คำเชิญเข้าร่วมแผนทีม SchoolHub`,message:`คุณได้รับคำเชิญให้เข้าร่วมแผนทีม SchoolHub จาก ${getUser()?.email||getDir().email||''}\n\nสิทธิ์: ${roleText(role)}\nลิงก์ตอบรับ: ${makeInviteLink(id,email)}`,extra:{inviteId:id,ownerUid:ownerUid(),role}});}catch(e){console.warn(e); show('เชิญแล้ว แต่ส่งเมลไม่ได้','บันทึกคำเชิญแล้ว แต่ระบบส่งอีเมลไม่สำเร็จ',true);}}
-      await loadAndRenderTeamPanel(); show('เชิญแล้ว','บันทึกคำเชิญเรียบร้อย');
+      await loadAndRenderTeamPanel(); setTimeout(()=>show('เชิญแล้ว','บันทึกคำเชิญเรียบร้อย'),80);
     }catch(e){show('เชิญไม่ได้',e.message||String(e),true);}finally{restore();}
   };
   window.schoolhubCancelTeamInvite=async function(id){
@@ -14801,7 +14984,7 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
     if(!currentBox) return;
     ensureTeamLimitText();
     let inviteHolder=document.getElementById('schoolhub-team-incoming-invites-box');
-    if(!inviteHolder){ inviteHolder=document.createElement('div'); inviteHolder.id='schoolhub-team-incoming-invites-box'; currentBox.appendChild(inviteHolder); }
+    if(!inviteHolder){ inviteHolder=document.createElement('div'); inviteHolder.id='schoolhub-team-incoming-invites-box'; inviteHolder.style.marginTop='16px'; currentBox.appendChild(inviteHolder); }
     await refreshIncomingInvites();
     if(document.getElementById('schoolhub-team-plan-box')) return;
     const holder=document.createElement('div'); holder.id='schoolhub-team-plan-box'; currentBox.appendChild(holder); await loadAndRenderTeamPanel();
@@ -14823,13 +15006,14 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
       const ref=doc(db,COL,own); const snap=await getDoc(ref); if(!snap.exists()) return;
       const team=snap.data(); const members=(team.members||[]).map(m=>m.id===inviteId?Object.assign({},m,{status:'accepted',acceptedAt:Date.now(),uid:user.uid,displayName:user.displayName||'',email:user.email||m.email}):m);
       const me=members.find(m=>m.id===inviteId);
-      await setDoc(ref,{members,updatedAt:Date.now()},{merge:true});
-      await setDoc(doc(db,PUBLIC,user.uid),{teamOwnerUid:own,teamRole:me?.role||'member',teamStatus:'accepted',planId:team.planId||'',planName:team.planName||'',teamJoinedAt:Date.now(),updatedAt:Date.now()},{merge:true});
+      await setDoc(ref,cleanForFirestore({members,updatedAt:Date.now()}),{merge:true});
+      await setDoc(doc(db,PUBLIC,user.uid),cleanForFirestore({teamOwnerUid:own,teamRole:me?.role||'member',teamStatus:'accepted',planId:team.planId ?? null,planName:team.planName || 'ทีม',teamJoinedAt:Date.now(),updatedAt:Date.now(),status:'active'}),{merge:true});
+      try{ window.__currentUserDir=Object.assign(window.__currentUserDir||{},{teamOwnerUid:own,teamRole:me?.role||'member',teamStatus:'accepted',planId:team.planId ?? null,planName:team.planName || 'ทีม',status:'active'}); window.__schoolhubPlanLocked=false; }catch(e){}
       show('ตอบรับแล้ว','เข้าร่วมแผนทีมเรียบร้อย');
       url.searchParams.delete('teamInvite'); url.searchParams.delete('teamOwner'); url.searchParams.delete('teamEmail'); history.replaceState({},'',url.toString());
     }catch(e){show('ตอบรับไม่ได้',e.message||String(e),true);}
   }
-  onAuthStateChanged(auth,(u)=>{ if(u) acceptInviteFromUrl(u); setTimeout(()=>{patchRender(); refreshIncomingInvites(); ensureTeamBox();},600); });
+  onAuthStateChanged(auth,(u)=>{ if(u){ setTimeout(()=>{patchRender(); refreshIncomingInvites(); ensureTeamBox(); const p=new URLSearchParams(location.search); if(p.get('teamInvite')||p.get('teamOwner')||p.get('teamEmail')){ if(window.openUserPlanSelector) window.openUserPlanSelector(); else if(window.switchView) window.switchView('user-plans'); }},600); } });
   const timer=setInterval(()=>{patchRender(); if(document.getElementById('user-current-plan-box')) ensureTeamBox();},800);
   setTimeout(()=>clearInterval(timer),12000);
   setInterval(()=>{ if(getUser()) refreshIncomingInvites(); },30000);
@@ -14840,268 +15024,41 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
 
 
 <!-- SchoolHub final patch: single team invite flow from teams.members[] only -->
-<style id="schoolhub-team-invite-single-flow-style">
-  #schoolhub-team-invite-alert-single{position:sticky;top:0;z-index:90;margin:0;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:14px 18px;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 10px 24px rgba(234,88,12,.10)}
-  #schoolhub-team-invite-alert-single button{background:#ea580c;color:#fff;border-radius:999px;padding:10px 16px;font-size:13px;font-weight:900;white-space:nowrap}
-  #schoolhub-team-invites-single-flow-box{margin:0 0 16px 0!important;display:block!important}
-  .schoolhub-team-invite-single-panel{background:#fff7ed;border:1px solid #fed7aa;border-radius:24px;padding:18px;box-shadow:0 12px 30px rgba(234,88,12,.08)}
-  .schoolhub-team-invite-single-card{background:#fff;border:1px solid #fed7aa;border-radius:18px;padding:14px;display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;margin-top:10px}
-  .schoolhub-team-invite-single-title{font-size:18px;font-weight:1000;color:#c2410c;display:flex;align-items:center;gap:8px}
-  .schoolhub-team-invite-single-sub{font-size:12px;font-weight:800;color:#ea580c;margin-top:4px}
-  .schoolhub-team-invite-single-card .team-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
-  .schoolhub-team-spinner{width:16px;height:16px;border:2px solid rgba(99,102,241,.22);border-top-color:#6366f1;border-radius:50%;display:inline-block;vertical-align:-3px;animation:schoolhubTeamSpin .75s linear infinite}
-  @keyframes schoolhubTeamSpin{to{transform:rotate(360deg)}}
-  @media(max-width:768px){#schoolhub-team-invite-alert-single{position:relative;align-items:flex-start;flex-direction:column}#schoolhub-team-invite-alert-single button{width:100%}.schoolhub-team-invite-single-card{grid-template-columns:1fr}.schoolhub-team-invite-single-card .team-actions{justify-content:flex-start}.schoolhub-team-invite-single-card .team-actions button{width:100%}}
-</style>
-<script type="module" id="schoolhub-team-invite-single-flow-final">
-import { getApps, initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, getDocs, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+<!-- schoolhub-team-invite-single-flow duplicate removed: using original working teams.members[] invite flow only -->
+
+
+
+<script>
 (function(){
-  if(window.__schoolhubTeamInviteSingleFlowFinal) return;
-  window.__schoolhubTeamInviteSingleFlowFinal = true;
-
-  const firebaseConfig = {apiKey:"AIzaSyCFPpiDldze8x23HDwhJo7v8KM_uFOGJsg",authDomain:"shool-2312a.firebaseapp.com",projectId:"shool-2312a",storageBucket:"shool-2312a.firebasestorage.app",messagingSenderId:"803574136389",appId:"1:803574136389:web:e0e5eecfc36dec69d4ed2c",measurementId:"G-ME7E38XNX6"};
-  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-
-  const TEAM_COL = 'teams';
-  const STATUS_COL = 'users_status';
-  const PUBLIC_COL = 'public_users_directory';
-  const STATS_COL = 'user_stats';
-
-  function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
-  function lower(v){return String(v||'').trim().toLowerCase();}
-  function now(){return Date.now();}
-  function show(title,msg,bad){(window.showCustomAlert||function(t,m){alert((t||'')+'\n'+(m||''));})(title,msg,bad);}
-  function roleText(role){return role==='co_owner'?'เจ้าของร่วม':'ผู้ใช้ร่วม';}
-  function statusText(s){return s==='accepted'?'ตอบรับแล้ว':(s==='declined'?'ปฏิเสธแล้ว':(s==='cancelled'?'ยกเลิกแล้ว':'รอตอบรับ'));}
-  function currentEmail(){return lower(auth.currentUser?.email || window.currentUser?.email || window.__currentUserDir?.email || '');}
-  function currentUid(){return auth.currentUser?.uid || window.currentUser?.uid || window.__currentUserDir?.uid || '';}
-  function getMemberEmail(m){return lower(m?.email || m?.inviteEmail || m?.memberEmail || m?.toEmail || m?.teamEmail || '');}
-  function memberStatus(m){return String(m?.status || 'pending').toLowerCase();}
-
-  async function findPendingInvites(){
-    const email=currentEmail();
-    if(!email) return [];
-    const snap=await getDocs(collection(db, TEAM_COL));
-    const found=[];
-    snap.forEach(ds=>{
-      const team=ds.data() || {};
-      const members=Array.isArray(team.members) ? team.members : [];
-      members.forEach((m,idx)=>{
-        const mEmail=getMemberEmail(m);
-        const st=memberStatus(m);
-        if(mEmail===email && st==='pending'){
-          const id=String(m.id || m.inviteId || ('idx_'+idx));
-          found.push({teamId:ds.id, team, member:Object.assign({},m,{id,__index:idx})});
-        }
-      });
-    });
-    window.__schoolhubPendingTeamInvites = found;
-    return found;
-  }
-
-  function ensureAlert(invites){
-    const old=document.getElementById('schoolhub-team-invite-alert-single');
-    if(!invites || !invites.length){ old?.remove(); return; }
-    const host=document.getElementById('main-content') || document.querySelector('main') || document.body;
-    let el=old;
-    if(!el){ el=document.createElement('div'); el.id='schoolhub-team-invite-alert-single'; host.prepend(el); }
-    el.innerHTML=`<div><i class="fas fa-envelope-open-text mr-2"></i>คุณมีคำเชิญเข้าร่วมแผนทีม ${invites.length} รายการ</div><button type="button" onclick="schoolhubOpenPlanInvitesSingleFlow()">ดูคำเชิญ</button>`;
-  }
-
-  function findPlanHost(){
-    return document.getElementById('user-current-plan-box') || document.getElementById('user-plan-list')?.parentElement || document.querySelector('[id*="plan"]') || document.getElementById('main-content') || document.body;
-  }
-
-  function ensureInviteBox(){
-    let box=document.getElementById('schoolhub-team-invites-single-flow-box');
-    if(box) return box;
-    box=document.createElement('div');
-    box.id='schoolhub-team-invites-single-flow-box';
-    const host=findPlanHost();
-    if(host.id==='user-current-plan-box') host.prepend(box);
-    else host.parentNode ? host.parentNode.insertBefore(box, host) : document.body.prepend(box);
-    return box;
-  }
-
-  function renderInviteBox(invites){
-    const box=ensureInviteBox();
-    if(!invites || !invites.length){ box.innerHTML=''; return; }
-    box.innerHTML=`<div class="schoolhub-team-invite-single-panel">
-      <div class="schoolhub-team-invite-single-title"><i class="fas fa-envelope-open-text"></i> คำเชิญเข้าร่วมแผนทีม</div>
-      <div class="schoolhub-team-invite-single-sub">ตอบรับหรือปฏิเสธคำเชิญได้จากหน้านี้</div>
-      ${invites.map(renderInviteCard).join('')}
-    </div>`;
-  }
-
-  function renderInviteCard(x){
-    const m=x.member||{}, team=x.team||{};
-    const id=esc(m.id||'');
-    const owner=esc(team.ownerEmail || team.ownerUid || x.teamId || '-');
-    return `<div class="schoolhub-team-invite-single-card">
-      <div>
-        <div class="font-black text-slate-900">${esc(team.planName || 'แผนทีม SchoolHub')}</div>
-        <div class="text-xs font-bold text-slate-500 mt-1">ผู้เชิญ: ${owner} • สิทธิ์: ${esc(roleText(m.role))} • สถานะ: ${esc(statusText(m.status))}</div>
-      </div>
-      <div class="team-actions">
-        <button type="button" id="sf-accept-${id}" onclick="schoolhubAcceptTeamInviteSingleFlow('${esc(x.teamId)}','${id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-4 py-2 text-xs font-black">ตอบรับ</button>
-        <button type="button" id="sf-decline-${id}" onclick="schoolhubDeclineTeamInviteSingleFlow('${esc(x.teamId)}','${id}')" class="bg-rose-50 text-rose-600 border border-rose-100 rounded-xl px-4 py-2 text-xs font-black">ปฏิเสธ</button>
-      </div>
-    </div>`;
-  }
-
-  function setBtnLoading(id,text){
-    const btn=document.getElementById(id);
-    if(!btn) return ()=>{};
-    const old=btn.innerHTML, dis=btn.disabled;
-    btn.disabled=true;
-    btn.innerHTML=`<span class="schoolhub-team-spinner"></span> ${esc(text||'กำลังทำงาน...')}`;
-    return ()=>{const b=document.getElementById(id); if(b){b.disabled=dis; b.innerHTML=old;}};
-  }
-
-  async function refreshInvites(renderInline=false){
-    try{
-      const invites=await findPendingInvites();
-      ensureAlert(invites);
-      if(renderInline || document.getElementById('schoolhub-team-invites-single-flow-box')) renderInviteBox(invites);
-      return invites;
-    }catch(err){
-      console.error('SchoolHub team invite load error:', err);
-      return [];
-    }
-  }
-
-  async function updateInviteStatus(teamId, inviteId, status){
-    const email=currentEmail();
-    const uid=currentUid();
-    const ref=doc(db, TEAM_COL, teamId);
-    const snap=await getDoc(ref);
-    if(!snap.exists()) throw new Error('ไม่พบทีม');
-    const team=snap.data() || {};
-    const members=Array.isArray(team.members) ? team.members.slice() : [];
-    let targetIndex=-1;
-    for(let i=0;i<members.length;i++){
-      const m=members[i] || {};
-      const id=String(m.id || m.inviteId || ('idx_'+i));
-      if(id===String(inviteId) || (getMemberEmail(m)===email && memberStatus(m)==='pending')){ targetIndex=i; break; }
-    }
-    if(targetIndex<0) throw new Error('ไม่พบคำเชิญของบัญชีนี้');
-    const old=members[targetIndex] || {};
-    const updated={
-      ...old,
-      id: old.id || old.inviteId || String(inviteId),
-      email: email || getMemberEmail(old),
-      uid: uid || old.uid || '',
-      displayName: auth.currentUser?.displayName || window.currentUser?.displayName || old.displayName || email || '',
-      status: status,
-      updatedAt: now()
-    };
-    if(status==='accepted') updated.acceptedAt=now();
-    if(status==='declined') updated.declinedAt=now();
-    members[targetIndex]=updated;
-    await setDoc(ref, {members, updatedAt:now()}, {merge:true});
-
-    if(status==='accepted'){
-      const role=updated.role || 'member';
-      const payload={
-        uid,
-        email,
-        displayName: updated.displayName || email,
-        status:'active',
-        teamStatus:'accepted',
-        teamOwnerUid: teamId,
-        teamRole: role,
-        planId: team.planId || '',
-        planName: team.planName || 'แผนทีม',
-        planPrice: team.planPrice || '',
-        planMemberLimit: team.teamLimit || team.maxTeamMembers || '',
-        teamJoinedAt: now(),
-        updatedAt: now()
-      };
-      if(uid) await setDoc(doc(db, PUBLIC_COL, uid), payload, {merge:true});
-      if(email){
-        await setDoc(doc(db, STATUS_COL, email), payload, {merge:true});
-        await setDoc(doc(db, STATS_COL, email), {email, uid, displayName:payload.displayName, status:'active', teamStatus:'accepted', updatedAt:now()}, {merge:true});
-      }
-      window.__currentUserDir = Object.assign(window.__currentUserDir||{}, payload);
-      window.__schoolhubPlanLocked = false;
-    }
-  }
-
-  window.schoolhubAcceptTeamInviteSingleFlow=async function(teamId, inviteId){
-    const done=setBtnLoading('sf-accept-'+inviteId,'กำลังตอบรับ...');
-    try{
-      await updateInviteStatus(teamId, inviteId, 'accepted');
-      await refreshInvites(true);
-      show('ตอบรับแล้ว','เข้าร่วมแผนทีมเรียบร้อย');
-      if(window.renderUserPlans) setTimeout(()=>{try{window.renderUserPlans(); refreshInvites(true);}catch(e){}},250);
-    }catch(e){ show('ตอบรับไม่ได้', e.message||String(e), true); }
-    finally{done();}
+document.addEventListener('DOMContentLoaded',function(){
+  const _signOutAndRedirect=async function(){
+    try{ if(window.localStorage) localStorage.clear(); }catch(e){}
+    try{ if(window.sessionStorage) sessionStorage.clear(); }catch(e){}
+    try{ if(window.auth && window.firebase && firebase.auth){ await firebase.auth().signOut(); }catch(e){}
   };
-
-  window.schoolhubDeclineTeamInviteSingleFlow=async function(teamId, inviteId){
-    const done=setBtnLoading('sf-decline-'+inviteId,'กำลังปฏิเสธ...');
-    try{
-      await updateInviteStatus(teamId, inviteId, 'declined');
-      await refreshInvites(true);
-      show('ปฏิเสธแล้ว','ปฏิเสธคำเชิญเรียบร้อย');
-    }catch(e){ show('ปฏิเสธไม่ได้', e.message||String(e), true); }
-    finally{done();}
-  };
-
-  // ให้ onclick เก่าทั้งหมดวิ่งเข้าระบบเดียวกัน ไม่ใช้ popup และไม่อ่าน collection แยก
-  window.schoolhubAcceptIncomingTeamInvite=window.schoolhubAcceptTeamInviteSingleFlow;
-  window.schoolhubDeclineIncomingTeamInvite=window.schoolhubDeclineTeamInviteSingleFlow;
-
-  window.schoolhubOpenPlanInvitesSingleFlow=async function(){
-    if(window.openUserPlanSelector) await window.openUserPlanSelector();
-    else if(window.switchView) window.switchView('user-plans');
-    setTimeout(async()=>{
-      const invites=await refreshInvites(true);
-      const box=document.getElementById('schoolhub-team-invites-single-flow-box');
-      if(invites.length && box) box.scrollIntoView({behavior:'smooth', block:'start'});
-    },300);
-  };
-  window.schoolhubOpenPlanInvites=window.schoolhubOpenPlanInvitesSingleFlow;
-
-  function patchRenderUserPlans(){
-    if(!window.renderUserPlans || window.__schoolhubTeamInviteSingleRenderPatched) return;
-    const old=window.renderUserPlans;
-    window.renderUserPlans=function(){
-      const r=old.apply(this, arguments);
-      setTimeout(()=>refreshInvites(true),120);
-      setTimeout(()=>refreshInvites(true),800);
-      return r;
-    };
-    window.__schoolhubTeamInviteSingleRenderPatched=true;
-  }
-
-  function handleInviteUrl(){
-    const params=new URLSearchParams(location.search);
-    if(params.get('teamInvite') || params.get('teamOwner') || params.get('teamEmail')){
-      setTimeout(()=>window.schoolhubOpenPlanInvitesSingleFlow(),700);
-    }
-  }
-
-  onAuthStateChanged(auth, (user)=>{
-    if(!user) return;
-    patchRenderUserPlans();
-    setTimeout(()=>refreshInvites(false),300);
-    setTimeout(()=>refreshInvites(true),1200);
-    handleInviteUrl();
-  });
-
-  const boot=setInterval(()=>{
-    patchRenderUserPlans();
-    if(auth.currentUser) refreshInvites(false);
-  },1200);
-  setTimeout(()=>clearInterval(boot),20000);
+});
+if(window.sendEmailVerification){
+ const __old=window.sendEmailVerification;
+ window.sendEmailVerification=async function(){
+   const r=await __old.apply(this,arguments);
+   try{
+     localStorage.clear();sessionStorage.clear();
+     if(window.auth?.signOut) await window.auth.signOut();
+     location.reload();
+   }catch(e){}
+   return r;
+ }
+}
+const oldAllow=window.allowTeam;
+window.allowTeam=function(){
+ try{
+   const s=(window.currentUserStatus||'');
+   if(s==='declined') return false;
+ }catch(e){}
+ return oldAllow?oldAllow():true;
+}
 })();
 </script>
-
 </body>
 </html>
