@@ -14556,8 +14556,26 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
     el.innerHTML=teamLoadingText(text||'กำลังทำงาน...');
     return function(){ const btn=document.getElementById(id); if(btn){btn.disabled=oldDisabled; btn.innerHTML=oldHtml;} };
   }
+  function schoolhubCleanFirestoreData(value){
+    if(value === undefined) return null;
+    if(value === null) return null;
+    if(Array.isArray(value)) return value.map(schoolhubCleanFirestoreData);
+    if(value && typeof value === 'object'){
+      if(typeof value.toDate === 'function' || typeof value.toMillis === 'function') return value;
+      const out={};
+      Object.keys(value).forEach(function(k){
+        const v=schoolhubCleanFirestoreData(value[k]);
+        if(v !== undefined) out[k]=v;
+      });
+      return out;
+    }
+    return value;
+  }
+  function schoolhubSafeSetDoc(ref,payload,opts){
+    return setDoc(ref,schoolhubCleanFirestoreData(payload||{}),opts);
+  }
   async function getTeamDoc(){const ref=ownerDocRef(); if(!ref) return {members:[]}; const snap=await getDoc(ref); return snap.exists()?snap.data():{members:[]};}
-  async function saveTeamDoc(data){const ref=ownerDocRef(); if(!ref) throw new Error('ไม่พบผู้ใช้'); await setDoc(ref,Object.assign({ownerUid:ownerUid(),ownerEmail:getUser()?.email||getDir().email||'',planId:getDir().planId||'',planName:getDir().planName||'',teamLimit:teamLimit(),updatedAt:Date.now()},data),{merge:true});}
+  async function saveTeamDoc(data){const ref=ownerDocRef(); if(!ref) throw new Error('ไม่พบผู้ใช้'); await schoolhubSafeSetDoc(ref,Object.assign({ownerUid:ownerUid(),ownerEmail:getUser()?.email||getDir().email||'',planId:getDir().planId||'',planName:getDir().planName||'',teamLimit:teamLimit(),updatedAt:Date.now()},data),{merge:true});}
   function getInviteClosedAt(m){return Number(m?.cancelledAt||m?.deletedAt||m?.removedAt||m?.declinedAt||m?.updatedAt||0);}
   function isClosedInvite(m){return ['cancelled','declined','deleted','removed'].includes(String(m?.status||''));}
   function shouldHideClosedInvite(m){const at=getInviteClosedAt(m); return isClosedInvite(m) && at && (Date.now()-at>=TEAM_INVITE_KEEP_MS);}
@@ -14730,12 +14748,12 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
     const u=getUser();
     const ref=doc(db,COL,teamId); const snap=await getDoc(ref); if(!snap.exists()) throw new Error('ไม่พบทีม');
     const team=snap.data()||{};
-    const members=(team.members||[]).map(m=>m.id===inviteId?Object.assign({},m,{status,updatedAt:Date.now(),uid:u?.uid||m.uid||'',displayName:u?.displayName||m.displayName||'',email:u?.email||m.email||'',acceptedAt:status==='accepted'?Date.now():m.acceptedAt,declinedAt:status==='declined'?Date.now():m.declinedAt}):m);
+    const members=(team.members||[]).map(m=>m.id===inviteId?Object.assign({},m,{status,updatedAt:Date.now(),uid:u?.uid||m.uid||'',displayName:u?.displayName||m.displayName||'',email:u?.email||m.email||'',acceptedAt:status==='accepted'?Date.now():(m.acceptedAt||null),declinedAt:status==='declined'?Date.now():(m.declinedAt||null)}):m);
     const me=members.find(m=>m.id===inviteId);
-    await setDoc(ref,{members,updatedAt:Date.now()},{merge:true});
+    await schoolhubSafeSetDoc(ref,{members,updatedAt:Date.now()},{merge:true});
     if(status==='accepted' && u?.uid){
       const payload={teamOwnerUid:teamId,teamRole:me?.role||'member',teamStatus:'accepted',planId:team.planId||'',planName:team.planName||'แผนทีม',teamJoinedAt:Date.now(),updatedAt:Date.now(),status:'active'};
-      await setDoc(doc(db,PUBLIC,u.uid),payload,{merge:true});
+      await schoolhubSafeSetDoc(doc(db,PUBLIC,u.uid),payload,{merge:true});
       window.__currentUserDir=Object.assign(window.__currentUserDir||{},payload);
       window.__schoolhubPlanLocked=false;
       window.__schoolhubPlanLockReason='';
@@ -14804,11 +14822,11 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
     if(email && user.email && email!==user.email.toLowerCase()) return show('อีเมลไม่ตรงคำเชิญ',`คำเชิญนี้ส่งถึง ${email} กรุณาเข้าสู่ระบบด้วยอีเมลนั้น`,true);
     try{
       const ref=doc(db,COL,own); const snap=await getDoc(ref); if(!snap.exists()) return;
-      const team=snap.data(); const members=(team.members||[]).map(m=>m.id===inviteId?Object.assign({},m,{status:'accepted',acceptedAt:Date.now(),uid:user.uid,displayName:user.displayName||'',email:user.email||m.email}):m);
+      const team=snap.data(); const members=(team.members||[]).map(m=>m.id===inviteId?Object.assign({},m,{status:'accepted',acceptedAt:Date.now(),uid:user.uid,displayName:user.displayName||'',email:user.email||m.email||''}):m);
       const me=members.find(m=>m.id===inviteId);
-      await setDoc(ref,{members,updatedAt:Date.now()},{merge:true});
+      await schoolhubSafeSetDoc(ref,{members,updatedAt:Date.now()},{merge:true});
       const payload={teamOwnerUid:own,teamRole:me?.role||'member',teamStatus:'accepted',planId:team.planId||'',planName:team.planName||'แผนทีม',teamJoinedAt:Date.now(),updatedAt:Date.now(),status:'active'};
-      await setDoc(doc(db,PUBLIC,user.uid),payload,{merge:true});
+      await schoolhubSafeSetDoc(doc(db,PUBLIC,user.uid),payload,{merge:true});
       window.__currentUserDir=Object.assign(window.__currentUserDir||{},payload);
       window.__schoolhubPlanLocked=false;
       window.__schoolhubPlanLockReason='';
