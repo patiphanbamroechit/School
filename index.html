@@ -4852,11 +4852,25 @@ async function submitPlanRequest(planId){
                 } else {
                     state = { courses: [], students: [], scores: [], attendance: {}, coursePlans: {}, courseGrades: {} };
                     window.state = state;
-                    await saveStateToDB();
+                    // บัญชีใหม่/บัญชีที่ยังไม่มีแผน ไม่ควรถูกบังคับบันทึก state ทันที
+                    // เพราะอาจทำให้ขึ้นเตือน Firestore หรือบังคับสมัครแผนก่อนเห็นคำเชิญทีม
+                    if (!window.__schoolhubPlanLocked) {
+                        try { await saveStateToDB(); } catch(e) { console.warn('initial save skipped:', e); }
+                    }
                 }
             } catch (error) {
                 console.warn('loadStateFromDB failed:', error);
-                showCustomAlert("ดึงข้อมูลออนไลน์ไม่ได้", getFirebaseErrorText(error), true);
+                const code = error?.code || '';
+                const message = error?.message || '';
+                // สำหรับบัญชีใหม่ที่ยังไม่มีแผน/มีคำเชิญทีม ให้เปิดเว็บต่อได้ก่อน
+                // ไม่แสดง popup ทับจนผู้ใช้กดดูคำเชิญไม่ได้
+                if (code === 'permission-denied' || message.includes('Missing or insufficient permissions')) {
+                    state = { courses: [], students: [], scores: [], attendance: {}, coursePlans: {}, courseGrades: {} };
+                    window.state = state;
+                    window.__schoolhubStatePermissionSkipped = true;
+                } else {
+                    showCustomAlert("ดึงข้อมูลออนไลน์ไม่ได้", getFirebaseErrorText(error), true);
+                }
             } finally {
                 updateGlobalViews();
             }
@@ -14609,6 +14623,8 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
       return found;
     }catch(e){console.warn('โหลดคำเชิญทีมไม่ได้:',e); return [];}
   }
+  window.schoolhubFindMyPendingTeamInvites = findMyPendingTeamInvites;
+
   function ensureTeamInviteAlert(invites){
     const old=document.getElementById('schoolhub-team-invite-alert');
     if(!invites || !invites.length){ old?.remove(); return; }
@@ -14872,5 +14888,88 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
   removeGlobalStatsPanel();
 })();
 </script>
+
+<!-- SchoolHub fix: allow new users with team invites to see/accept invites before buying a plan -->
+<script id="schoolhub-new-user-team-invite-plan-gate-fix">
+(function(){
+  if(window.__schoolhubNewUserInviteGateFix) return;
+  window.__schoolhubNewUserInviteGateFix = true;
+
+  function hasPendingIncomingInvites(){
+    try{
+      return Array.isArray(window.__schoolhubIncomingTeamInvites) &&
+             window.__schoolhubIncomingTeamInvites.length > 0;
+    }catch(e){ return false; }
+  }
+
+  async function refreshInvitesFast(){
+    try{
+      if(typeof window.schoolhubFindMyPendingTeamInvites === 'function'){
+        const invites = await window.schoolhubFindMyPendingTeamInvites();
+        window.__schoolhubIncomingTeamInvites = invites || [];
+        if(typeof window.schoolhubOpenPlanInvites === 'function' && invites && invites.length){
+          // ไม่เปิดหน้าเอง แค่ให้ระบบรู้ว่ามีคำเชิญเพื่อไม่ล็อกก่อน
+        }
+        return invites || [];
+      }
+    }catch(e){ console.warn('ตรวจคำเชิญทีมก่อนล็อกแผนไม่ได้:', e); }
+    return [];
+  }
+
+  const oldRefresh = window.refreshCurrentUserPlanLock;
+  if(typeof oldRefresh === 'function'){
+    window.refreshCurrentUserPlanLock = async function(){
+      const invites = await refreshInvitesFast();
+
+      // บัญชีใหม่ที่ยังไม่มีแผน แต่มีคำเชิญทีม ต้องเข้าไปหน้าแผนเพื่อกดตอบรับได้
+      if(invites && invites.length){
+        window.__schoolhubPlanLocked = false;
+        window.__schoolhubPlanLockReason = '';
+        try{
+          localStorage.setItem('schoolhub_plan_lock_cache', JSON.stringify({
+            locked:false,
+            reason:'',
+            checkedAt:Date.now(),
+            hasTeamInvite:true
+          }));
+        }catch(e){}
+        return false;
+      }
+
+      return oldRefresh.apply(this, arguments);
+    };
+  }
+
+  // กดแถบ "ดูคำเชิญ" ให้ไปหน้าแผน แล้วแสดงกล่องตอบรับ/ปฏิเสธในหน้านั้น ไม่ใช้ popup
+  const oldOpenPlanInvites = window.schoolhubOpenPlanInvites;
+  window.schoolhubOpenPlanInvites = async function(){
+    try{
+      if(window.openUserPlanSelector) await window.openUserPlanSelector();
+      else if(window.switchView) window.switchView('user-plans');
+    }catch(e){}
+
+    setTimeout(async function(){
+      try{
+        if(typeof window.refreshIncomingInvites === 'function') await window.refreshIncomingInvites();
+        else await refreshInvitesFast();
+
+        const box = document.getElementById('schoolhub-team-incoming-invites-box');
+        if(box){
+          box.style.display = 'block';
+          box.style.visibility = 'visible';
+          box.scrollIntoView({behavior:'smooth', block:'center'});
+        }
+      }catch(e){ console.warn(e); }
+    }, 250);
+  };
+
+  // หลังโหลดหน้า/ล็อกอิน ให้ตรวจคำเชิญไว้ก่อน เพื่อไม่ให้ระบบบังคับสมัครแผนก่อนเห็นคำเชิญ
+  setTimeout(refreshInvitesFast, 800);
+  setInterval(function(){
+    if(window.currentUser || (window.firebase && window.firebase.auth)) refreshInvitesFast();
+  }, 15000);
+})();
+</script>
+
 </body>
 </html>
