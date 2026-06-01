@@ -14817,5 +14817,238 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
 })();
 </script>
 
+
+<!-- SchoolHub fix: team invite modal lock + hide global stats overlap -->
+<style id="schoolhub-team-invite-modal-lock-and-stats-hide">
+/* ซ่อนสถิติรวมทั้งระบบทั้งหมด เพื่อไม่ให้ซ้อน/โผล่ใต้หน้าแผนหรือ popup */
+#admin-global-stats-panel{
+  display:none !important;
+  visibility:hidden !important;
+  pointer-events:none !important;
+}
+
+/* ไม่ให้กล่องคำเชิญถูกแทรกใน flow ของหน้าแล้วดัน layout */
+#schoolhub-team-incoming-invites-box{
+  display:none !important;
+}
+
+body.schoolhub-modal-open{
+  overflow:hidden !important;
+}
+
+#schoolhub-team-invite-modal-root{
+  position:fixed !important;
+  inset:0 !important;
+  z-index:999999 !important;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+}
+
+#schoolhub-team-invite-modal-root.is-open{
+  display:flex !important;
+}
+
+.schoolhub-team-invite-modal-backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(15,23,42,.58);
+  backdrop-filter:blur(4px);
+}
+
+.schoolhub-team-invite-modal-card{
+  position:relative;
+  width:min(680px, calc(100vw - 28px));
+  max-height:min(82vh, 720px);
+  overflow:auto;
+  background:#fff;
+  border-radius:28px;
+  border:1px solid rgba(226,232,240,.95);
+  box-shadow:0 30px 90px rgba(15,23,42,.28);
+}
+
+.schoolhub-team-invite-modal-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:20px 22px;
+  border-bottom:1px solid #eef2f7;
+}
+
+.schoolhub-team-invite-modal-body{
+  padding:18px 22px 22px;
+}
+
+.schoolhub-team-invite-modal-close{
+  width:38px;
+  height:38px;
+  border-radius:14px;
+  border:0;
+  background:#f1f5f9;
+  color:#64748b;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.schoolhub-team-invite-modal-close:hover{
+  background:#e2e8f0;
+  color:#0f172a;
+}
+
+.schoolhub-team-invite-modal-empty{
+  text-align:center;
+  color:#94a3b8;
+  font-weight:800;
+  padding:28px 12px;
+}
+
+#schoolhub-team-invite-modal-root .schoolhub-team-invite-card{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  border:1px solid #fed7aa;
+  background:#fff7ed;
+  border-radius:20px;
+  padding:14px;
+  margin-bottom:10px;
+}
+</style>
+
+<script id="schoolhub-team-invite-modal-lock-and-stats-hide">
+(function(){
+  function removeGlobalStatsPanel(){
+    try{
+      document.querySelectorAll('#admin-global-stats-panel').forEach(function(el){ el.remove(); });
+    }catch(e){}
+  }
+
+  function ensureInviteModal(){
+    var root=document.getElementById('schoolhub-team-invite-modal-root');
+    if(root) return root;
+
+    root=document.createElement('div');
+    root.id='schoolhub-team-invite-modal-root';
+    root.innerHTML =
+      '<div class="schoolhub-team-invite-modal-backdrop" data-close-team-invite-modal="1"></div>' +
+      '<div class="schoolhub-team-invite-modal-card" role="dialog" aria-modal="true" aria-label="คำเชิญเข้าร่วมแผนทีม">' +
+        '<div class="schoolhub-team-invite-modal-head">' +
+          '<div>' +
+            '<div class="text-xl font-black text-slate-900"><i class="fas fa-envelope-open-text text-orange-600 mr-2"></i>คำเชิญเข้าร่วมแผนทีม</div>' +
+            '<div class="text-xs font-bold text-slate-500 mt-1">ตอบรับหรือปฏิเสธคำเชิญได้จากหน้าต่างนี้</div>' +
+          '</div>' +
+          '<button type="button" class="schoolhub-team-invite-modal-close" data-close-team-invite-modal="1">×</button>' +
+        '</div>' +
+        '<div id="schoolhub-team-invite-modal-body" class="schoolhub-team-invite-modal-body">' +
+          '<div class="schoolhub-team-invite-modal-empty">กำลังโหลดคำเชิญ...</div>' +
+        '</div>' +
+      '</div>';
+
+    root.addEventListener('click', function(e){
+      if(e.target && e.target.getAttribute('data-close-team-invite-modal') === '1'){
+        closeInviteModal();
+      }
+    });
+
+    document.body.appendChild(root);
+    return root;
+  }
+
+  function esc(v){
+    return String(v==null?'':v)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&#039;');
+  }
+
+  function roleText(r){ return r==='co_owner'?'เจ้าของร่วม':'ผู้ใช้ร่วม'; }
+  function inviteStatusText(s){
+    return s==='accepted'?'ตอบรับแล้ว':(s==='declined'?'ปฏิเสธแล้ว':(['cancelled','deleted','removed'].includes(s)?'ยกเลิกแล้ว':'รอตอบรับ'));
+  }
+
+  function renderInviteModal(){
+    var body=document.getElementById('schoolhub-team-invite-modal-body');
+    if(!body) return;
+    var invites=Array.isArray(window.__schoolhubIncomingTeamInvites)?window.__schoolhubIncomingTeamInvites:[];
+    if(!invites.length){
+      body.innerHTML='<div class="schoolhub-team-invite-modal-empty">ไม่มีคำเชิญที่รอตอบรับ</div>';
+      return;
+    }
+
+    body.innerHTML=invites.map(function(x){
+      var m=x.member||{}, team=x.team||{};
+      var owner=team.ownerEmail||team.ownerUid||x.teamId||'-';
+      var id=esc(m.id||'');
+      var teamId=esc(x.teamId||'');
+      return '<div class="schoolhub-team-invite-card">' +
+        '<div>' +
+          '<div class="font-black text-slate-900">'+esc(team.planName||'แผนทีม SchoolHub')+'</div>' +
+          '<div class="text-xs font-bold text-slate-500 mt-1">ผู้เชิญ: '+esc(owner)+' • สิทธิ์: '+roleText(m.role)+' • สถานะ: '+inviteStatusText(m.status)+'</div>' +
+        '</div>' +
+        '<div class="team-actions flex flex-wrap gap-2 justify-end">' +
+          '<button type="button" id="team-accept-'+id+'" onclick="schoolhubAcceptIncomingTeamInvite(\''+teamId+'\',\''+id+'\')" class="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-4 py-2 text-xs font-black">ตอบรับ</button>' +
+          '<button type="button" id="team-decline-'+id+'" onclick="schoolhubDeclineIncomingTeamInvite(\''+teamId+'\',\''+id+'\')" class="bg-rose-50 text-rose-600 border border-rose-100 rounded-xl px-4 py-2 text-xs font-black">ปฏิเสธ</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function openInviteModal(){
+    removeGlobalStatsPanel();
+    var root=ensureInviteModal();
+    renderInviteModal();
+    root.classList.add('is-open');
+    document.body.classList.add('schoolhub-modal-open');
+  }
+
+  function closeInviteModal(){
+    var root=document.getElementById('schoolhub-team-invite-modal-root');
+    if(root) root.classList.remove('is-open');
+    document.body.classList.remove('schoolhub-modal-open');
+  }
+
+  window.schoolhubCloseTeamInviteModal=closeInviteModal;
+
+  /* แทนที่ปุ่มดูคำเชิญ: ไปหน้าแผนได้ แต่ห้าม scrollIntoView / focus / ดัน layout */
+  window.schoolhubOpenPlanInvites=async function(){
+    var scrollX=window.scrollX, scrollY=window.scrollY;
+    removeGlobalStatsPanel();
+
+    try{
+      if(window.openUserPlanSelector) await window.openUserPlanSelector();
+      else if(window.switchView) window.switchView('user-plans');
+    }catch(e){}
+
+    setTimeout(async function(){
+      try{
+        if(window.refreshIncomingInvites) await window.refreshIncomingInvites();
+      }catch(e){}
+      removeGlobalStatsPanel();
+      window.scrollTo(scrollX, scrollY);
+      openInviteModal();
+    },180);
+  };
+
+  /* กันกล่องคำเชิญ inline และสถิติรวมถูกสร้างกลับมาในอนาคต */
+  var observer=new MutationObserver(function(){
+    removeGlobalStatsPanel();
+    var inlineBox=document.getElementById('schoolhub-team-incoming-invites-box');
+    if(inlineBox) inlineBox.innerHTML='';
+  });
+
+  document.addEventListener('DOMContentLoaded', function(){
+    removeGlobalStatsPanel();
+    ensureInviteModal();
+    observer.observe(document.body,{childList:true,subtree:true});
+  });
+
+  removeGlobalStatsPanel();
+})();
+</script>
+
 </body>
 </html>
