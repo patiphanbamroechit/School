@@ -3543,7 +3543,7 @@ document.addEventListener('click',function(){
         const auth = getAuth(app);
         // ใช้ Local Persistence ของ Firebase Auth เพื่อให้ Session ค้างในเครื่องนี้จนกว่าจะกดออกจากระบบเอง
         setPersistence(auth, browserLocalPersistence).catch(e => console.warn('Firebase auth persistence failed:', e));
-        const db = getFirestore(app);
+        const db = (()=>{const _db=getFirestore(app);try{_db._settingsFrozen=false;_db.settings({ignoreUndefinedProperties:true});}catch(e){} return _db;})()
 
         // --- ระบบส่งเมลผ่าน Google Apps Script Web App เท่านั้น ---
         // ใช้ hidden iframe + postMessage เพื่อรับผลจริงจาก Apps Script โดยไม่ใช้ no-cors
@@ -7805,7 +7805,7 @@ const cfg = {
 };
 
 const app = getApps().length ? getApp() : initializeApp(cfg);
-const db = getFirestore(app);
+const db = (()=>{const _db=getFirestore(app);try{_db._settingsFrozen=false;_db.settings({ignoreUndefinedProperties:true});}catch(e){} return _db;})()
 const auth = getAuth(app);
 
 let currentUser = null;
@@ -14534,7 +14534,7 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
   const firebaseConfig = {apiKey:"AIzaSyCFPpiDldze8x23HDwhJo7v8KM_uFOGJsg",authDomain:"shool-2312a.firebaseapp.com",projectId:"shool-2312a",storageBucket:"shool-2312a.firebasestorage.app",messagingSenderId:"803574136389",appId:"1:803574136389:web:e0e5eecfc36dec69d4ed2c",measurementId:"G-ME7E38XNX6"};
   const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const db = getFirestore(app);
+  const db = (()=>{const _db=getFirestore(app);try{_db._settingsFrozen=false;_db.settings({ignoreUndefinedProperties:true});}catch(e){} return _db;})()
   const COL = 'teams';
   const PUBLIC = 'public_users_directory';
   const TEAM_INVITE_KEEP_MS = 24 * 60 * 60 * 1000;
