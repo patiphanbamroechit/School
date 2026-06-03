@@ -3539,14 +3539,14 @@ document.addEventListener('click',function(){
         import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
-  apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
-  authDomain: "shoolhub-5677e.firebaseapp.com",
-  projectId: "shoolhub-5677e",
-  storageBucket: "shoolhub-5677e.firebasestorage.app",
-  messagingSenderId: "630487358153",
-  appId: "1:630487358153:web:1866add5d4a29b74abcb18",
-  measurementId: "G-2Q6R46DC38"
-};
+            apiKey: "AIzaSyCFPpiDldze8x23HDwhJo7v8KM_uFOGJsg",
+            authDomain: "shool-2312a.firebaseapp.com",
+            projectId: "shool-2312a",
+            storageBucket: "shool-2312a.firebasestorage.app",
+            messagingSenderId: "803574136389",
+            appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
+            measurementId: "G-ME7E38XNX6"
+        };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -3556,7 +3556,7 @@ document.addEventListener('click',function(){
 
         // --- ระบบส่งเมลผ่าน Google Apps Script Web App เท่านั้น ---
         // ใช้ hidden iframe + postMessage เพื่อรับผลจริงจาก Apps Script โดยไม่ใช้ no-cors
-        const MAIL_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzJZNwyvTWRVr4mmk_g_KARlfDe77VBLbsJdS1grR1WlvZ48dmwHLp0ZaKaH1QGjXU/exec';
+        const MAIL_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx6vgxxjJBy0JPFPVjhCOEAn5aCCXXPjE0nBHEt7xkoXfYHeIZ5yGuM8dzcSWW0nsk8jg/exec';
         const makeToken = () => Date.now().toString(36) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
         function buildSchoolHubLink(params = {}) {
             const url = new URL(window.location.href);
@@ -14800,15 +14800,7 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
 (function(){
   if(window.__schoolhubTeamPlanPatch) return;
   window.__schoolhubTeamPlanPatch = true;
-  const firebaseConfig = {
-  apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
-  authDomain: "shoolhub-5677e.firebaseapp.com",
-  projectId: "shoolhub-5677e",
-  storageBucket: "shoolhub-5677e.firebasestorage.app",
-  messagingSenderId: "630487358153",
-  appId: "1:630487358153:web:1866add5d4a29b74abcb18",
-  measurementId: "G-2Q6R46DC38"
-};
+  const firebaseConfig = {apiKey:"AIzaSyCFPpiDldze8x23HDwhJo7v8KM_uFOGJsg",authDomain:"shool-2312a.firebaseapp.com",projectId:"shool-2312a",storageBucket:"shool-2312a.firebasestorage.app",messagingSenderId:"803574136389",appId:"1:803574136389:web:e0e5eecfc36dec69d4ed2c",measurementId:"G-ME7E38XNX6"};
   const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
