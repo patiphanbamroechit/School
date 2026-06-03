@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -2206,6 +2207,13 @@ document.addEventListener('click',function(){
   #btn-export-attendance-excel{position:static!important;bottom:auto!important;top:auto!important;transform:none!important;}
 }
 </style>
+
+<style id="schoolhub-withdrawn-student-patch-css">
+.schoolhub-withdrawn-text { text-decoration: line-through !important; text-decoration-thickness: 2px !important; text-decoration-color: #ef4444 !important; color: #94a3b8 !important; }
+.schoolhub-withdrawn-row { opacity: .72; }
+.schoolhub-withdrawn-badge { display:inline-flex; align-items:center; gap:.25rem; font-size:.68rem; font-weight:800; color:#be123c; background:#fff1f2; border:1px solid #fecdd3; border-radius:9999px; padding:.18rem .5rem; margin-left:.35rem; white-space:nowrap; }
+.schoolhub-withdrawn-control { opacity:.55 !important; pointer-events:none !important; cursor:not-allowed !important; }
+</style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased h-screen overflow-hidden selection:bg-indigo-100 selection:text-indigo-900">
 
@@ -3342,6 +3350,7 @@ document.addEventListener('click',function(){
                 <div><label class="block text-sm font-semibold mb-1">รหัสนักเรียน</label><input type="text" id="edit-student-code" required class="w-full border rounded-xl p-3 bg-slate-50"></div>
                 <div><label class="block text-sm font-semibold mb-1">ชื่อ - นามสกุล</label><input type="text" id="edit-student-name" required class="w-full border rounded-xl p-3 bg-slate-50"></div>
                 <div><label class="block text-sm font-semibold mb-1">ระดับชั้น</label><input type="text" id="edit-student-grade" required class="w-full border rounded-xl p-3 bg-slate-50"></div>
+                <label class="hidden flex items-center gap-3 bg-rose-50 border border-rose-100 text-rose-700 rounded-xl p-3 font-bold text-sm"><input type="checkbox" id="edit-student-withdrawn" class="w-5 h-5 accent-rose-600"> นักเรียนคนนี้ลาออก</label>
                 <div class="pt-4 flex gap-3"><button type="button" onclick="closeModal('student-edit-modal')" class="w-1/2 py-3 bg-slate-100 rounded-xl font-bold text-slate-600">ยกเลิก</button><button type="submit" class="w-1/2 py-3 text-white bg-primary rounded-xl font-bold">บันทึก</button></div>
             </form>
         </div>
@@ -3530,14 +3539,14 @@ document.addEventListener('click',function(){
         import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
-            apiKey: "AIzaSyCFPpiDldze8x23HDwhJo7v8KM_uFOGJsg",
-            authDomain: "shool-2312a.firebaseapp.com",
-            projectId: "shool-2312a",
-            storageBucket: "shool-2312a.firebasestorage.app",
-            messagingSenderId: "803574136389",
-            appId: "1:803574136389:web:e0e5eecfc36dec69d4ed2c",
-            measurementId: "G-ME7E38XNX6"
-        };
+  apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
+  authDomain: "shoolhub-5677e.firebaseapp.com",
+  projectId: "shoolhub-5677e",
+  storageBucket: "shoolhub-5677e.firebasestorage.app",
+  messagingSenderId: "630487358153",
+  appId: "1:630487358153:web:1866add5d4a29b74abcb18",
+  measurementId: "G-2Q6R46DC38"
+};
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -3547,7 +3556,7 @@ document.addEventListener('click',function(){
 
         // --- ระบบส่งเมลผ่าน Google Apps Script Web App เท่านั้น ---
         // ใช้ hidden iframe + postMessage เพื่อรับผลจริงจาก Apps Script โดยไม่ใช้ no-cors
-        const MAIL_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx6vgxxjJBy0JPFPVjhCOEAn5aCCXXPjE0nBHEt7xkoXfYHeIZ5yGuM8dzcSWW0nsk8jg/exec';
+        const MAIL_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzJZNwyvTWRVr4mmk_g_KARlfDe77VBLbsJdS1grR1WlvZ48dmwHLp0ZaKaH1QGjXU/exec';
         const makeToken = () => Date.now().toString(36) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
         function buildSchoolHubLink(params = {}) {
             const url = new URL(window.location.href);
@@ -3806,6 +3815,70 @@ document.addEventListener('click',function(){
         let isAdmin = false;
         let state = { courses: [], students: [], scores: [], attendance: {}, coursePlans: {}, courseGrades: {} };
         window.state = state;
+
+        window.isStudentWithdrawn = (student) => !!(student && (student.withdrawn === true || student.status === 'ลาออก' || student.status === 'withdrawn'));
+        window.getStudentWithdrawnClass = (student) => window.isStudentWithdrawn(student) ? ' schoolhub-withdrawn-text' : '';
+        window.getStudentWithdrawnRowClass = (student) => window.isStudentWithdrawn(student) ? ' schoolhub-withdrawn-row' : '';
+        window.getStudentWithdrawnBadge = (student) => window.isStudentWithdrawn(student) ? '<span onclick="event.stopPropagation(); showStudentWithdrawReason(\'' + student.id + '\')" class="schoolhub-withdrawn-badge" title="ดูเหตุผลลาออก" role="button" tabindex="0"><i class="fas fa-user-slash"></i> ลาออก</span>' : '';
+        window.refreshWithdrawnStudentViews = function(){
+            try { renderStudentsMaster(); } catch(e) {}
+            try { updateGlobalViews(); } catch(e) {}
+            if (currentActiveCourseId) {
+                try { renderAttendanceList(); } catch(e) {}
+                try { renderScoreList(); } catch(e) {}
+                try { renderCourseOverview(); } catch(e) {}
+            }
+        };
+        window.getWithdrawnOperatorName = function(){
+            try { return (currentUser && (currentUser.displayName || currentUser.email || currentUser.uid)) || (window.currentUser && (window.currentUser.displayName || window.currentUser.email || window.currentUser.uid)) || 'ไม่ระบุ'; }
+            catch(e){ return 'ไม่ระบุ'; }
+        };
+        window.showStudentWithdrawReason = function(id){
+            const s = state.students.find(x => x.id === id); if(!s) return;
+            showCustomAlert('เหตุผลการลาออก', 'นักเรียน: ' + (s.name || '-') + '\nเหตุผล: ' + (s.withdrawReason || '-') + '\nวันที่บันทึก: ' + (s.withdrawDate || '-') + '\nผู้บันทึก: ' + (s.withdrawBy || '-'));
+        };
+        window.closeStudentWithdrawPopup = function(){ const el = document.getElementById('student-withdraw-popup'); if(el) el.remove(); };
+        window.confirmSetStudentWithdrawn = async function(id){
+            const s = state.students.find(x => x.id === id); if(!s) return;
+            window.closeStudentWithdrawPopup();
+            const popup = document.createElement('div');
+            popup.id = 'student-withdraw-popup';
+            popup.className = 'fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[999999] flex items-center justify-center p-4 fade-in';
+            popup.innerHTML = '<div class="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl"><div class="text-center mb-5"><div class="text-5xl text-rose-500 mb-3"><i class="fas fa-user-slash"></i></div><h3 class="text-2xl font-bold text-slate-800">ตั้งเป็นลาออก</h3><p class="text-slate-500 text-sm mt-2">'+escapeHTML(s.code || '')+' '+escapeHTML(s.name || '')+'</p></div><label class="block text-sm font-bold text-slate-700 mb-2">เหตุผลการลาออก <span class="text-rose-500">*</span></label><textarea id="student-withdraw-reason" rows="5" class="w-full border border-slate-200 rounded-2xl p-4 focus:ring-4 focus:ring-rose-100 focus:border-rose-400 outline-none resize-y" placeholder="กรอกเหตุผลการลาออก"></textarea><p id="student-withdraw-error" class="hidden text-rose-500 text-sm font-bold mt-2">กรุณากรอกเหตุผลการลาออก</p><div class="flex gap-3 mt-6"><button type="button" onclick="closeStudentWithdrawPopup()" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3.5 rounded-2xl transition">ยกเลิก</button><button type="button" onclick="saveStudentWithdrawn(\''+id+'\')" class="w-1/2 bg-rose-600 hover:bg-rose-700 text-white font-semibold py-3.5 rounded-2xl transition">บันทึก</button></div></div>';
+            document.body.appendChild(popup);
+            setTimeout(function(){ var t=document.getElementById('student-withdraw-reason'); if(t) t.focus(); },50);
+        };
+        window.saveStudentWithdrawn = async function(id){
+            const reasonEl = document.getElementById('student-withdraw-reason');
+            const errEl = document.getElementById('student-withdraw-error');
+            const reason = reasonEl ? reasonEl.value.trim() : '';
+            if(!reason){ if(errEl) errEl.classList.remove('hidden'); if(reasonEl) reasonEl.focus(); return; }
+            const idx = state.students.findIndex(s => s.id === id); if(idx < 0) return;
+            state.students[idx].withdrawn = true;
+            state.students[idx].status = 'ลาออก';
+            state.students[idx].withdrawReason = reason;
+            state.students[idx].withdrawDate = new Date().toLocaleString('th-TH');
+            state.students[idx].withdrawBy = window.getWithdrawnOperatorName();
+            window.closeStudentWithdrawPopup();
+            window.refreshWithdrawnStudentViews();
+            await saveStateToDB();
+            showCustomAlert('สำเร็จ', 'ตั้งสถานะลาออกเรียบร้อย');
+        };
+        window.cancelStudentWithdrawn = async function(id){
+            const idx = state.students.findIndex(s => s.id === id); if(idx < 0) return;
+            window.showCustomConfirm('ยกเลิกสถานะลาออก', 'ยืนยันยกเลิกสถานะลาออกของนักเรียนคนนี้?', async () => {
+                state.students[idx].withdrawn = false;
+                state.students[idx].status = '';
+                window.refreshWithdrawnStudentViews();
+                await saveStateToDB();
+                showCustomAlert('สำเร็จ', 'ยกเลิกสถานะลาออกเรียบร้อย');
+            });
+        };
+        window.toggleStudentWithdrawn = async (id) => {
+            const s = state.students.find(x => x.id === id); if(!s) return;
+            if(window.isStudentWithdrawn(s)) return window.cancelStudentWithdrawn(id);
+            return window.confirmSetStudentWithdrawn(id);
+        };
         window.isSocialAuthenticating = false;
 
         let currentActiveCourseId = null;
@@ -5682,11 +5755,12 @@ ${resetUrl.toString()}
                 tbody.innerHTML += `<tr class="bg-indigo-50/80 border-y border-indigo-100 cursor-pointer" onclick="toggleStudentRoomGroup('${groupId}')"><td colspan="4" class="p-4"><div class="flex items-center justify-between"><div class="font-black text-primary"><i class="fas fa-door-open mr-2"></i>${escapeHTML(room)}</div><div class="text-xs font-bold text-indigo-500 bg-white px-3 py-1 rounded-full">${list.length} คน</div></div></td></tr>`;
                 list.forEach(s => {
                     tbody.innerHTML += `
-                        <tr class="${groupId}">
-                            <td class="font-mono font-medium text-slate-500">${escapeHTML(s.code)}</td>
-                            <td class="font-bold text-slate-700">${escapeHTML(s.name)}</td>
+                        <tr class="${groupId}${window.getStudentWithdrawnRowClass(s)}">
+                            <td class="font-mono font-medium text-slate-500${window.getStudentWithdrawnClass(s)}">${escapeHTML(s.code)}</td>
+                            <td class="font-bold text-slate-700${window.getStudentWithdrawnClass(s)}">${escapeHTML(s.name)}${window.getStudentWithdrawnBadge(s)}</td>
                             <td><span class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-lg text-xs font-bold">${escapeHTML(window.getStudentClassName(s))}</span></td>
                             <td class="text-right">
+                                <button onclick="event.stopPropagation(); showStudentMoreMenu('${s.id}', this)" class="text-slate-600 bg-slate-100 px-2 h-8 rounded-lg hover:bg-slate-200 text-xs font-bold mr-1">อื่นๆ</button>
                                 <button onclick="event.stopPropagation(); editStudent('${s.id}')" class="text-blue-500 bg-blue-50 w-8 h-8 rounded-lg hover:bg-blue-100"><i class="fas fa-edit"></i></button>
                                 <button onclick="event.stopPropagation(); deleteStudent('${s.id}')" class="text-rose-500 bg-rose-50 w-8 h-8 rounded-lg hover:bg-rose-100 ml-1"><i class="fas fa-trash"></i></button>
                             </td>
@@ -5804,7 +5878,7 @@ ${resetUrl.toString()}
         window.editStudent = (id) => {
             const s = state.students.find(x => x.id === id); if(!s) return;
             editingStudentId = id;
-            document.getElementById('edit-student-code').value = s.code; document.getElementById('edit-student-name').value = s.name; document.getElementById('edit-student-grade').value = s.grade;
+            document.getElementById('edit-student-code').value = s.code; document.getElementById('edit-student-name').value = s.name; document.getElementById('edit-student-grade').value = s.grade; if(document.getElementById('edit-student-withdrawn')) document.getElementById('edit-student-withdrawn').checked = window.isStudentWithdrawn(s);
             window.openModal('student-edit-modal');
         };
 
@@ -5867,7 +5941,7 @@ ${resetUrl.toString()}
                     if(st==='present') pr++; else if(st==='late') la++; else if(st==='absent') ab++;
                 });
 
-                tbody += `<tr><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center font-bold text-slate-500">${index + 1}</td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700" title="${s.code}">${s.code}</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700" title="${s.name}">${s.name}</td>`;
+                tbody += `<tr class="${window.getStudentWithdrawnRowClass(s)}"><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center font-bold text-slate-500${window.getStudentWithdrawnClass(s)}">${index + 1}</td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700${window.getStudentWithdrawnClass(s)}" title="${s.code}">${s.code}</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700${window.getStudentWithdrawnClass(s)}" title="${s.name}">${s.name}${window.getStudentWithdrawnBadge(s)}</td>`;
                 tbody += `<td class="text-center font-bold summary-att-col"><span class="text-emerald-500">${pr}</span>/<span class="text-amber-500">${la}</span>/<span class="text-rose-500">${ab}</span></td>`;
 
                 let totalScore = 0;
@@ -5932,7 +6006,7 @@ ${resetUrl.toString()}
                 const isMobileCardView = window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
                 plans.sort((a,b) => a.week - b.week).forEach(p => {
                     if (isMobileCardView) {
-                        tbody.innerHTML += `<tr class="schoolhub-mobile-row"><td colspan="4" class="schoolhub-mobile-cell">
+                        tbody.innerHTML += `<tr class="schoolhub-mobile-row${window.getStudentWithdrawnRowClass(s)}"><td colspan="4" class="schoolhub-mobile-cell">
                             <div class="schoolhub-mobile-card">
                                 <div class="schoolhub-mobile-card-head">
                                     <div class="min-w-0">
@@ -6070,33 +6144,36 @@ ${resetUrl.toString()}
                 const studentOrder = index + 1;
                 const hasSavedStatus = existing.records && Object.prototype.hasOwnProperty.call(existing.records, s.id);
                 const st = hasSavedStatus ? existing.records[s.id] : (isMobileCardView ? '' : 'present');
+                const isWithdrawn = window.isStudentWithdrawn(s);
+                const disabledAttr = isWithdrawn ? 'disabled' : '';
+                const disabledClass = isWithdrawn ? ' schoolhub-withdrawn-control' : '';
                 if (isMobileCardView) {
                     tbody.innerHTML += `
                     <tr class="schoolhub-mobile-row"><td colspan="4" class="schoolhub-mobile-cell">
                         <div class="schoolhub-mobile-card">
                             <div class="schoolhub-mobile-card-head">
                                 <div class="min-w-0">
-                                    <div class="schoolhub-seq-text">#${studentOrder}</div>
-                                    <div class="schoolhub-mobile-card-title">${escapeHTML(s.name||'')}</div>
-                                    <div class="schoolhub-mobile-card-sub">${escapeHTML(s.code||'')}</div>
+                                    <div class="schoolhub-seq-text${window.getStudentWithdrawnClass(s)}">#${studentOrder}</div>
+                                    <div class="schoolhub-mobile-card-title${window.getStudentWithdrawnClass(s)}">${escapeHTML(s.name||'')}${window.getStudentWithdrawnBadge(s)}</div>
+                                    <div class="schoolhub-mobile-card-sub${window.getStudentWithdrawnClass(s)}">${escapeHTML(s.code||'')}</div>
                                 </div>
                             </div>
-                            <div class="schoolhub-mobile-att-actions">
-                                <label class="schoolhub-mobile-att-btn present ${st==='present'?'is-active':''}"><input type="radio" name="att_${s.id}" value="present" ${st==='present'?'checked':''} class="w-4 h-4 text-emerald-500 accent-emerald-500"> <span>มา</span></label>
-                                <label class="schoolhub-mobile-att-btn late ${st==='late'?'is-active':''}"><input type="radio" name="att_${s.id}" value="late" ${st==='late'?'checked':''} class="w-4 h-4 text-amber-500 accent-amber-500"> <span>สาย</span></label>
-                                <label class="schoolhub-mobile-att-btn absent ${st==='absent'?'is-active':''}"><input type="radio" name="att_${s.id}" value="absent" ${st==='absent'?'checked':''} class="w-4 h-4 text-rose-500 accent-rose-500"> <span>ขาด</span></label>
+                            <div class="schoolhub-mobile-att-actions${disabledClass}">
+                                <label class="schoolhub-mobile-att-btn present ${st==='present'?'is-active':''}"><input type="radio" name="att_${s.id}" value="present" ${st==='present'?'checked':''} class="w-4 h-4 text-emerald-500 accent-emerald-500" ${disabledAttr}> <span>มา</span></label>
+                                <label class="schoolhub-mobile-att-btn late ${st==='late'?'is-active':''}"><input type="radio" name="att_${s.id}" value="late" ${st==='late'?'checked':''} class="w-4 h-4 text-amber-500 accent-amber-500" ${disabledAttr}> <span>สาย</span></label>
+                                <label class="schoolhub-mobile-att-btn absent ${st==='absent'?'is-active':''}"><input type="radio" name="att_${s.id}" value="absent" ${st==='absent'?'checked':''} class="w-4 h-4 text-rose-500 accent-rose-500" ${disabledAttr}> <span>ขาด</span></label>
                             </div>
                         </div>
                     </td></tr>`;
                 } else {
                     tbody.innerHTML += `
-                    <tr>
-                        <td class="text-center"><span class="schoolhub-seq-text">#${studentOrder}</span></td><td class="font-mono text-slate-400">${s.code}</td><td class="font-bold text-slate-700">${s.name}</td>
+                    <tr class="${window.getStudentWithdrawnRowClass(s)}">
+                        <td class="text-center"><span class="schoolhub-seq-text${window.getStudentWithdrawnClass(s)}">#${studentOrder}</span></td><td class="font-mono text-slate-400${window.getStudentWithdrawnClass(s)}">${s.code}</td><td class="font-bold text-slate-700${window.getStudentWithdrawnClass(s)}">${s.name}${window.getStudentWithdrawnBadge(s)}</td>
                         <td>
-                            <div class="flex justify-center gap-4 bg-slate-50 p-2 rounded-xl">
-                                <label class="cursor-pointer flex items-center gap-2"><input type="radio" name="att_${s.id}" value="present" ${st==='present'?'checked':''} class="w-4 h-4 text-emerald-500 accent-emerald-500"> <span class="font-bold text-emerald-700">มา</span></label>
-                                <label class="cursor-pointer flex items-center gap-2"><input type="radio" name="att_${s.id}" value="late" ${st==='late'?'checked':''} class="w-4 h-4 text-amber-500 accent-amber-500"> <span class="font-bold text-amber-600">สาย</span></label>
-                                <label class="cursor-pointer flex items-center gap-2"><input type="radio" name="att_${s.id}" value="absent" ${st==='absent'?'checked':''} class="w-4 h-4 text-rose-500 accent-rose-500"> <span class="font-bold text-rose-600">ขาด</span></label>
+                            <div class="flex justify-center gap-4 bg-slate-50 p-2 rounded-xl${disabledClass}">
+                                <label class="cursor-pointer flex items-center gap-2"><input type="radio" name="att_${s.id}" value="present" ${st==='present'?'checked':''} class="w-4 h-4 text-emerald-500 accent-emerald-500" ${disabledAttr}> <span class="font-bold text-emerald-700">มา</span></label>
+                                <label class="cursor-pointer flex items-center gap-2"><input type="radio" name="att_${s.id}" value="late" ${st==='late'?'checked':''} class="w-4 h-4 text-amber-500 accent-amber-500" ${disabledAttr}> <span class="font-bold text-amber-600">สาย</span></label>
+                                <label class="cursor-pointer flex items-center gap-2"><input type="radio" name="att_${s.id}" value="absent" ${st==='absent'?'checked':''} class="w-4 h-4 text-rose-500 accent-rose-500" ${disabledAttr}> <span class="font-bold text-rose-600">ขาด</span></label>
                             </div>
                         </td>
                     </tr>`;
@@ -6105,7 +6182,7 @@ ${resetUrl.toString()}
         };
         window.saveAttendance = async () => {
             const cid = currentActiveCourseId; const date = document.getElementById('att-date').value; if(!cid || !date) return;
-            const records = {}; window.getCourseStudents(cid).forEach(s => { const checked = document.querySelector(`input[name="att_${s.id}"]:checked`); if(checked) records[s.id] = checked.value; });
+            const records = Object.assign({}, (state.attendance[cid] && state.attendance[cid][date] && state.attendance[cid][date].records) ? state.attendance[cid][date].records : {}); window.getCourseStudents(cid).forEach(s => { if(window.isStudentWithdrawn(s)) return; const checked = document.querySelector(`input[name="att_${s.id}"]:checked`); if(checked) records[s.id] = checked.value; });
             if(!state.attendance[cid]) state.attendance[cid] = {}; state.attendance[cid][date] = { records, updatedAt: Date.now() };
             await saveStateToDB(); window.initCalendar();
             document.getElementById('att-date').value = '';
@@ -6250,30 +6327,30 @@ ${resetUrl.toString()}
                 let inputHtml = '';
                 if (maxScoreNum === 0) {
                     const isChecked = (sc === 1 || sc === '1' || sc === true) ? 'checked' : '';
-                    inputHtml = `<input type="checkbox" class="score-checkbox w-6 h-6 text-primary rounded focus:ring-primary cursor-pointer mx-auto block shadow-sm" ${isChecked} data-studentid="${s.id}">`;
+                    inputHtml = `<input type="checkbox" class="score-checkbox w-6 h-6 text-primary rounded focus:ring-primary cursor-pointer mx-auto block shadow-sm" ${isChecked} data-studentid="${s.id}" ${window.isStudentWithdrawn(s)?'disabled':''}>`;
                 } else {
                     // เอา placeholder="0" ออก ให้แสดงว่างเปล่า
-                    inputHtml = `<input type="number" inputmode="decimal" pattern="[0-9]*" min="0" max="${max}" placeholder="" value="${sc}" class="score-input w-24 bg-white border border-slate-200 rounded-lg p-2.5 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none mx-auto block shadow-sm" oninput="if(parseFloat(this.value)>${max}) this.value=${max};" onkeydown="if(event.key === 'Enter') { event.preventDefault(); const inputs = document.querySelectorAll('.score-input'); const i = Array.from(inputs).indexOf(this); if(i > -1 && i < inputs.length - 1) { inputs[i+1].focus(); inputs[i+1].scrollIntoView({block: 'center', behavior: 'smooth'}); } }">`;
+                    inputHtml = `<input type="number" inputmode="decimal" pattern="[0-9]*" min="0" max="${max}" placeholder="" value="${sc}" class="score-input w-24 bg-white border border-slate-200 rounded-lg p-2.5 text-center font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none mx-auto block shadow-sm" data-studentid="${s.id}" ${window.isStudentWithdrawn(s)?'disabled':''} oninput="if(parseFloat(this.value)>${max}) this.value=${max};" onkeydown="if(event.key === 'Enter') { event.preventDefault(); const inputs = document.querySelectorAll('.score-input'); const i = Array.from(inputs).indexOf(this); if(i > -1 && i < inputs.length - 1) { inputs[i+1].focus(); inputs[i+1].scrollIntoView({block: 'center', behavior: 'smooth'}); } }">`;
                 }
                 if (isMobileCardView) {
                     const scoreLabel = maxScoreNum === 0 ? 'สถานะงาน' : `คะแนน / ${escapeHTML(max)}`;
-                    tbody.innerHTML += `<tr class="schoolhub-mobile-row"><td colspan="4" class="schoolhub-mobile-cell">
+                    tbody.innerHTML += `<tr class="schoolhub-mobile-row${window.getStudentWithdrawnRowClass(s)}"><td colspan="4" class="schoolhub-mobile-cell">
                         <div class="schoolhub-mobile-card">
                             <div class="schoolhub-mobile-card-head">
                                 <div class="min-w-0">
-                                    <div class="schoolhub-seq-text">#${studentOrder}</div>
-                                    <div class="schoolhub-mobile-card-title">${escapeHTML(s.name||'')}</div>
-                                    <div class="schoolhub-mobile-card-sub">${escapeHTML(s.code||'')}</div>
+                                    <div class="schoolhub-seq-text${window.getStudentWithdrawnClass(s)}">#${studentOrder}</div>
+                                    <div class="schoolhub-mobile-card-title${window.getStudentWithdrawnClass(s)}">${escapeHTML(s.name||'')}${window.getStudentWithdrawnBadge(s)}</div>
+                                    <div class="schoolhub-mobile-card-sub${window.getStudentWithdrawnClass(s)}">${escapeHTML(s.code||'')}</div>
                                 </div>
                             </div>
                             <div class="schoolhub-mobile-score-box">
                                 <div class="text-xs font-black text-slate-500 mb-2">${scoreLabel}</div>
-                                <div class="flex items-center justify-center">${inputHtml}</div>
+                                <div class="flex items-center justify-center${window.isStudentWithdrawn(s)?' schoolhub-withdrawn-control':''}">${inputHtml}</div>
                             </div>
                         </div>
                     </td></tr>`;
                 } else {
-                    tbody.innerHTML += `<tr><td class="text-center"><span class="schoolhub-seq-text">#${studentOrder}</span></td><td class="font-mono text-slate-400">${s.code}</td><td class="font-bold text-slate-700">${s.name}</td><td class="bg-indigo-50/50 text-center">${inputHtml}</td></tr>`;
+                    tbody.innerHTML += `<tr class="${window.getStudentWithdrawnRowClass(s)}"><td class="text-center"><span class="schoolhub-seq-text${window.getStudentWithdrawnClass(s)}">#${studentOrder}</span></td><td class="font-mono text-slate-400${window.getStudentWithdrawnClass(s)}">${s.code}</td><td class="font-bold text-slate-700${window.getStudentWithdrawnClass(s)}">${s.name}${window.getStudentWithdrawnBadge(s)}</td><td class="bg-indigo-50/50 text-center${window.isStudentWithdrawn(s)?' schoolhub-withdrawn-control':''}">${inputHtml}</td></tr>`;
                 }
             });
 
@@ -6282,17 +6359,20 @@ ${resetUrl.toString()}
         window.saveScores = async () => {
             const cId = currentActiveCourseId; const week = document.getElementById('score-week').value; const title = window.getScoreTitle(); const maxScore = document.getElementById('score-max').value;
             if(!cId || !week || !title || maxScore === '') return showCustomAlert("ข้อมูลไม่ครบ", "ระบุงานและคะแนนเต็มให้ครบ", true);
-            const records = {};
+            const existingScoreRow = state.scores.find(s => s.courseId === cId && s.week === week && s.title === title);
+            const records = Object.assign({}, existingScoreRow && existingScoreRow.records ? existingScoreRow.records : {});
             const maxScoreNum = parseFloat(maxScore);
 
             if (maxScoreNum === 0) {
                 document.querySelectorAll('.score-checkbox').forEach((cb) => {
+                    if(cb.disabled) return;
                     records[cb.getAttribute('data-studentid')] = cb.checked ? 1 : 0;
                 });
             } else {
                 document.querySelectorAll('.score-input').forEach((inp, idx) => {
+                    if(inp.disabled) return;
                     // หากไม่กรอก จะเก็บเป็น '' (ว่าง) ไม่ใช่ 0
-                    records[window.getCourseStudents(cId)[idx].id] = inp.value !== '' ? parseFloat(inp.value) : '';
+                    records[inp.getAttribute('data-studentid') || window.getCourseStudents(cId)[idx].id] = inp.value !== '' ? parseFloat(inp.value) : '';
                 });
             }
 
@@ -7149,7 +7229,7 @@ ${resetUrl.toString()}
     var tbody='<tbody>';
     courseStudents.forEach(function(st,index){
       var pr=0,la=0,ab=0; attDates.forEach(function(d){ var rec=history[d]&&history[d].records||{}; var x=rec[st.id]; if(x==='present')pr++; else if(x==='late')la++; else if(x==='absent')ab++; });
-      tbody += '<tr><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center"><span class="schoolhub-seq-text">#'+(index+1)+'</span></td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700">'+esc(st.code)+'</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700">'+esc(st.name)+'</td><td class="text-center text-xs font-bold text-slate-500 bg-slate-50">'+esc(className(st))+'</td>';
+      tbody += '<tr class="'+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center"><span class="schoolhub-seq-text'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</span></td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</td><td class="text-center text-xs font-bold text-slate-500 bg-slate-50">'+esc(className(st))+'</td>';
       tbody += '<td class="text-center font-bold summary-att-col"><span class="text-emerald-500">'+pr+'</span>/<span class="text-amber-500">'+la+'</span>/<span class="text-rose-500">'+ab+'</span></td>';
       var total=0;
       plans.forEach(function(p){ var task=courseScores.find(ts=>ts.week==p.week && ts.title===p.title); var raw=task && task.records ? task.records[st.id] : null; var isChecklist=Number(p.maxScore)===0; if(isChecklist){ var icon= raw===1 ? '<span class="summary-score-cell-content text-emerald-500"><i class="fas fa-check"></i></span>' : (raw===0 ? '<span class="summary-score-cell-content text-rose-300"><i class="fas fa-times"></i></span>' : '<span class="summary-score-cell-content text-slate-300">-</span>'); tbody += '<td class="text-center summary-score-col">'+icon+'</td>'; } else { if(raw!==null && raw!=='') total+=Number(raw); var disp=!task?'<span class="summary-score-cell-content text-slate-300">-</span>':(raw===''?'<span class="summary-score-cell-content text-rose-600 font-black">X</span>':'<span class="summary-score-cell-content text-slate-700">'+esc(raw)+'</span>'); tbody += '<td class="text-center font-mono summary-score-col">'+disp+'</td>'; }});
@@ -7167,11 +7247,36 @@ ${resetUrl.toString()}
     var rooms={}; students.forEach(function(st){ var r=className(st); (rooms[r]||(rooms[r]=[])).push(st); });
     Object.keys(rooms).sort((a,b)=>a.localeCompare(b,'th',{numeric:true})).forEach(function(room){
       var list=rooms[room].sort((a,b)=>String(a.code||'').localeCompare(String(b.code||''),'th',{numeric:true}) || String(a.name||'').localeCompare(String(b.name||''),'th'));
-      var cards=list.map(function(st){ return '<button type="button" onclick="editStudent(\''+st.id+'\')" class="text-left bg-white border border-slate-100 hover:border-indigo-200 hover:shadow-md rounded-2xl p-4 transition"><div class="flex items-start justify-between gap-3"><div><div class="font-black text-slate-800">'+esc(st.name)+'</div><div class="text-xs font-mono text-slate-400 mt-1">'+esc(st.code)+'</div></div><span class="text-primary bg-indigo-50 rounded-full w-9 h-9 flex items-center justify-center"><i class="fas fa-pen"></i></span></div></button>'; }).join('');
+      var cards=list.map(function(st){ return '<div class="bg-white border border-slate-100 hover:border-indigo-200 hover:shadow-md rounded-2xl p-4 transition '+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><div class="flex items-start justify-between gap-3"><button type="button" onclick="editStudent(\''+st.id+'\')" class="text-left flex-1 min-w-0"><div class="font-black text-slate-800 '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</div><div class="text-xs font-mono text-slate-400 mt-1 '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</div></button><button type="button" onclick="showStudentMoreMenu(\''+st.id+'\', this)" class="text-slate-600 bg-slate-100 rounded-xl px-3 h-9 text-xs font-black hover:bg-slate-200">อื่นๆ</button></div></div>'; }).join('');
       tbody.innerHTML += '<tr><td colspan="4" class="p-4 bg-slate-50/60"><div class="bg-indigo-50/80 border border-indigo-100 rounded-3xl p-4"><div class="flex items-center justify-between mb-4"><div class="font-black text-primary text-lg"><i class="fas fa-door-open mr-2"></i>'+esc(room)+'</div><div class="text-xs font-bold text-indigo-500 bg-white px-3 py-1 rounded-full">'+list.length+' คน</div></div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">'+cards+'</div></div></td></tr>';
     });
   };
 
+
+  window.closeStudentMoreMenu = function(){ var el=document.getElementById('student-more-menu'); if(el) el.remove(); };
+  window.showStudentMoreMenu = function(id, btn){
+    var st=(state.students||[]).find(function(x){return x.id===id;}); if(!st) return;
+    window.closeStudentMoreMenu();
+    var isW=window.isStudentWithdrawn&&window.isStudentWithdrawn(st);
+    var menu=document.createElement('div');
+    menu.id='student-more-menu';
+    menu.className='fixed z-[999999] bg-white border border-slate-200 rounded-2xl shadow-2xl p-2 min-w-[220px]';
+    var reasonBtn=isW?'<button type="button" onclick="closeStudentMoreMenu(); showStudentWithdrawReason(\''+id+'\')" class="w-full text-left px-4 py-2.5 rounded-xl hover:bg-rose-50 text-rose-600 text-sm font-bold"><i class="fas fa-circle-info w-5"></i> ดูเหตุผลลาออก</button>':'';
+    var cancelBtn=isW?'<button type="button" onclick="closeStudentMoreMenu(); cancelStudentWithdrawn(\''+id+'\')" class="w-full text-left px-4 py-2.5 rounded-xl hover:bg-emerald-50 text-emerald-600 text-sm font-bold"><i class="fas fa-user-check w-5"></i> ยกเลิกสถานะลาออก</button>':'';
+    var setBtn=!isW?'<button type="button" onclick="closeStudentMoreMenu(); confirmSetStudentWithdrawn(\''+id+'\')" class="w-full text-left px-4 py-2.5 rounded-xl hover:bg-rose-50 text-rose-600 text-sm font-bold"><i class="fas fa-user-slash w-5"></i> ตั้งเป็นลาออก</button>':'';
+    menu.innerHTML='<button type="button" onclick="closeStudentMoreMenu(); showStudentInfo(\''+id+'\')" class="w-full text-left px-4 py-2.5 rounded-xl hover:bg-slate-50 text-slate-700 text-sm font-bold"><i class="fas fa-id-card w-5"></i> ดูข้อมูลนักเรียน</button><button type="button" onclick="closeStudentMoreMenu(); editStudent(\''+id+'\')" class="w-full text-left px-4 py-2.5 rounded-xl hover:bg-indigo-50 text-indigo-600 text-sm font-bold"><i class="fas fa-pen w-5"></i> แก้ไขข้อมูลนักเรียน</button>'+setBtn+reasonBtn+cancelBtn;
+    document.body.appendChild(menu);
+    var r=btn&&btn.getBoundingClientRect?btn.getBoundingClientRect():{left:16,bottom:16};
+    var left=Math.min(r.left, window.innerWidth-240);
+    var top=Math.min(r.bottom+8, window.innerHeight-menu.offsetHeight-16);
+    menu.style.left=Math.max(12,left)+'px';
+    menu.style.top=Math.max(12,top)+'px';
+    setTimeout(function(){ document.addEventListener('click', window.closeStudentMoreMenu, {once:true}); },0);
+  };
+  window.showStudentInfo = function(id){
+    var st=(state.students||[]).find(function(x){return x.id===id;}); if(!st) return;
+    showCustomAlert('ข้อมูลนักเรียน', 'รหัสนักเรียน: '+(st.code||'-')+'\nชื่อ-นามสกุล: '+(st.name||'-')+'\nชั้น/ห้อง: '+(window.getStudentClassName?window.getStudentClassName(st):(st.grade||st.room||'-'))+'\nสถานะ: '+((window.isStudentWithdrawn&&window.isStudentWithdrawn(st))?'ลาออก':'ปกติ'));
+  };
   window.exportScoresToExcel = function(){
     var cid=window.currentActiveCourseId; if(!cid) return showCustomAlert('ผิดพลาด','กรุณาเลือกรายวิชา',true);
     var all=allStudentsForCourse(cid); if(!all.length) return showCustomAlert('ผิดพลาด','ไม่มีข้อมูลนักเรียนในวิชานี้',true);
@@ -12250,9 +12355,9 @@ window.requestOwnPasswordReset = async function(){
         }
       });
       var gg = scoreAndGrade(total, totalMax, gradeCriteria);
-      tbody += '<tr><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center"><span class="schoolhub-seq-text">#'+(index+1)+'</span></td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700">'+esc(st.code)+'</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700">'+esc(st.name)+'</td><td class="text-center text-xs font-bold text-slate-500 bg-slate-50">'+esc(cls(st))+'</td><td class="text-center font-bold summary-att-col"><span class="text-emerald-500">'+pr+'</span>/<span class="text-amber-500">'+la+'</span>/<span class="text-rose-500">'+ab+'</span></td>'+planCells+'<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col">'+total+'</td><td class="text-center font-bold bg-amber-50/30 summary-grade-col">'+esc(gg.grade)+'</td></tr>';
+      tbody += '<tr class="'+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><td class="sticky summary-sticky-no summary-no-col bg-white z-20 border-r text-center"><span class="schoolhub-seq-text'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</span></td><td class="sticky summary-sticky-code summary-code-col bg-white z-20 border-r font-mono text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</td><td class="sticky summary-sticky-name summary-name-col bg-white z-20 border-r font-bold text-slate-700'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</td><td class="text-center text-xs font-bold text-slate-500 bg-slate-50">'+esc(cls(st))+'</td><td class="text-center font-bold summary-att-col"><span class="text-emerald-500">'+pr+'</span>/<span class="text-amber-500">'+la+'</span>/<span class="text-rose-500">'+ab+'</span></td>'+planCells+'<td class="text-center font-bold text-primary bg-slate-50 border-r summary-total-col">'+total+'</td><td class="text-center font-bold bg-amber-50/30 summary-grade-col">'+esc(gg.grade)+'</td></tr>';
 
-      mobileHtml += '<div class="summary-mobile-card"><div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name">'+esc(st.name)+'</div><div class="text-xs font-bold text-slate-400 mt-1">'+esc(cls(st))+'</div></div><div class="schoolhub-seq-text">#'+(index+1)+'</div></div><details class="summary-mobile-card-code"><summary><i class="fas fa-id-card mr-1"></i>เปิด/ปิดรหัสนักเรียน</summary><div>'+esc(st.code)+'</div></details><div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+pr+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+la+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+ab+'</b>ขาด</div></div><div class="summary-mobile-plans">'+(planCards || '<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>')+'</div><div class="summary-mobile-total"><span>รวม '+total+'/'+totalMax+'</span><span class="'+gg.color+'">เกรด '+esc(gg.grade)+'</span></div></div>';
+      mobileHtml += '<div class="summary-mobile-card '+(window.getStudentWithdrawnRowClass?window.getStudentWithdrawnRowClass(st):'')+'"><div class="flex items-start justify-between gap-3"><div><div class="summary-mobile-card-name '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.name)+(window.getStudentWithdrawnBadge?window.getStudentWithdrawnBadge(st):'')+'</div><div class="text-xs font-bold text-slate-400 mt-1">'+esc(cls(st))+'</div></div><div class="schoolhub-seq-text '+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">#'+(index+1)+'</div></div><details class="summary-mobile-card-code"><summary><i class="fas fa-id-card mr-1"></i>เปิด/ปิดรหัสนักเรียน</summary><div class="'+(window.getStudentWithdrawnClass?window.getStudentWithdrawnClass(st):'')+'">'+esc(st.code)+'</div></details><div class="summary-mobile-stats"><div class="summary-mobile-stat text-emerald-600"><b>'+pr+'</b>มา</div><div class="summary-mobile-stat text-amber-600"><b>'+la+'</b>สาย</div><div class="summary-mobile-stat text-rose-600"><b>'+ab+'</b>ขาด</div></div><div class="summary-mobile-plans">'+(planCards || '<div class="col-span-2 text-center text-slate-400 text-sm font-bold py-3">ยังไม่มีแผนคะแนน</div>')+'</div><div class="summary-mobile-total"><span>รวม '+total+'/'+totalMax+'</span><span class="'+gg.color+'">เกรด '+esc(gg.grade)+'</span></div></div>';
     });
     tbody += '</tbody>';
     table.innerHTML = thead + tbody;
@@ -13797,6 +13902,31 @@ window.requestOwnPasswordReset = async function(){
   }
   function closeModal(id){ var el=document.getElementById(id); if(el) el.classList.add('hidden'); }
 
+
+  window.closeStudentMoreMenu = function(){ var el=document.getElementById('student-more-menu'); if(el) el.remove(); };
+  window.showStudentMoreMenu = function(id, btn){
+    var st=(state.students||[]).find(function(x){return x.id===id;}); if(!st) return;
+    window.closeStudentMoreMenu();
+    var isW=window.isStudentWithdrawn&&window.isStudentWithdrawn(st);
+    var menu=document.createElement('div');
+    menu.id='student-more-menu';
+    menu.className='fixed z-[999999] bg-white border border-slate-200 rounded-2xl shadow-2xl p-2 min-w-[220px]';
+    var reasonBtn=isW?'<button type="button" onclick="closeStudentMoreMenu(); showStudentWithdrawReason(\''+id+'\')" class="w-full text-left px-4 py-2.5 rounded-xl hover:bg-rose-50 text-rose-600 text-sm font-bold"><i class="fas fa-circle-info w-5"></i> ดูเหตุผลลาออก</button>':'';
+    var cancelBtn=isW?'<button type="button" onclick="closeStudentMoreMenu(); cancelStudentWithdrawn(\''+id+'\')" class="w-full text-left px-4 py-2.5 rounded-xl hover:bg-emerald-50 text-emerald-600 text-sm font-bold"><i class="fas fa-user-check w-5"></i> ยกเลิกสถานะลาออก</button>':'';
+    var setBtn=!isW?'<button type="button" onclick="closeStudentMoreMenu(); confirmSetStudentWithdrawn(\''+id+'\')" class="w-full text-left px-4 py-2.5 rounded-xl hover:bg-rose-50 text-rose-600 text-sm font-bold"><i class="fas fa-user-slash w-5"></i> ตั้งเป็นลาออก</button>':'';
+    menu.innerHTML='<button type="button" onclick="closeStudentMoreMenu(); showStudentInfo(\''+id+'\')" class="w-full text-left px-4 py-2.5 rounded-xl hover:bg-slate-50 text-slate-700 text-sm font-bold"><i class="fas fa-id-card w-5"></i> ดูข้อมูลนักเรียน</button><button type="button" onclick="closeStudentMoreMenu(); editStudent(\''+id+'\')" class="w-full text-left px-4 py-2.5 rounded-xl hover:bg-indigo-50 text-indigo-600 text-sm font-bold"><i class="fas fa-pen w-5"></i> แก้ไขข้อมูลนักเรียน</button>'+setBtn+reasonBtn+cancelBtn;
+    document.body.appendChild(menu);
+    var r=btn&&btn.getBoundingClientRect?btn.getBoundingClientRect():{left:16,bottom:16};
+    var left=Math.min(r.left, window.innerWidth-240);
+    var top=Math.min(r.bottom+8, window.innerHeight-menu.offsetHeight-16);
+    menu.style.left=Math.max(12,left)+'px';
+    menu.style.top=Math.max(12,top)+'px';
+    setTimeout(function(){ document.addEventListener('click', window.closeStudentMoreMenu, {once:true}); },0);
+  };
+  window.showStudentInfo = function(id){
+    var st=(state.students||[]).find(function(x){return x.id===id;}); if(!st) return;
+    showCustomAlert('ข้อมูลนักเรียน', 'รหัสนักเรียน: '+(st.code||'-')+'\nชื่อ-นามสกุล: '+(st.name||'-')+'\nชั้น/ห้อง: '+(window.getStudentClassName?window.getStudentClassName(st):(st.grade||st.room||'-'))+'\nสถานะ: '+((window.isStudentWithdrawn&&window.isStudentWithdrawn(st))?'ลาออก':'ปกติ'));
+  };
   window.exportScoresToExcel = function(){
     var cid=courseId(); if(!cid) return showCustomAlert('ผิดพลาด','ไม่พบรายวิชา',true);
     var c=course(); var rooms=roomsForCourse(c); var all=allCourseStudents(cid);
@@ -14196,6 +14326,31 @@ window.requestOwnPasswordReset = async function(){
     return (select && select.value) || (window.__overviewRoomFilter && window.__overviewRoomFilter[cid]) || (window.activeCourseRoomFilter && window.activeCourseRoomFilter[cid]) || 'all';
   }
 
+
+  window.closeStudentMoreMenu = function(){ var el=document.getElementById('student-more-menu'); if(el) el.remove(); };
+  window.showStudentMoreMenu = function(id, btn){
+    var st=(state.students||[]).find(function(x){return x.id===id;}); if(!st) return;
+    window.closeStudentMoreMenu();
+    var isW=window.isStudentWithdrawn&&window.isStudentWithdrawn(st);
+    var menu=document.createElement('div');
+    menu.id='student-more-menu';
+    menu.className='fixed z-[999999] bg-white border border-slate-200 rounded-2xl shadow-2xl p-2 min-w-[220px]';
+    var reasonBtn=isW?'<button type="button" onclick="closeStudentMoreMenu(); showStudentWithdrawReason(\''+id+'\')" class="w-full text-left px-4 py-2.5 rounded-xl hover:bg-rose-50 text-rose-600 text-sm font-bold"><i class="fas fa-circle-info w-5"></i> ดูเหตุผลลาออก</button>':'';
+    var cancelBtn=isW?'<button type="button" onclick="closeStudentMoreMenu(); cancelStudentWithdrawn(\''+id+'\')" class="w-full text-left px-4 py-2.5 rounded-xl hover:bg-emerald-50 text-emerald-600 text-sm font-bold"><i class="fas fa-user-check w-5"></i> ยกเลิกสถานะลาออก</button>':'';
+    var setBtn=!isW?'<button type="button" onclick="closeStudentMoreMenu(); confirmSetStudentWithdrawn(\''+id+'\')" class="w-full text-left px-4 py-2.5 rounded-xl hover:bg-rose-50 text-rose-600 text-sm font-bold"><i class="fas fa-user-slash w-5"></i> ตั้งเป็นลาออก</button>':'';
+    menu.innerHTML='<button type="button" onclick="closeStudentMoreMenu(); showStudentInfo(\''+id+'\')" class="w-full text-left px-4 py-2.5 rounded-xl hover:bg-slate-50 text-slate-700 text-sm font-bold"><i class="fas fa-id-card w-5"></i> ดูข้อมูลนักเรียน</button><button type="button" onclick="closeStudentMoreMenu(); editStudent(\''+id+'\')" class="w-full text-left px-4 py-2.5 rounded-xl hover:bg-indigo-50 text-indigo-600 text-sm font-bold"><i class="fas fa-pen w-5"></i> แก้ไขข้อมูลนักเรียน</button>'+setBtn+reasonBtn+cancelBtn;
+    document.body.appendChild(menu);
+    var r=btn&&btn.getBoundingClientRect?btn.getBoundingClientRect():{left:16,bottom:16};
+    var left=Math.min(r.left, window.innerWidth-240);
+    var top=Math.min(r.bottom+8, window.innerHeight-menu.offsetHeight-16);
+    menu.style.left=Math.max(12,left)+'px';
+    menu.style.top=Math.max(12,top)+'px';
+    setTimeout(function(){ document.addEventListener('click', window.closeStudentMoreMenu, {once:true}); },0);
+  };
+  window.showStudentInfo = function(id){
+    var st=(state.students||[]).find(function(x){return x.id===id;}); if(!st) return;
+    showCustomAlert('ข้อมูลนักเรียน', 'รหัสนักเรียน: '+(st.code||'-')+'\nชื่อ-นามสกุล: '+(st.name||'-')+'\nชั้น/ห้อง: '+(window.getStudentClassName?window.getStudentClassName(st):(st.grade||st.room||'-'))+'\nสถานะ: '+((window.isStudentWithdrawn&&window.isStudentWithdrawn(st))?'ลาออก':'ปกติ'));
+  };
   window.exportScoresToExcel = function(){
     var cid=courseId();
     var c=course();
@@ -14645,7 +14800,15 @@ import { getFirestore, doc, getDoc, setDoc, getDocs, collection, serverTimestamp
 (function(){
   if(window.__schoolhubTeamPlanPatch) return;
   window.__schoolhubTeamPlanPatch = true;
-  const firebaseConfig = {apiKey:"AIzaSyCFPpiDldze8x23HDwhJo7v8KM_uFOGJsg",authDomain:"shool-2312a.firebaseapp.com",projectId:"shool-2312a",storageBucket:"shool-2312a.firebasestorage.app",messagingSenderId:"803574136389",appId:"1:803574136389:web:e0e5eecfc36dec69d4ed2c",measurementId:"G-ME7E38XNX6"};
+  const firebaseConfig = {
+  apiKey: "AIzaSyADAbTJEWivV1Nn-au7tXofStx4ADYTCM8",
+  authDomain: "shoolhub-5677e.firebaseapp.com",
+  projectId: "shoolhub-5677e",
+  storageBucket: "shoolhub-5677e.firebasestorage.app",
+  messagingSenderId: "630487358153",
+  appId: "1:630487358153:web:1866add5d4a29b74abcb18",
+  measurementId: "G-2Q6R46DC38"
+};
   const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
